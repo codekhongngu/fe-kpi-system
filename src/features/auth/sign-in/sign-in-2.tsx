@@ -51,7 +51,7 @@ export function SignIn2() {
         )}
       >
         <img
-          src={CSDLBg}
+          src={dashboardLight}
           className='dark:hidden'
           width={1024}
           height={1151}
