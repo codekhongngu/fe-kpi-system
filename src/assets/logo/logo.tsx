@@ -1,11 +1,11 @@
 import { type SVGProps } from 'react'
-import { cn } from '@/lib/utils'
 import logo from './logo.svg'
-export function Logo({ className, ...props }: SVGProps<SVGSVGElement>) {
+export function Logo({ className }: SVGProps<SVGSVGElement>) {
   return (
    <img
+      className={className}
       src={logo}
       alt='CSDL Logo'
-      />
+    />
   )
 }
