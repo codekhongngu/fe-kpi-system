@@ -1,0 +1,336 @@
+﻿Cá»˜NG HÃ’A XÃƒ Há»˜I CHá»¦ NGHÄ¨A VIá»†T NAM
+Äá»™c láº­p â€“ Tá»± do â€“ Háº¡nh phÃºc
+TÃ€I LIá»†U Äáº¶C Táº¢ CHá»¨C NÄ‚NG Há»† THá»NG
+Dá»® LIá»†U ÄIá»€U HÃ€NH Ná»˜I Bá»˜ Cáº¤P XÃƒ
+(QLDD â€“ Internal Administrative Data Management System)
+PhiÃªn báº£n: 2.0  |  ThÃ¡ng 04 / 2026
+Tráº¡ng thÃ¡i: TÃ i liá»‡u chÃ­nh thá»©c â€“ PhiÃªn báº£n tá»•ng há»£p
+1. Tá»”NG QUAN Há»† THá»NG
+1.1 MÃ´ Táº£ Há»‡ Thá»‘ng
+Há»‡ thá»‘ng Quáº£n lÃ½ Dá»¯ liá»‡u Äiá»u hÃ nh Ná»™i bá»™ cáº¥p XÃ£ (QLDD) lÃ  ná»n táº£ng pháº§n má»m tÃ­ch há»£p Ä‘Æ°á»£c thiáº¿t káº¿ chuyÃªn biá»‡t cho cÃ¡c cÆ¡ quan hÃ nh chÃ­nh cáº¥p xÃ£, phÆ°á»ng. Há»‡ thá»‘ng sá»‘ hÃ³a toÃ n bá»™ quy trÃ¬nh thu tháº­p, quáº£n lÃ½, phÃ¢n tÃ­ch vÃ  bÃ¡o cÃ¡o sá»‘ liá»‡u hoáº¡t Ä‘á»™ng nhÃ  nÆ°á»›c, há»— trá»£ chuyá»ƒn Ä‘á»•i sá»‘ trong cÃ´ng tÃ¡c quáº£n trá»‹ hÃ nh chÃ­nh cÃ´ng á»Ÿ cÆ¡ sá»Ÿ.
+1.2 Má»¥c TiÃªu
+Táº­p trung hÃ³a quáº£n lÃ½ toÃ n bá»™ biá»ƒu máº«u bÃ¡o cÃ¡o trong má»™t ná»n táº£ng thá»‘ng nháº¥t
+Tá»± Ä‘á»™ng hÃ³a quy trÃ¬nh nháº­p liá»‡u, xÃ¡c thá»±c, tá»•ng há»£p vÃ  xá»­ lÃ½ dá»¯ liá»‡u
+Cung cáº¥p cÃ´ng cá»¥ thá»‘ng kÃª, phÃ¢n tÃ­ch vÃ  trá»±c quan hÃ³a dá»¯ liá»‡u
+Äáº£m báº£o tÃ­nh nháº¥t quÃ¡n, toÃ n váº¹n vÃ  chuáº©n hÃ³a dá»¯ liá»‡u theo quy Ä‘á»‹nh nhÃ  nÆ°á»›c
+Há»— trá»£ ra quyáº¿t Ä‘á»‹nh quáº£n lÃ½ dá»±a trÃªn dá»¯ liá»‡u thá»i gian thá»±c
+NÃ¢ng cao nÄƒng lá»±c chuyá»ƒn Ä‘á»•i sá»‘ táº¡i cÃ¡c Ä‘Æ¡n vá»‹ hÃ nh chÃ­nh cáº¥p xÃ£, phÆ°á»ng
+1.3 Äá»‘i TÆ°á»£ng Sá»­ Dá»¥ng
+1.4 Kiáº¿n TrÃºc Tá»•ng Thá»ƒ
+Há»‡ thá»‘ng Ä‘Æ°á»£c xÃ¢y dá»±ng theo kiáº¿n trÃºc 3 táº§ng (Three-tier Architecture):
+Táº§ng TrÃ¬nh BÃ y (Presentation Layer): Giao diá»‡n web responsive, há»— trá»£ truy cáº­p trÃªn mÃ¡y tÃ­nh Ä‘á»ƒ bÃ n, mÃ¡y tÃ­nh báº£ng vÃ  Ä‘iá»‡n thoáº¡i
+Táº§ng Xá»­ LÃ½ Nghiá»‡p Vá»¥ (Business Logic Layer): REST API, xá»­ lÃ½ luá»“ng nghiá»‡p vá»¥, xÃ¡c thá»±c vÃ  phÃ¢n quyá»n
+Táº§ng Dá»¯ Liá»‡u (Data Layer): CÆ¡ sá»Ÿ dá»¯ liá»‡u quan há»‡, caching, lÆ°u trá»¯ file Ä‘Ã­nh kÃ¨m
+2. DANH Má»¤C CHá»¨C NÄ‚NG Tá»”NG THá»‚
+3. MÃ” Táº¢ CHI TIáº¾T CHá»¨C NÄ‚NG
+NHÃ“M I â€“ Há»† THá»NG CHUNG
+3.1 ÄÄƒng Nháº­p Há»‡ Thá»‘ng
+[SYS-01-A]  ÄÄƒng nháº­p báº±ng tÃ i khoáº£n & máº­t kháº©u
+Nháº­p tÃªn Ä‘Äƒng nháº­p (username hoáº·c email) vÃ  máº­t kháº©u
+Há»‡ thá»‘ng kiá»ƒm tra thÃ´ng tin, tráº£ vá» thÃ´ng bÃ¡o lá»—i náº¿u sai
+KhÃ³a tÃ i khoáº£n táº¡m thá»i sau 5 láº§n Ä‘Äƒng nháº­p sai liÃªn tiáº¿p (thá»i gian khÃ³a: 15 phÃºt)
+Chuyá»ƒn hÆ°á»›ng Ä‘áº¿n trang chÃ­nh sau khi Ä‘Äƒng nháº­p thÃ nh cÃ´ng
+[SYS-01-B]  XÃ¡c nháº­n báº±ng mÃ£ kiá»ƒm tra (2FA)
+Khi báº­t 2FA: há»‡ thá»‘ng gá»­i mÃ£ OTP qua email hoáº·c á»©ng dá»¥ng TOTP sau khi xÃ¡c thá»±c máº­t kháº©u thÃ nh cÃ´ng
+MÃ£ OTP cÃ³ hiá»‡u lá»±c trong 5 phÃºt; ngÆ°á»i dÃ¹ng nháº­p mÃ£ Ä‘á»ƒ hoÃ n táº¥t Ä‘Äƒng nháº­p
+Cho phÃ©p láº¥y láº¡i mÃ£ OTP náº¿u chÆ°a nháº­n Ä‘Æ°á»£c
+[SYS-01-C]  Láº¥y láº¡i máº­t kháº©u
+NgÆ°á»i dÃ¹ng nháº­p email Ä‘Äƒng kÃ½ Ä‘á»ƒ nháº­n liÃªn káº¿t Ä‘áº·t láº¡i máº­t kháº©u
+LiÃªn káº¿t cÃ³ hiá»‡u lá»±c trong 30 phÃºt; sau khi sá»­ dá»¥ng liÃªn káº¿t tá»± vÃ´ hiá»‡u hÃ³a
+Kiá»ƒm tra máº­t kháº©u má»›i Ä‘á»§ Ä‘iá»u kiá»‡n: tá»‘i thiá»ƒu 8 kÃ½ tá»±, cÃ³ chá»¯ hoa, chá»¯ thÆ°á»ng, sá»‘, kÃ½ tá»± Ä‘áº·c biá»‡t
+3.2 ÄÄƒng Xuáº¥t Há»‡ Thá»‘ng
+[SYS-02]  ÄÄƒng xuáº¥t
+NÃºt Ä‘Äƒng xuáº¥t hiá»ƒn thá»‹ táº¡i thanh Ä‘iá»u hÆ°á»›ng (header)
+Khi nháº¥n Ä‘Äƒng xuáº¥t: há»§y session, xÃ³a token, chuyá»ƒn vá» trang Ä‘Äƒng nháº­p
+Há»‡ thá»‘ng tá»± Ä‘á»™ng Ä‘Äƒng xuáº¥t sau 30 phÃºt khÃ´ng hoáº¡t Ä‘á»™ng (session timeout, cÃ³ thá»ƒ cáº¥u hÃ¬nh)
+3.3 Äá»•i Máº­t Kháº©u
+[SYS-03]  Äá»•i máº­t kháº©u cÃ¡ nhÃ¢n
+Nháº­p máº­t kháº©u hiá»‡n táº¡i Ä‘á»ƒ xÃ¡c nháº­n danh tÃ­nh
+Nháº­p máº­t kháº©u má»›i vÃ  xÃ¡c nháº­n láº¡i
+Kiá»ƒm tra máº­t kháº©u má»›i: tá»‘i thiá»ƒu 8 kÃ½ tá»±, khÃ´ng trÃ¹ng máº­t kháº©u cÅ©, Ä‘á»§ Ä‘á»™ phá»©c táº¡p
+LÆ°u máº­t kháº©u má»›i (hash bcrypt, cost factor >= 12); Ä‘Äƒng xuáº¥t táº¥t cáº£ phiÃªn khÃ¡c
+NHÃ“M II â€“ QUáº¢N TRá»Š Há»† THá»NG
+3.4 Quáº£n LÃ½ ÄÆ¡n Vá»‹
+[ORG-01-A]  Xem & TÃ¬m kiáº¿m danh sÃ¡ch Ä‘Æ¡n vá»‹
+Xem danh sÃ¡ch Ä‘Æ¡n vá»‹ dáº¡ng báº£ng: MÃ£ Ä‘Æ¡n vá»‹, TÃªn Ä‘Æ¡n vá»‹, Cáº¥p báº­c, TrÆ°á»Ÿng Ä‘Æ¡n vá»‹, Tráº¡ng thÃ¡i
+TÃ¬m kiáº¿m theo mÃ£ Ä‘á»‹nh danh, tÃªn Ä‘Æ¡n vá»‹
+Lá»c theo tráº¡ng thÃ¡i: Hoáº¡t Ä‘á»™ng / ÄÃ£ khÃ³a
+Xem thÃ´ng tin chi tiáº¿t má»™t Ä‘Æ¡n vá»‹: thÃ nh viÃªn, biá»ƒu máº«u Ä‘Æ°á»£c giao, thá»‘ng kÃª hoÃ n thÃ nh
+[ORG-01-B]  ThÃªm má»›i Ä‘Æ¡n vá»‹
+Nháº­p: MÃ£ Ä‘á»‹nh danh Ä‘Æ¡n vá»‹, TÃªn Ä‘Æ¡n vá»‹, ÄÆ¡n vá»‹ cha (náº¿u cÃ³), TrÆ°á»Ÿng Ä‘Æ¡n vá»‹, MÃ´ táº£
+Kiá»ƒm tra mÃ£ Ä‘á»‹nh danh khÃ´ng trÃ¹ng láº·p
+Há»— trá»£ cáº¥u trÃºc cÃ¢y: CÆ¡ quan â†’ PhÃ²ng ban â†’ Bá»™ pháº­n â†’ NhÃ³m
+[ORG-01-C]  Sá»­a / KhÃ³a / XÃ³a Ä‘Æ¡n vá»‹
+Chá»‰nh sá»­a thÃ´ng tin Ä‘Æ¡n vá»‹ Ä‘Ã£ táº¡o
+KhÃ³a/Má»Ÿ khÃ³a: Ä‘Æ¡n vá»‹ bá»‹ khÃ³a khÃ´ng thá»ƒ nháº­n biá»ƒu máº«u má»›i vÃ  thÃ nh viÃªn khÃ´ng thá»ƒ Ä‘Äƒng nháº­p
+XÃ³a Ä‘Æ¡n vá»‹: kiá»ƒm tra khÃ´ng cÃ²n thÃ nh viÃªn vÃ  khÃ´ng cÃ²n biá»ƒu máº«u Ä‘ang thá»±c hiá»‡n
+3.5 Quáº£n LÃ½ Ká»³ BÃ¡o CÃ¡o
+[RPT-PRD-01-A]  Xem & TÃ¬m kiáº¿m danh sÃ¡ch ká»³ bÃ¡o cÃ¡o
+Xem danh sÃ¡ch ká»³ bÃ¡o cÃ¡o: MÃ£ ká»³, TÃªn ká»³, Kiá»ƒu ká»³, Tá»« ngÃ y, Äáº¿n ngÃ y, Tráº¡ng thÃ¡i
+Lá»c theo kiá»ƒu ká»³: Tuáº§n / ThÃ¡ng / QuÃ½ / NÄƒm
+Xem thÃ´ng tin chi tiáº¿t má»™t ká»³ bÃ¡o cÃ¡o
+[RPT-PRD-01-B]  ThÃªm má»›i / Sá»­a / XÃ³a ká»³ bÃ¡o cÃ¡o
+Nháº­p: TÃªn ká»³, Kiá»ƒu ká»³ (Tuáº§n/ThÃ¡ng/QuÃ½/NÄƒm), NgÃ y báº¯t Ä‘áº§u, NgÃ y káº¿t thÃºc
+Kiá»ƒm tra dá»¯ liá»‡u Ä‘áº§u vÃ o: ngÃ y káº¿t thÃºc > ngÃ y báº¯t Ä‘áº§u; khÃ´ng trÃ¹ng ká»³ cÃ¹ng loáº¡i
+KhÃ´ng Ä‘Æ°á»£c xÃ³a ká»³ bÃ¡o cÃ¡o khi Ä‘Ã£ cÃ³ biá»ƒu máº«u Ä‘Æ°á»£c giao cho ká»³ Ä‘Ã³
+3.6 Quáº£n LÃ½ TÃ i Khoáº£n NgÆ°á»i DÃ¹ng
+[USR-01-A]  Xem danh sÃ¡ch & chi tiáº¿t ngÆ°á»i dÃ¹ng
+Hiá»ƒn thá»‹ danh sÃ¡ch ngÆ°á»i dÃ¹ng theo Ä‘Æ¡n vá»‹: MÃ£ ngÆ°á»i dÃ¹ng, Há» tÃªn, Email, Vai trÃ², Tráº¡ng thÃ¡i, Láº§n Ä‘Äƒng nháº­p cuá»‘i
+Xem thÃ´ng tin chi tiáº¿t cá»§a tá»«ng ngÆ°á»i dÃ¹ng
+TÃ¬m kiáº¿m theo tÃªn, email, mÃ£ ngÆ°á»i dÃ¹ng, Ä‘Æ¡n vá»‹
+[USR-01-B]  ThÃªm má»›i ngÆ°á»i dÃ¹ng
+Nháº­p: MÃ£ ngÆ°á»i dÃ¹ng, Há» tÃªn, Email, TÃªn Ä‘Äƒng nháº­p, ÄÆ¡n vá»‹, Vai trÃ², Tráº¡ng thÃ¡i
+Há»‡ thá»‘ng tá»± táº¡o máº­t kháº©u táº¡m thá»i vÃ  gá»­i email thÃ´ng bÃ¡o cho ngÆ°á»i dÃ¹ng má»›i
+Kiá»ƒm tra: email vÃ  tÃªn Ä‘Äƒng nháº­p khÃ´ng trÃ¹ng láº·p trong toÃ n há»‡ thá»‘ng
+[USR-01-C]  Cáº­p nháº­t & Quáº£n lÃ½ tráº¡ng thÃ¡i
+Äiá»u chá»‰nh thÃ´ng tin chi tiáº¿t: há» tÃªn, email, Ä‘Æ¡n vá»‹, vai trÃ²
+KÃ­ch hoáº¡t / Dá»«ng hoáº¡t Ä‘á»™ng tÃ i khoáº£n (khÃ´ng xÃ³a dá»¯ liá»‡u lá»‹ch sá»­)
+Äáº·t láº¡i máº­t kháº©u (Admin reset): gá»­i máº­t kháº©u táº¡m thá»i qua email
+[USR-01-D]  Import danh sÃ¡ch ngÆ°á»i dÃ¹ng
+Táº£i file máº«u Excel (template) Ä‘á»ƒ nháº­p danh sÃ¡ch ngÆ°á»i dÃ¹ng hÃ ng loáº¡t
+Upload file vÃ  xÃ¡c thá»±c dá»¯ liá»‡u trÆ°á»›c khi import: kiá»ƒm tra trÃ¹ng láº·p, Ä‘á»‹nh dáº¡ng
+BÃ¡o cÃ¡o káº¿t quáº£ import: sá»‘ báº£n ghi thÃ nh cÃ´ng, sá»‘ lá»—i kÃ¨m lÃ½ do
+[USR-01-E]  XÃ³a ngÆ°á»i dÃ¹ng
+XÃ³a má»m (soft delete): áº©n tÃ i khoáº£n, giá»¯ láº¡i dá»¯ liá»‡u lá»‹ch sá»­ audit
+KhÃ´ng thá»ƒ xÃ³a tÃ i khoáº£n Ä‘ang cÃ³ bÃ¡o cÃ¡o chÆ°a hoÃ n thÃ nh
+3.7 Há»“ SÆ¡ CÃ¡ NhÃ¢n
+[USR-02]  Cáº­p nháº­t thÃ´ng tin cÃ¡ nhÃ¢n
+Cáº­p nháº­t: TÃªn hiá»ƒn thá»‹, Sá»‘ Ä‘iá»‡n thoáº¡i, áº¢nh Ä‘áº¡i diá»‡n
+Äá»•i máº­t kháº©u cÃ¡ nhÃ¢n (xÃ¡c nháº­n máº­t kháº©u cÅ© trÆ°á»›c)
+Cáº¥u hÃ¬nh thÃ´ng bÃ¡o cÃ¡ nhÃ¢n: loáº¡i thÃ´ng bÃ¡o, kÃªnh nháº­n (In-app / Email)
+Cáº¥u hÃ¬nh ngÃ´n ngá»¯ giao diá»‡n, mÃºi giá»
+3.8 Quáº£n LÃ½ NhÃ³m Quyá»n & Quyá»n (RBAC)
+[USR-03]  Quáº£n lÃ½ nhÃ³m quyá»n
+Xem danh sÃ¡ch nhÃ³m quyá»n hiá»‡n cÃ³
+ThÃªm má»›i nhÃ³m quyá»n: Ä‘áº·t tÃªn, mÃ´ táº£, gÃ¡n danh sÃ¡ch quyá»n
+Chá»‰nh sá»­a, xÃ³a nhÃ³m quyá»n (kiá»ƒm tra khÃ´ng cÃ²n ngÆ°á»i dÃ¹ng nÃ o thuá»™c nhÃ³m)
+4 nhÃ³m máº·c Ä‘á»‹nh khÃ´ng Ä‘Æ°á»£c xÃ³a: System Admin, Data Manager, Data Entry, Approver
+[USR-04]  Quáº£n lÃ½ quyá»n chi tiáº¿t
+PhÃ¢n quyá»n theo chá»©c nÄƒng (Feature-level): Xem / ThÃªm / Sá»­a / XÃ³a / Xuáº¥t
+PhÃ¢n quyá»n theo pháº¡m vi dá»¯ liá»‡u (Data-level): toÃ n há»‡ thá»‘ng / Ä‘Æ¡n vá»‹ mÃ¬nh / Ä‘Æ¡n vá»‹ con
+GÃ¡n ngÆ°á»i dÃ¹ng vÃ o nhÃ³m quyá»n; má»™t ngÆ°á»i dÃ¹ng cÃ³ thá»ƒ thuá»™c nhiá»u nhÃ³m
+NHÃ“M III â€“ THIáº¾T Káº¾ BÃO CÃO
+3.9 Thiáº¿t Káº¿ BÃ¡o CÃ¡o Sá»‘ Liá»‡u
+[FM-01-A]  Xem danh sÃ¡ch & chi tiáº¿t biá»ƒu máº«u
+Xem danh sÃ¡ch biá»ƒu máº«u Ä‘Ã£ thiáº¿t káº¿: MÃ£ BM, TÃªn BM, LÄ©nh vá»±c, Chu ká»³, Tráº¡ng thÃ¡i
+TÃ¬m kiáº¿m / lá»c theo lÄ©nh vá»±c, chu ká»³, tráº¡ng thÃ¡i (kÃ­ch hoáº¡t/vÃ´ hiá»‡u)
+Xem thÃ´ng tin chi tiáº¿t: danh sÃ¡ch chá»‰ tiÃªu, thuá»™c tÃ­nh, lá»‹ch sá»­ chá»‰nh sá»­a cáº¥u trÃºc
+Xem trÆ°á»›c (preview) giao diá»‡n nháº­p liá»‡u cá»§a biá»ƒu máº«u
+Xem danh sÃ¡ch Ä‘Æ¡n vá»‹ Ä‘Ã£ Ä‘Æ°á»£c giao vÃ  tá»· lá»‡ hoÃ n thÃ nh theo ká»³
+[FM-01-B]  ThÃªm má»›i / Sá»­a biá»ƒu máº«u
+Nháº­p: TÃªn biá»ƒu máº«u, LÄ©nh vá»±c, Chu ká»³ bÃ¡o cÃ¡o, MÃ´ táº£, ÄÆ¡n vá»‹ thá»±c hiá»‡n
+Sao chÃ©p (copy) tá»« biá»ƒu máº«u hiá»‡n cÃ³: sao chÃ©p toÃ n bá»™ cáº¥u trÃºc, khÃ´ng sao chÃ©p dá»¯ liá»‡u
+Kiá»ƒm tra tÃªn biá»ƒu máº«u khÃ´ng trÃ¹ng trong cÃ¹ng lÄ©nh vá»±c; tá»‘i Ä‘a 255 kÃ½ tá»±
+[FM-01-C]  KÃ­ch hoáº¡t / VÃ´ hiá»‡u hÃ³a / XÃ³a biá»ƒu máº«u
+KÃ­ch hoáº¡t (is_active = true): biá»ƒu máº«u sáºµn sÃ ng Ä‘Æ°á»£c giao cho Ä‘Æ¡n vá»‹
+VÃ´ hiá»‡u hÃ³a: khÃ´ng giao má»›i Ä‘Æ°á»£c nhÆ°ng dá»¯ liá»‡u cÅ© váº«n giá»¯ nguyÃªn
+XÃ³a: chá»‰ Ä‘Æ°á»£c phÃ©p khi chÆ°a cÃ³ dá»¯ liá»‡u nháº­p liá»‡u nÃ o; náº¿u cÃ³ dá»¯ liá»‡u chá»‰ Ä‘Æ°á»£c vÃ´ hiá»‡u hÃ³a
+[FM-01-D]  Upload biá»ƒu máº«u máº«u (Template file)
+Upload file Excel/PDF máº«u Ä‘Ã­nh kÃ¨m theo biá»ƒu máº«u Ä‘á»ƒ ngÆ°á»i nháº­p liá»‡u tham kháº£o
+Hiá»ƒn thá»‹ file máº«u trong mÃ n hÃ¬nh nháº­p liá»‡u
+3.10 Thiáº¿t Káº¿ Thuá»™c TÃ­nh BÃ¡o CÃ¡o
+[FM-02]  Quáº£n lÃ½ thuá»™c tÃ­nh chá»‰ tiÃªu
+Xem danh sÃ¡ch thuá»™c tÃ­nh cá»§a biá»ƒu máº«u Ä‘Æ°á»£c chá»n
+ThÃªm má»›i thuá»™c tÃ­nh tÃ¹y chá»‰nh ngoÃ i cÃ¡c thuá»™c tÃ­nh máº·c Ä‘á»‹nh (MÃ£ chá»‰ tiÃªu, TÃªn, ÄÆ¡n vá»‹ tÃ­nh)
+Chá»‰nh sá»­a: TÃªn thuá»™c tÃ­nh, Kiá»ƒu dá»¯ liá»‡u (Sá»‘ nguyÃªn/Sá»‘ thá»±c/VÄƒn báº£n/NgÃ y thÃ¡ng/Lá»±a chá»n), Báº¯t buá»™c hay khÃ´ng
+Báº­t/táº¯t hiá»ƒn thá»‹ tá»«ng thuá»™c tÃ­nh trÃªn giao diá»‡n nháº­p liá»‡u
+Sáº¯p xáº¿p thá»© tá»± hiá»ƒn thá»‹ thuá»™c tÃ­nh
+XÃ³a thuá»™c tÃ­nh tÃ¹y chá»‰nh (thuá»™c tÃ­nh máº·c Ä‘á»‹nh há»‡ thá»‘ng khÃ´ng cho phÃ©p xÃ³a)
+Táº£i file Excel máº«u Ä‘á»ƒ nháº­p danh sÃ¡ch thuá»™c tÃ­nh; upload file Ä‘á»ƒ cáº­p nháº­t hÃ ng loáº¡t
+3.11 Thiáº¿t Káº¿ Chá»‰ TiÃªu BÃ¡o CÃ¡o
+[FM-03]  Quáº£n lÃ½ chá»‰ tiÃªu bÃ¡o cÃ¡o
+Xem danh sÃ¡ch chá»‰ tiÃªu cá»§a biá»ƒu máº«u; hiá»ƒn thá»‹: MÃ£ chá»‰ tiÃªu, TÃªn, ÄÆ¡n vá»‹ tÃ­nh, Loáº¡i, Thá»© tá»±
+Xem chi tiáº¿t má»™t chá»‰ tiÃªu: toÃ n bá»™ thuá»™c tÃ­nh vÃ  cáº¥u hÃ¬nh
+ThÃªm má»›i chá»‰ tiÃªu: nháº­p MÃ£ chá»‰ tiÃªu (duy nháº¥t trong biá»ƒu máº«u), TÃªn (tá»‘i Ä‘a 500 kÃ½ tá»±), ÄÆ¡n vá»‹ tÃ­nh, Kiá»ƒu dá»¯ liá»‡u, NhÃ³m chá»‰ tiÃªu
+Chá»‰ tiÃªu tÃ­nh toÃ¡n tá»± Ä‘á»™ng: Ä‘á»‹nh nghÄ©a cÃ´ng thá»©c dá»±a trÃªn giÃ¡ trá»‹ chá»‰ tiÃªu khÃ¡c
+Sá»­a / XÃ³a chá»‰ tiÃªu (kiá»ƒm tra rÃ ng buá»™c: khÃ´ng xÃ³a chá»‰ tiÃªu Ä‘Ã£ cÃ³ dá»¯ liá»‡u nháº­p)
+Sáº¯p xáº¿p thá»© tá»± chá»‰ tiÃªu báº±ng kÃ©o tháº£ (drag & drop); nhÃ³m chá»‰ tiÃªu theo danh má»¥c
+Táº£i file Excel máº«u Ä‘á»ƒ nháº­p chá»‰ tiÃªu; upload file Ä‘á»ƒ cáº­p nháº­t hÃ ng loáº¡t
+ThÃªm má»›i chá»‰ tiÃªu vÃ o danh má»¥c chá»‰ tiÃªu dÃ¹ng chung (dÃ¹ng láº¡i cho nhiá»u biá»ƒu máº«u)
+NHÃ“M IV â€“ NGHIá»†P Vá»¤ Gá»¬I NHáº¬N BÃO CÃO
+3.12 Giao BÃ¡o CÃ¡o
+[ASGN-01-A]  Xem danh sÃ¡ch bÃ¡o cÃ¡o cáº§n giao
+Xem danh sÃ¡ch biá»ƒu máº«u Ä‘Ã£ kÃ­ch hoáº¡t cáº§n phÃ¢n cÃ´ng
+TÃ¬m kiáº¿m/lá»c theo tÃªn biá»ƒu máº«u, lÄ©nh vá»±c, ká»³ bÃ¡o cÃ¡o
+Hiá»ƒn thá»‹ sá»‘ Ä‘Æ¡n vá»‹ Ä‘Ã£ giao / tá»•ng Ä‘Æ¡n vá»‹ cho má»—i biá»ƒu máº«u
+[ASGN-01-B]  Giao bÃ¡o cÃ¡o cho Ä‘Æ¡n vá»‹
+Chá»n biá»ƒu máº«u cáº§n giao (tá»«ng láº§n chá»n 1 biá»ƒu máº«u)
+Chá»n ká»³ bÃ¡o cÃ¡o: Tuáº§n / ThÃ¡ng / QuÃ½ / NÄƒm (máº·c Ä‘á»‹nh theo chu ká»³ biá»ƒu máº«u)
+Chá»n má»™t hoáº·c nhiá»u Ä‘Æ¡n vá»‹ nháº­n (há»— trá»£ chá»n toÃ n bá»™, tÃ¬m kiáº¿m theo tÃªn, hiá»ƒn thá»‹ dáº¡ng cÃ¢y)
+Äáº·t háº¡n nháº­p liá»‡u: Tá»« ngÃ y â€“ Äáº¿n ngÃ y (máº·c Ä‘á»‹nh hÃ´m nay Ä‘áº¿n +30 ngÃ y; hiá»ƒn thá»‹ Ä‘áº¿m ngÆ°á»£c)
+Xem láº¡i danh sÃ¡ch Ä‘Æ¡n vá»‹ Ä‘Æ°á»£c giao trÆ°á»›c khi lÆ°u (cÃ³ thá»ƒ sá»­a/xÃ³a tá»«ng dÃ²ng)
+XÃ¡c nháº­n giao: há»‡ thá»‘ng lÆ°u form_assignments vÃ  gá»­i thÃ´ng bÃ¡o Ä‘áº¿n Ä‘Æ¡n vá»‹ Ä‘Æ°á»£c giao
+Kiá»ƒm tra khÃ´ng giao trÃ¹ng (biá»ƒu máº«u + ká»³ + Ä‘Æ¡n vá»‹)
+[ASGN-01-C]  Há»§y giao bÃ¡o cÃ¡o
+Há»§y giao cho má»™t Ä‘Æ¡n vá»‹ cá»¥ thá»ƒ (chá»‰ khi Ä‘Æ¡n vá»‹ chÆ°a báº¯t Ä‘áº§u nháº­p liá»‡u)
+Ghi nháº­n lÃ½ do há»§y vÃ o audit log; thÃ´ng bÃ¡o Ä‘áº¿n Ä‘Æ¡n vá»‹ bá»‹ há»§y giao
+[ASGN-01-D]  Tá»± Ä‘á»™ng giao bÃ¡o cÃ¡o ká»³ sau
+Cáº¥u hÃ¬nh tá»± Ä‘á»™ng táº¡o lá»‡nh giao cho ká»³ tiáº¿p theo dá»±a trÃªn danh sÃ¡ch Ä‘Æ¡n vá»‹ ká»³ hiá»‡n táº¡i
+NgÆ°á»i quáº£n lÃ½ xem láº¡i vÃ  xÃ¡c nháº­n trÆ°á»›c khi tá»± Ä‘á»™ng giao cÃ³ hiá»‡u lá»±c
+3.13 Nháº­p Liá»‡u BÃ¡o CÃ¡o Sá»‘ Liá»‡u
+[DM-01-A]  Xem danh sÃ¡ch bÃ¡o cÃ¡o cáº§n nháº­p liá»‡u
+Hiá»ƒn thá»‹ danh sÃ¡ch biá»ƒu máº«u Ä‘Æ°á»£c giao cho Ä‘Æ¡n vá»‹ ngÆ°á»i dÃ¹ng: TÃªn BM, Ká»³, Háº¡n ná»™p, Tráº¡ng thÃ¡i, % hoÃ n thÃ nh
+Lá»c theo tráº¡ng thÃ¡i: ChÆ°a nháº­p / Äang nháº­p (Draft) / ÄÃ£ gá»­i / Trá»… háº¡n
+[DM-01-B]  Nháº­p liá»‡u sá»‘ liá»‡u
+Giao diá»‡n lÆ°á»›i (grid): má»—i hÃ ng lÃ  má»™t chá»‰ tiÃªu, má»—i cá»™t lÃ  má»™t thuá»™c tÃ­nh
+Di chuyá»ƒn giá»¯a cÃ¡c Ã´ báº±ng Tab/Enter; há»— trá»£ phÃ­m táº¯t: Ctrl+S (lÆ°u nhÃ¡p), Ctrl+Enter (gá»­i)
+Thanh tiáº¿n trÃ¬nh hiá»ƒn thá»‹ % Ã´ Ä‘Ã£ Ä‘iá»n / tá»•ng Ã´ cáº§n Ä‘iá»n
+TÃ´ mÃ u cáº£nh bÃ¡o táº¡i cÃ¡c Ã´ báº¯t buá»™c chÆ°a nháº­p
+XÃ¡c thá»±c real-time: kiá»ƒu dá»¯ liá»‡u, pháº¡m vi min/max, Ã´ báº¯t buá»™c, cáº£nh bÃ¡o khi chÃªnh lá»‡ch >50% ká»³ trÆ°á»›c
+TÃ¬m kiáº¿m chá»‰ tiÃªu theo tá»« khÃ³a trong biá»ƒu máº«u
+[DM-01-C]  LÆ°u nhÃ¡p tá»± Ä‘á»™ng (Auto-save)
+Tá»± Ä‘á»™ng lÆ°u nhÃ¡p má»—i 30 giÃ¢y khi cÃ³ thay Ä‘á»•i
+Hiá»ƒn thá»‹ thÃ´ng bÃ¡o: "ÄÃ£ lÆ°u nhÃ¡p lÃºc HH:MM:SS"
+KhÃ´i phá»¥c nhÃ¡p tá»± Ä‘á»™ng khi ngÆ°á»i dÃ¹ng má»Ÿ láº¡i biá»ƒu máº«u chÆ°a gá»­i
+[DM-01-D]  Nháº­p liá»‡u tá»« file Excel
+Táº£i file Excel máº«u chuáº©n theo cáº¥u trÃºc biá»ƒu máº«u
+Upload file: Ã¡nh xáº¡ cá»™t tá»± Ä‘á»™ng, xÃ¡c thá»±c toÃ n bá»™ trÆ°á»›c khi nháº­p
+BÃ¡o cÃ¡o káº¿t quáº£: sá»‘ dÃ²ng thÃ nh cÃ´ng / sá»‘ dÃ²ng lá»—i kÃ¨m mÃ´ táº£ lá»—i
+[DM-01-E]  Sao chÃ©p dá»¯ liá»‡u ká»³ trÆ°á»›c
+NÃºt "Láº¥y dá»¯ liá»‡u ká»³ trÆ°á»›c": Ä‘iá»n sáºµn giÃ¡ trá»‹ tá»« ká»³ liá»n ká»
+XÃ¡c nháº­n trÆ°á»›c khi ghi Ä‘Ã¨ dá»¯ liá»‡u hiá»‡n táº¡i; chá»‰ sao chÃ©p giÃ¡ trá»‹ sá»‘
+[DM-01-F]  Lá»‹ch sá»­ thay Ä‘á»•i & Xuáº¥t dá»¯ liá»‡u
+Xem lá»‹ch sá»­: ngÆ°á»i sá»­a, thá»i gian, giÃ¡ trá»‹ cÅ© â†’ má»›i theo tá»«ng Ã´
+Xuáº¥t dá»¯ liá»‡u ra Excel (giá»¯ cáº¥u trÃºc biá»ƒu máº«u) hoáº·c PDF (Ä‘á»‹nh dáº¡ng A4, cÃ³ chá»¯ kÃ½ phÃª duyá»‡t)
+3.14 Gá»­i BÃ¡o CÃ¡o
+[SUBM-01-A]  Gá»­i bÃ¡o cÃ¡o lÃªn cáº¥p trÃªn
+NÃºt "Gá»­i duyá»‡t" chá»‰ hiá»ƒn thá»‹ khi táº¥t cáº£ Ã´ báº¯t buá»™c Ä‘Ã£ Ä‘iá»n Ä‘áº§y Ä‘á»§
+Cho phÃ©p nháº­p ghi chÃº khi gá»­i
+Há»‡ thá»‘ng tá»± Ä‘á»™ng thÃ´ng bÃ¡o Ä‘áº¿n ngÆ°á»i phÃª duyá»‡t Ä‘Æ°á»£c chá»‰ Ä‘á»‹nh
+Tráº¡ng thÃ¡i bÃ¡o cÃ¡o chuyá»ƒn tá»« DRAFT â†’ PENDING
+[SUBM-01-B]  Xem & Táº£i bÃ¡o cÃ¡o trÆ°á»›c khi gá»­i
+Xem toÃ n bá»™ dá»¯ liá»‡u Ä‘Ã£ nháº­p trÆ°á»›c khi gá»­i chÃ­nh thá»©c
+Táº£i xuá»‘ng file Excel / PDF cá»§a bÃ¡o cÃ¡o
+3.15 Tá»•ng Há»£p BÃ¡o CÃ¡o Sá»‘ Liá»‡u
+[SUM-01-A]  Xem tráº¡ng thÃ¡i tá»•ng há»£p
+Xem sá»‘ lÆ°á»£ng bÃ¡o cÃ¡o Ä‘Æ¡n vá»‹ Ä‘Ã£ ná»™p / chÆ°a ná»™p / trá»… háº¡n
+Hiá»ƒn thá»‹ tráº¡ng thÃ¡i tá»•ng há»£p: ChÆ°a tá»•ng há»£p / ÄÃ£ tá»•ng há»£p / ÄÃ£ trÃ¬nh lÃ£nh Ä‘áº¡o
+TÃ¬m kiáº¿m trong bÃ¡o cÃ¡o tá»•ng há»£p theo tá»« khÃ³a chá»‰ tiÃªu
+[SUM-01-B]  Thá»±c hiá»‡n tá»•ng há»£p sá»‘ liá»‡u
+KÃ­ch nÃºt "Tá»•ng há»£p": há»‡ thá»‘ng tá»± Ä‘á»™ng cá»™ng dá»“n sá»‘ liá»‡u tá»« cÃ¡c Ä‘Æ¡n vá»‹ Ä‘Ã£ ná»™p
+Xem sá»‘ liá»‡u tá»•ng há»£p theo tá»«ng chá»‰ tiÃªu; phÃ¢n biá»‡t rÃµ Ä‘Æ¡n vá»‹ nÃ o chÆ°a ná»™p
+Cháº¡y láº¡i tá»•ng há»£p khi cÃ³ Ä‘Æ¡n vá»‹ ná»™p muá»™n (cáº­p nháº­t sá»‘ liá»‡u má»›i nháº¥t)
+[SUM-01-C]  TrÃ¬nh bÃ¡o cÃ¡o lÃªn lÃ£nh Ä‘áº¡o
+NÃºt "TrÃ¬nh lÃ£nh Ä‘áº¡o": chuyá»ƒn tráº¡ng thÃ¡i â†’ chá» lÃ£nh Ä‘áº¡o phÃª duyá»‡t
+ThÃ´ng bÃ¡o tá»± Ä‘á»™ng Ä‘áº¿n lÃ£nh Ä‘áº¡o Ä‘Æ¡n vá»‹
+1. Quy táº¯c Biá»ƒu máº«u Tá»•ng há»£p (Cáº¥u trÃºc Cha - Con)
+CÆ¡ cháº¿ nÃ y Ã¡p dá»¥ng khi má»™t bÃ¡o cÃ¡o lá»›n (Cha) Ä‘Æ°á»£c chia nhá» thÃ nh cÃ¡c pháº§n viá»‡c khÃ¡c nhau cho cÃ¡c Ä‘Æ¡n vá»‹/cÃ¡ nhÃ¢n khÃ¡c nhau (Con).
+NguyÃªn táº¯c liÃªn káº¿t: Sá»­ dá»¥ng MÃ£ chá»‰ tiÃªu (Indicator Code) lÃ m khÃ³a Ä‘á»‹nh danh duy nháº¥t. CÃ¡c chá»‰ tiÃªu trong biá»ƒu máº«u Con pháº£i lÃ  táº­p há»£p con cá»§a biá»ƒu máº«u Cha.
+Logic rÃ£ chá»‰ tiÃªu: * Biá»ƒu máº«u Cha Ä‘á»‹nh nghÄ©a danh má»¥c $N$ chá»‰ tiÃªu.
+Khi thiáº¿t káº¿ biá»ƒu máº«u Con, ngÆ°á»i quáº£n lÃ½ trÃ­ch xuáº¥t cÃ¡c mÃ£ chá»‰ tiÃªu cá»¥ thá»ƒ tá»« danh má»¥c cá»§a bÃ¡o cÃ¡o Cha. CÃ¡c biá»ƒu máº«u Con khÃ¡c nhau khÃ´ng Ä‘Æ°á»£c chá»©a trÃ¹ng mÃ£ chá»‰ tiÃªu Ä‘á»ƒ Ä‘áº£m báº£o tÃ­nh duy nháº¥t cá»§a dá»¯ liá»‡u Ä‘áº§u vÃ o.
+Logic Ä‘á»“ng bá»™ dá»¯ liá»‡u:
+Chiá»u xuÃ´i: Khi biá»ƒu máº«u Con Ä‘Æ°á»£c phÃª duyá»‡t (APPROVED), giÃ¡ trá»‹ cá»§a cÃ¡c mÃ£ chá»‰ tiÃªu sáº½ tá»± Ä‘á»™ng cáº­p nháº­t vÃ o cÃ¡c Ã´ tÆ°Æ¡ng á»©ng trÃªn biá»ƒu máº«u Cha.
+Tráº¡ng thÃ¡i hiá»ƒn thá»‹: Táº¡i biá»ƒu máº«u Cha, cÃ¡c Ã´ dá»¯ liá»‡u nÃ y sáº½ á»Ÿ tráº¡ng thÃ¡i Chá»‰ Ä‘á»c (Read-only) vÃ  hiá»ƒn thá»‹ rÃµ nguá»“n gá»‘c dá»¯ liá»‡u (VÃ­ dá»¥: "Láº¥y tá»« BÃ¡o cÃ¡o Con A").
+Äiá»u kiá»‡n hoÃ n thÃ nh: Biá»ƒu máº«u Cha chá»‰ cÃ³ thá»ƒ Ä‘Æ°á»£c duyá»‡t khi táº¥t cáº£ cÃ¡c biá»ƒu máº«u Con liÃªn quan Ä‘Ã£ hoÃ n thÃ nh ná»™p sá»‘ liá»‡u.
+2. Quy táº¯c Biá»ƒu máº«u Cá»™ng dá»“n (Cumulative Logic)
+CÆ¡ cháº¿ nÃ y Ã¡p dá»¥ng khi cÃ¹ng má»™t biá»ƒu máº«u Ä‘Æ°á»£c giao cho nhiá»u Ä‘Æ¡n vá»‹ cáº¥p dÆ°á»›i Ä‘á»ƒ thu tháº­p sá»‘ liá»‡u tá»•ng lá»±c.
+NguyÃªn táº¯c tá»•ng há»£p: GiÃ¡ trá»‹ chá»‰ tiÃªu táº¡i cáº¥p quáº£n lÃ½ báº±ng tá»•ng Ä‘áº¡i sá»‘ cÃ¡c giÃ¡ trá»‹ cÃ¹ng mÃ£ chá»‰ tiÃªu tá»« táº¥t cáº£ Ä‘Æ¡n vá»‹ cáº¥p dÆ°á»›i ná»™p lÃªn.
+CÃ´ng thá»©c xá»­ lÃ½: $V_{Cha} = \sum (V_{Donvi1} + V_{Donvi2} + ... + V_{DonviN})$.
+Logic thá»i gian thá»±c: * Há»‡ thá»‘ng cho phÃ©p xem sá»‘ liá»‡u cá»™ng dá»“n táº¡m tÃ­nh (ngay khi Ä‘Æ¡n vá»‹ ná»™p bÃ¡o cÃ¡o á»Ÿ tráº¡ng thÃ¡i PENDING).
+Dá»¯ liá»‡u cá»™ng dá»“n chÃ­nh thá»©c chá»‰ Ä‘Æ°á»£c xÃ¡c nháº­n khi táº¥t cáº£ Ä‘Æ¡n vá»‹ thÃ nh pháº§n chuyá»ƒn sang tráº¡ng thÃ¡i APPROVED.
+Xá»­ lÃ½ sai lá»‡ch: Há»‡ thá»‘ng cung cáº¥p chá»©c nÄƒng Ä‘á»‘i soÃ¡t Ä‘á»ƒ phÃ¡t hiá»‡n Ä‘Æ¡n vá»‹ nÃ o chÆ°a ná»™p hoáº·c dá»¯ liá»‡u cÃ³ sá»± biáº¿n Ä‘á»™ng báº¥t thÆ°á»ng (vÆ°á»£t ngÆ°á»¡ng cáº£nh bÃ¡o cáº¥u hÃ¬nh táº¡i má»¥c NT-01) trÆ°á»›c khi thá»±c hiá»‡n chá»‘t sá»‘ liá»‡u cá»™ng dá»“n.
+3. Quy táº¯c chung vá» tÃ­nh toÃ n váº¹n
+KhÃ³a dá»¯ liá»‡u: Ngay khi dá»¯ liá»‡u tá»« biá»ƒu máº«u Con hoáº·c Ä‘Æ¡n vá»‹ cáº¥p dÆ°á»›i Ä‘Æ°á»£c tá»•ng há»£p vÃ o biá»ƒu máº«u Cha, cÃ¡c báº£n ghi gá»‘c sáº½ bá»‹ khÃ³a Ä‘á»ƒ trÃ¡nh sai lá»‡ch sá»‘ liá»‡u tá»•ng. Náº¿u muá»‘n sá»­a Ä‘á»•i, pháº£i thá»±c hiá»‡n quy trÃ¬nh Tráº£ láº¡i (Reject) tá»« cáº¥p cao nháº¥t xuá»‘ng.
+Äá»“ng bá»™ Ä‘Æ¡n vá»‹ tÃ­nh: Táº¥t cáº£ cÃ¡c chá»‰ tiÃªu cÃ³ cÃ¹ng mÃ£ khi náº±m trong cÃ¡c biá»ƒu máº«u khÃ¡c nhau (Cha hay Con) báº¯t buá»™c pháº£i sá»­ dá»¥ng chung má»™t Ä‘Æ¡n vá»‹ tÃ­nh (Unit of Measure) vÃ  Ä‘á»‹nh dáº¡ng dá»¯ liá»‡u (Data Type).
+3.16 Duyá»‡t BÃ¡o CÃ¡o
+[APPR-01-A]  Xem danh sÃ¡ch bÃ¡o cÃ¡o cáº§n duyá»‡t
+TÃ¬m kiáº¿m/lá»c bÃ¡o cÃ¡o theo Ä‘Æ¡n vá»‹, biá»ƒu máº«u, ká»³, tráº¡ng thÃ¡i
+Hiá»ƒn thá»‹ Æ°u tiÃªn: bÃ¡o cÃ¡o gáº§n trá»… háº¡n hoáº·c Ä‘Ã£ chá» duyá»‡t lÃ¢u
+[APPR-01-B]  Xem chi tiáº¿t & Táº£i bÃ¡o cÃ¡o
+Xem toÃ n bá»™ dá»¯ liá»‡u bÃ¡o cÃ¡o cá»§a Ä‘Æ¡n vá»‹ trÃ¬nh lÃªn
+Xem lá»‹ch sá»­ phÃª duyá»‡t cÃ¡c láº§n trÆ°á»›c (náº¿u cÃ³)
+Táº£i xuá»‘ng file Excel/PDF cá»§a bÃ¡o cÃ¡o Ä‘á»ƒ xem ngoÃ i há»‡ thá»‘ng
+[APPR-01-C]  PhÃª duyá»‡t bÃ¡o cÃ¡o
+NÃºt "PhÃª duyá»‡t": tráº¡ng thÃ¡i chuyá»ƒn sang APPROVED
+Ghi nháº­n: ngÆ°á»i duyá»‡t, thá»i Ä‘iá»ƒm duyá»‡t, ghi chÃº phÃª duyá»‡t
+ThÃ´ng bÃ¡o tá»± Ä‘á»™ng Ä‘áº¿n ngÆ°á»i gá»­i bÃ¡o cÃ¡o
+[APPR-01-D]  Tá»« chá»‘i / Tráº£ láº¡i bÃ¡o cÃ¡o
+NÃºt "Tá»« chá»‘i/Tráº£ láº¡i": báº¯t buá»™c nháº­p lÃ½ do
+Tráº¡ng thÃ¡i chuyá»ƒn sang REJECTED; ngÆ°á»i nháº­p liá»‡u nháº­n thÃ´ng bÃ¡o kÃ¨m lÃ½ do
+NgÆ°á»i nháº­p liá»‡u chá»‰nh sá»­a vÃ  gá»­i láº¡i; lá»‹ch sá»­ má»—i láº§n gá»­i Ä‘Æ°á»£c lÆ°u Ä‘áº§y Ä‘á»§
+[APPR-01-E]  Cáº­p nháº­t ná»™i dung tá»« chá»‘i
+Approver cÃ³ thá»ƒ bá»• sung/cáº­p nháº­t ghi chÃº lÃ½ do tá»« chá»‘i sau khi Ä‘Ã£ gá»­i (trong vÃ²ng 24h)
+3.17 Theo DÃµi Tráº¡ng ThÃ¡i BÃ¡o CÃ¡o
+[MON-01]  Theo dÃµi tráº¡ng thÃ¡i thá»±c hiá»‡n
+Xem danh sÃ¡ch bÃ¡o cÃ¡o cá»§a Ä‘Æ¡n vá»‹ thá»±c hiá»‡n: tÃªn BM, ká»³, Ä‘Æ¡n vá»‹, tráº¡ng thÃ¡i, % hoÃ n thÃ nh, háº¡n ná»™p
+TÃ¬m kiáº¿m/lá»c theo Ä‘Æ¡n vá»‹, biá»ƒu máº«u, ká»³, tráº¡ng thÃ¡i (DRAFT/PENDING/APPROVED/REJECTED/OVERDUE)
+Xem dá»¯ liá»‡u chi tiáº¿t bÃ¡o cÃ¡o cá»§a tá»«ng Ä‘Æ¡n vá»‹
+Táº£i xuá»‘ng bÃ¡o cÃ¡o cá»§a Ä‘Æ¡n vá»‹
+Gá»­i nháº¯c nhá»Ÿ (reminder) thá»§ cÃ´ng Ä‘áº¿n Ä‘Æ¡n vá»‹ chÆ°a ná»™p
+3.18 Tra Cá»©u BÃ¡o CÃ¡o
+[QRY-01]  Tra cá»©u bÃ¡o cÃ¡o theo Ä‘Æ¡n vá»‹
+Chá»n Ä‘Æ¡n vá»‹ â†’ chá»n biá»ƒu máº«u â†’ chá»n ká»³ â†’ xem dá»¯ liá»‡u chi tiáº¿t
+So sÃ¡nh dá»¯ liá»‡u giá»¯a cÃ¡c ká»³ cá»§a cÃ¹ng Ä‘Æ¡n vá»‹
+Xuáº¥t dá»¯ liá»‡u tra cá»©u ra Excel/PDF
+[QRY-02]  Tra cá»©u bÃ¡o cÃ¡o tá»•ng há»£p
+Xem sá»‘ liá»‡u tá»•ng há»£p theo biá»ƒu máº«u, ká»³, lÄ©nh vá»±c
+Lá»c theo nhiá»u tiÃªu chÃ­ Ä‘á»“ng thá»i: Ä‘Æ¡n vá»‹, lÄ©nh vá»±c, khoáº£ng thá»i gian
+Xuáº¥t bÃ¡o cÃ¡o tá»•ng há»£p ra Excel/PDF
+NHÃ“M V â€“ THÃ”NG BÃO, Cáº¢NH BÃO & THá»NG KÃŠ
+3.19 ThÃ´ng BÃ¡o & Cáº£nh BÃ¡o
+[NT-01]  ThÃ´ng bÃ¡o tá»± Ä‘á»™ng
+NT-01-A: ThÃ´ng bÃ¡o giao viá»‡c má»›i khi Data Manager phÃ¢n cÃ´ng biá»ƒu máº«u cho Ä‘Æ¡n vá»‹
+NT-01-B: Nháº¯c háº¡n ná»™p: tá»± Ä‘á»™ng gá»­i trÆ°á»›c 3 ngÃ y, 1 ngÃ y vÃ  vÃ o ngÃ y háº¿t háº¡n
+NT-01-C: ThÃ´ng bÃ¡o bÃ¡o cÃ¡o chá» duyá»‡t Ä‘áº¿n ngÆ°á»i phÃª duyá»‡t Ä‘Æ°á»£c chá»‰ Ä‘á»‹nh
+NT-01-D: ThÃ´ng bÃ¡o káº¿t quáº£ phÃª duyá»‡t (APPROVED/REJECTED kÃ¨m ghi chÃº) Ä‘áº¿n ngÆ°á»i gá»­i
+NT-01-E: Cáº£nh bÃ¡o dá»¯ liá»‡u báº¥t thÆ°á»ng: giÃ¡ trá»‹ ngoÃ i pháº¡m vi, chÃªnh lá»‡ch >50% ká»³ trÆ°á»›c
+NT-01-F: Cáº£nh bÃ¡o chá»‰ tiÃªu Ä‘áº¡t <50% káº¿ hoáº¡ch khi cÃ²n >50% thá»i gian
+[NT-02]  CÃ i Ä‘áº·t thÃ´ng bÃ¡o
+Multi-channel: In-app notification vÃ  Email (cÃ³ thá»ƒ báº­t/táº¯t tá»«ng kÃªnh)
+NgÆ°á»i dÃ¹ng tá»± chá»n loáº¡i thÃ´ng bÃ¡o muá»‘n nháº­n (cÃ¡ nhÃ¢n hÃ³a)
+Nháº­t kÃ½ thÃ´ng bÃ¡o: lá»‹ch sá»­ gá»­i, tráº¡ng thÃ¡i (thÃ nh cÃ´ng/lá»—i), Ä‘Ã£ Ä‘á»c/chÆ°a Ä‘á»c
+Retry tá»± Ä‘á»™ng khi gá»­i email lá»—i: tá»‘i Ä‘a 3 láº§n, cÃ¡ch 5 phÃºt
+Xá»­ lÃ½ báº¥t Ä‘á»“ng bá»™ (async queue) khÃ´ng áº£nh hÆ°á»Ÿng hiá»‡u nÄƒng há»‡ thá»‘ng
+3.20 Thá»‘ng KÃª & PhÃ¢n TÃ­ch
+[STAT-01]  Dashboard & Thá»‘ng kÃª
+Dashboard KPI: chá»‰ tiÃªu quan trá»ng dáº¡ng tháº» (Card), Ä‘á»“ng há»“ Ä‘o (Gauge), sparkline
+Thá»‘ng kÃª cÆ¡ báº£n: Tá»•ng, Trung bÃ¬nh, Min, Max, Äáº¿m theo cá»™t/nhÃ³m
+So sÃ¡nh Ä‘a chiá»u: ká»³ nÃ y vs. ká»³ trÆ°á»›c, giá»¯a cÃ¡c Ä‘Æ¡n vá»‹, thá»±c táº¿ vs. káº¿ hoáº¡ch
+Tá»· lá»‡ hoÃ n thÃ nh bÃ¡o cÃ¡o: Ä‘Ã£ ná»™p / tá»•ng Ä‘Æ°á»£c giao theo Ä‘Æ¡n vá»‹, ká»³, lÄ©nh vá»±c
+[STAT-02]  Biá»ƒu Ä‘á»“ & Pivot Table
+Biá»ƒu Ä‘á»“: Cá»™t (Bar), ÄÆ°á»ng (Line), TrÃ²n (Pie), Káº¿t há»£p (Combo); tÃ¹y chá»‰nh mÃ u sáº¯c, nhÃ£n
+Pivot Table: kÃ©o tháº£ chiá»u dá»¯ liá»‡u, tá»•ng há»£p linh hoáº¡t (sum/avg/count/min/max)
+LÆ°u biá»ƒu Ä‘á»“ thÃ nh hÃ¬nh áº£nh (PNG/SVG)
+[STAT-03]  Xuáº¥t bÃ¡o cÃ¡o phÃ¢n tÃ­ch
+Xuáº¥t ra PDF/Excel/Word vá»›i Ä‘áº§y Ä‘á»§ biá»ƒu Ä‘á»“ vÃ  báº£ng sá»‘ liá»‡u
+Há»— trá»£ máº«u xuáº¥t tÃ¹y chá»‰nh theo Ä‘Æ¡n vá»‹; xuáº¥t nhiá»u ká»³ vÃ o má»™t file (multi-sheet)
+4. Báº¢NG TRáº NG THÃI BÃO CÃO VÃ€ LUá»’NG CHUYá»‚N TRáº NG THÃI
+Ghi chÃº: Sau khi APPROVED, dá»¯ liá»‡u khÃ´ng thá»ƒ sá»­a trá»±c tiáº¿p. Náº¿u cáº§n hiá»‡u chá»‰nh, pháº£i táº¡o phiÃªn báº£n Ä‘iá»u chá»‰nh má»›i vÃ  thá»±c hiá»‡n láº¡i quy trÃ¬nh phÃª duyá»‡t.
+5. MÃ” HÃŒNH Dá»® LIá»†U Cá»T LÃ•I
+6. YÃŠU Cáº¦U PHI CHá»¨C NÄ‚NG
+6.1 Hiá»‡u NÄƒng
+Thá»i gian pháº£n há»“i API: < 500ms cho 95% request thÃ´ng thÆ°á»ng
+Dashboard KPI táº£i trong < 3 giÃ¢y vá»›i dá»¯ liá»‡u 12 thÃ¡ng gáº§n nháº¥t
+Há»— trá»£ tá»‘i thiá»ƒu 100 ngÆ°á»i dÃ¹ng Ä‘á»“ng thá»i khÃ´ng giáº£m hiá»‡u nÄƒng
+Import file Excel 10.000 dÃ²ng xá»­ lÃ½ trong < 30 giÃ¢y
+6.2 Báº£o Máº­t
+ToÃ n bá»™ giao tiáº¿p qua HTTPS (TLS 1.2+)
+Máº­t kháº©u hash báº±ng bcrypt (cost factor >= 12); khÃ´ng lÆ°u plaintext
+JWT access token háº¿t háº¡n sau 1 giá»; Refresh token háº¿t háº¡n sau 7 ngÃ y
+Chá»‘ng táº¥n cÃ´ng: SQL Injection, XSS, CSRF
+API Rate limit: 1000 request/phÃºt/IP
+Kiá»ƒm tra báº£o máº­t (Penetration Testing) Ã­t nháº¥t 1 láº§n/nÄƒm
+6.3 Kháº£ NÄƒng Sá»­ Dá»¥ng
+Giao diá»‡n responsive: tÆ°Æ¡ng thÃ­ch mÃ n hÃ¬nh tá»« 1024px trá»Ÿ lÃªn
+Há»— trá»£ trÃ¬nh duyá»‡t: Chrome, Firefox, Edge (2 phiÃªn báº£n má»›i nháº¥t)
+NgÃ´n ngá»¯ giao diá»‡n: Tiáº¿ng Viá»‡t; sáºµn sÃ ng má»Ÿ rá»™ng thÃªm ngÃ´n ngá»¯
+ThÃ´ng bÃ¡o lá»—i rÃµ rÃ ng, thÃ¢n thiá»‡n vá»›i ngÆ°á»i dÃ¹ng khÃ´ng chuyÃªn IT
+6.4 Äá»™ Tin Cáº­y & Sáºµn SÃ ng
+Uptime má»¥c tiÃªu: >= 99.5% (khÃ´ng tÃ­nh báº£o trÃ¬ cÃ³ káº¿ hoáº¡ch)
+Sao lÆ°u dá»¯ liá»‡u tá»± Ä‘á»™ng hÃ ng ngÃ y; lÆ°u trá»¯ tá»‘i thiá»ƒu 30 ngÃ y
+Recovery Point Objective (RPO): <= 24 giá»
+Recovery Time Objective (RTO): <= 4 giá»
+6.5 Kháº£ NÄƒng Má»Ÿ Rá»™ng
+Kiáº¿n trÃºc há»— trá»£ scale horizontally khi tÄƒng táº£i
+Thiáº¿t káº¿ module hÃ³a, dá»… dÃ ng bá»• sung chá»©c nÄƒng má»›i
+REST API chuáº©n, há»— trá»£ tÃ­ch há»£p vá»›i há»‡ thá»‘ng cáº¥p huyá»‡n/tá»‰nh trong tÆ°Æ¡ng lai
+7. Káº¾ HOáº CH TRIá»‚N KHAI
+7.1 PhÃ¢n Chia Giai Äoáº¡n
+7.2 YÃªu Cáº§u MÃ´i TrÆ°á»ng Triá»ƒn Khai
+Server: Tá»‘i thiá»ƒu 4 CPU core, 8GB RAM, 100GB SSD
+Há»‡ Ä‘iá»u hÃ nh: Ubuntu Server 22.04 LTS hoáº·c tÆ°Æ¡ng Ä‘Æ°Æ¡ng
+CÆ¡ sá»Ÿ dá»¯ liá»‡u: PostgreSQL 15+ hoáº·c MySQL 8+
+Web Server: Nginx 1.24+
+Káº¿t ná»‘i internet: tá»‘i thiá»ƒu 10 Mbps
+PHá»¤ Lá»¤C A â€“ Báº¢NG MÃƒ CHá»¨C NÄ‚NG
+PHá»¤ Lá»¤C B â€“ THUáº¬T NGá»® & VIáº¾T Táº®T

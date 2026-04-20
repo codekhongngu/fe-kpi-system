@@ -59,6 +59,11 @@ export const sidebarData: SidebarData = {
           icon: Users,
         },
         {
+          title: 'System Admin',
+          url: '/system-admin',
+          icon: ShieldCheck,
+        },
+        {
           title: 'Secured by Clerk',
           icon: ClerkLogo,
           items: [
