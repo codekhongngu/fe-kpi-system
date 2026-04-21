@@ -9,6 +9,8 @@ import {
   Lock,
   Bell,
   Package,
+  FileSpreadsheet,
+  FileCheck2,
   Palette,
   ServerOff,
   Settings,
@@ -59,9 +61,19 @@ export const sidebarData: SidebarData = {
           icon: Users,
         },
         {
-          title: 'System Admin',
+          title: 'Quản trị hệ thống',
           url: '/system-admin',
           icon: ShieldCheck,
+        },
+        {
+          title: 'Quản lí biểu mẫu',
+          url: '/form-management',
+          icon: FileSpreadsheet,
+        },
+        {
+          title: 'Quản lý báo cáo',
+          url: '/report-management',
+          icon: FileCheck2,
         },
         {
           title: 'Secured by Clerk',

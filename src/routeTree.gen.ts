@@ -29,7 +29,9 @@ import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSystemAdminIndexRouteImport } from './routes/_authenticated/system-admin/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedReportManagementIndexRouteImport } from './routes/_authenticated/report-management/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
+import { Route as AuthenticatedFormManagementIndexRouteImport } from './routes/_authenticated/form-management/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
 import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
 import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
@@ -141,10 +143,22 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedReportManagementIndexRoute =
+  AuthenticatedReportManagementIndexRouteImport.update({
+    id: '/report-management/',
+    path: '/report-management/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHelpCenterIndexRoute =
   AuthenticatedHelpCenterIndexRouteImport.update({
     id: '/help-center/',
     path: '/help-center/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFormManagementIndexRoute =
+  AuthenticatedFormManagementIndexRouteImport.update({
+    id: '/form-management/',
+    path: '/form-management/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
@@ -228,7 +242,9 @@ export interface FileRoutesByFullPath {
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/apps/': typeof AuthenticatedAppsIndexRoute
   '/chats/': typeof AuthenticatedChatsIndexRoute
+  '/form-management/': typeof AuthenticatedFormManagementIndexRoute
   '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/report-management/': typeof AuthenticatedReportManagementIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/system-admin/': typeof AuthenticatedSystemAdminIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
@@ -257,7 +273,9 @@ export interface FileRoutesByTo {
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
+  '/form-management': typeof AuthenticatedFormManagementIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
+  '/report-management': typeof AuthenticatedReportManagementIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/system-admin': typeof AuthenticatedSystemAdminIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
@@ -291,7 +309,9 @@ export interface FileRoutesById {
   '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
+  '/_authenticated/form-management/': typeof AuthenticatedFormManagementIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
+  '/_authenticated/report-management/': typeof AuthenticatedReportManagementIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/system-admin/': typeof AuthenticatedSystemAdminIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
@@ -323,7 +343,9 @@ export interface FileRouteTypes {
     | '/clerk/user-management'
     | '/apps/'
     | '/chats/'
+    | '/form-management/'
     | '/help-center/'
+    | '/report-management/'
     | '/settings/'
     | '/system-admin/'
     | '/tasks/'
@@ -352,7 +374,9 @@ export interface FileRouteTypes {
     | '/clerk/user-management'
     | '/apps'
     | '/chats'
+    | '/form-management'
     | '/help-center'
+    | '/report-management'
     | '/settings'
     | '/system-admin'
     | '/tasks'
@@ -385,7 +409,9 @@ export interface FileRouteTypes {
     | '/clerk/_authenticated/user-management'
     | '/_authenticated/apps/'
     | '/_authenticated/chats/'
+    | '/_authenticated/form-management/'
     | '/_authenticated/help-center/'
+    | '/_authenticated/report-management/'
     | '/_authenticated/settings/'
     | '/_authenticated/system-admin/'
     | '/_authenticated/tasks/'
@@ -549,11 +575,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/report-management/': {
+      id: '/_authenticated/report-management/'
+      path: '/report-management'
+      fullPath: '/report-management/'
+      preLoaderRoute: typeof AuthenticatedReportManagementIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/help-center/': {
       id: '/_authenticated/help-center/'
       path: '/help-center'
       fullPath: '/help-center/'
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/form-management/': {
+      id: '/_authenticated/form-management/'
+      path: '/form-management'
+      fullPath: '/form-management/'
+      preLoaderRoute: typeof AuthenticatedFormManagementIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chats/': {
@@ -658,7 +698,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
+  AuthenticatedFormManagementIndexRoute: typeof AuthenticatedFormManagementIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
+  AuthenticatedReportManagementIndexRoute: typeof AuthenticatedReportManagementIndexRoute
   AuthenticatedSystemAdminIndexRoute: typeof AuthenticatedSystemAdminIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
@@ -670,7 +712,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
+  AuthenticatedFormManagementIndexRoute: AuthenticatedFormManagementIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
+  AuthenticatedReportManagementIndexRoute:
+    AuthenticatedReportManagementIndexRoute,
   AuthenticatedSystemAdminIndexRoute: AuthenticatedSystemAdminIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
