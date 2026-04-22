@@ -11,6 +11,8 @@ export type TemplateField = {
   required: boolean
   visible: boolean
   order: number
+  parentId?: string | null
+  level?: number
   isSystemDefault: boolean
 }
 
@@ -22,6 +24,9 @@ export type TemplateIndicator = {
   type: IndicatorType
   group: string
   formula: string | null
+  parentId?: string | null
+  order?: number
+  level?: number
   hasReportData: boolean
 }
 

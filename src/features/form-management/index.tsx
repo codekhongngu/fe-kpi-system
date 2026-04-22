@@ -1,14 +1,10 @@
-import { FilePenLine, ListFilter, SlidersHorizontal } from 'lucide-react'
+﻿import { Outlet } from '@tanstack/react-router'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TemplateStructureTab } from './components/template-structure-tab'
-import { TemplatesLifecycleTab } from './components/templates-lifecycle-tab'
-import { TemplatesListTab } from './components/templates-list-tab'
+import { Separator } from '@/components/ui/separator'
 
 export function FormManagement() {
   return (
@@ -21,45 +17,22 @@ export function FormManagement() {
         </div>
       </Header>
 
-      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        <Card>
-          <CardHeader>
-            <CardTitle className='text-2xl'>Module B - Quản lí biểu mẫu</CardTitle>
-          </CardHeader>
-          <CardContent className='text-muted-foreground'>
-            Tập trung quản lý danh sách biểu mẫu, vòng đời thêm/sửa/xóa và cấu trúc
-            thuộc tính/chỉ tiêu. Dữ liệu hiện tại chạy bằng mock API để phục vụ phát triển
-            UI/logic nghiệp vụ.
-          </CardContent>
-        </Card>
+      <Main fixed>
+        {/* <div className='space-y-0.5'>
+          <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
+            Module B - Quản lý biểu mẫu
+          </h1>
+          <p className='text-muted-foreground'>
+            Mô hình Form Builder theo thiết kế mới: tách trang Danh sách, Tạo mới, Chỉnh sửa và Chi
+            tiết để tối ưu điều hướng và trải nghiệm thao tác.
+          </p>
+        </div>
 
-        <Tabs defaultValue='list' className='space-y-4'>
-          <div className='w-full overflow-x-auto'>
-            <TabsList>
-              <TabsTrigger value='list'>
-                <ListFilter />
-                Danh sách biểu mẫu
-              </TabsTrigger>
-              <TabsTrigger value='lifecycle'>
-                <FilePenLine />
-                Thêm/Sửa/Xóa
-              </TabsTrigger>
-              <TabsTrigger value='structure'>
-                <SlidersHorizontal />
-                Thuộc tính & chỉ tiêu
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value='list'>
-            <TemplatesListTab />
-          </TabsContent>
-          <TabsContent value='lifecycle'>
-            <TemplatesLifecycleTab />
-          </TabsContent>
-          <TabsContent value='structure'>
-            <TemplateStructureTab />
-          </TabsContent>
-        </Tabs>
+        <Separator className='my-4 lg:my-6' /> */}
+
+        <div className='flex w-full flex-1 overflow-y-auto p-1'>
+          <Outlet />
+        </div>
       </Main>
     </>
   )

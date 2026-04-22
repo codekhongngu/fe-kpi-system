@@ -25,6 +25,7 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
+import { Route as AuthenticatedFormManagementRouteRouteImport } from './routes/_authenticated/form-management/route'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSystemAdminIndexRouteImport } from './routes/_authenticated/system-admin/index'
@@ -41,7 +42,10 @@ import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedFormManagementCreateRouteImport } from './routes/_authenticated/form-management/create'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedFormManagementEditTemplateIdRouteImport } from './routes/_authenticated/form-management/edit.$templateId'
+import { Route as AuthenticatedFormManagementDetailsTemplateIdRouteImport } from './routes/_authenticated/form-management/details.$templateId'
 
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
@@ -121,6 +125,12 @@ const AuthenticatedSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFormManagementRouteRoute =
+  AuthenticatedFormManagementRouteRouteImport.update({
+    id: '/form-management',
+    path: '/form-management',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
@@ -157,9 +167,9 @@ const AuthenticatedHelpCenterIndexRoute =
   } as any)
 const AuthenticatedFormManagementIndexRoute =
   AuthenticatedFormManagementIndexRouteImport.update({
-    id: '/form-management/',
-    path: '/form-management/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedFormManagementRouteRoute,
   } as any)
 const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
   id: '/chats/',
@@ -211,16 +221,35 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedFormManagementCreateRoute =
+  AuthenticatedFormManagementCreateRouteImport.update({
+    id: '/create',
+    path: '/create',
+    getParentRoute: () => AuthenticatedFormManagementRouteRoute,
+  } as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFormManagementEditTemplateIdRoute =
+  AuthenticatedFormManagementEditTemplateIdRouteImport.update({
+    id: '/edit/$templateId',
+    path: '/edit/$templateId',
+    getParentRoute: () => AuthenticatedFormManagementRouteRoute,
+  } as any)
+const AuthenticatedFormManagementDetailsTemplateIdRoute =
+  AuthenticatedFormManagementDetailsTemplateIdRouteImport.update({
+    id: '/details/$templateId',
+    path: '/details/$templateId',
+    getParentRoute: () => AuthenticatedFormManagementRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/form-management': typeof AuthenticatedFormManagementRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
@@ -233,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/form-management/create': typeof AuthenticatedFormManagementCreateRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -249,6 +279,8 @@ export interface FileRoutesByFullPath {
   '/system-admin/': typeof AuthenticatedSystemAdminIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
+  '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
+  '/form-management/edit/$templateId': typeof AuthenticatedFormManagementEditTemplateIdRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -264,6 +296,7 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/form-management/create': typeof AuthenticatedFormManagementCreateRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -280,11 +313,14 @@ export interface FileRoutesByTo {
   '/system-admin': typeof AuthenticatedSystemAdminIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
+  '/form-management/edit/$templateId': typeof AuthenticatedFormManagementEditTemplateIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/clerk': typeof ClerkRouteRouteWithChildren
+  '/_authenticated/form-management': typeof AuthenticatedFormManagementRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
   '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -300,6 +336,7 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/form-management/create': typeof AuthenticatedFormManagementCreateRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
@@ -316,12 +353,15 @@ export interface FileRoutesById {
   '/_authenticated/system-admin/': typeof AuthenticatedSystemAdminIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
+  '/_authenticated/form-management/edit/$templateId': typeof AuthenticatedFormManagementEditTemplateIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/clerk'
+    | '/form-management'
     | '/settings'
     | '/forgot-password'
     | '/otp'
@@ -334,6 +374,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/errors/$error'
+    | '/form-management/create'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -350,6 +391,8 @@ export interface FileRouteTypes {
     | '/system-admin/'
     | '/tasks/'
     | '/users/'
+    | '/form-management/details/$templateId'
+    | '/form-management/edit/$templateId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -365,6 +408,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/'
     | '/errors/$error'
+    | '/form-management/create'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
@@ -381,10 +425,13 @@ export interface FileRouteTypes {
     | '/system-admin'
     | '/tasks'
     | '/users'
+    | '/form-management/details/$templateId'
+    | '/form-management/edit/$templateId'
   id:
     | '__root__'
     | '/_authenticated'
     | '/clerk'
+    | '/_authenticated/form-management'
     | '/_authenticated/settings'
     | '/clerk/(auth)'
     | '/clerk/_authenticated'
@@ -400,6 +447,7 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/form-management/create'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
@@ -416,6 +464,8 @@ export interface FileRouteTypes {
     | '/_authenticated/system-admin/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
+    | '/_authenticated/form-management/details/$templateId'
+    | '/_authenticated/form-management/edit/$templateId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -547,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/form-management': {
+      id: '/_authenticated/form-management'
+      path: '/form-management'
+      fullPath: '/form-management'
+      preLoaderRoute: typeof AuthenticatedFormManagementRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
       path: '/users'
@@ -591,10 +648,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/form-management/': {
       id: '/_authenticated/form-management/'
-      path: '/form-management'
+      path: '/'
       fullPath: '/form-management/'
       preLoaderRoute: typeof AuthenticatedFormManagementIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedFormManagementRouteRoute
     }
     '/_authenticated/chats/': {
       id: '/_authenticated/chats/'
@@ -659,6 +716,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/form-management/create': {
+      id: '/_authenticated/form-management/create'
+      path: '/create'
+      fullPath: '/form-management/create'
+      preLoaderRoute: typeof AuthenticatedFormManagementCreateRouteImport
+      parentRoute: typeof AuthenticatedFormManagementRouteRoute
+    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
@@ -666,8 +730,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/form-management/edit/$templateId': {
+      id: '/_authenticated/form-management/edit/$templateId'
+      path: '/edit/$templateId'
+      fullPath: '/form-management/edit/$templateId'
+      preLoaderRoute: typeof AuthenticatedFormManagementEditTemplateIdRouteImport
+      parentRoute: typeof AuthenticatedFormManagementRouteRoute
+    }
+    '/_authenticated/form-management/details/$templateId': {
+      id: '/_authenticated/form-management/details/$templateId'
+      path: '/details/$templateId'
+      fullPath: '/form-management/details/$templateId'
+      preLoaderRoute: typeof AuthenticatedFormManagementDetailsTemplateIdRouteImport
+      parentRoute: typeof AuthenticatedFormManagementRouteRoute
+    }
   }
 }
+
+interface AuthenticatedFormManagementRouteRouteChildren {
+  AuthenticatedFormManagementCreateRoute: typeof AuthenticatedFormManagementCreateRoute
+  AuthenticatedFormManagementIndexRoute: typeof AuthenticatedFormManagementIndexRoute
+  AuthenticatedFormManagementDetailsTemplateIdRoute: typeof AuthenticatedFormManagementDetailsTemplateIdRoute
+  AuthenticatedFormManagementEditTemplateIdRoute: typeof AuthenticatedFormManagementEditTemplateIdRoute
+}
+
+const AuthenticatedFormManagementRouteRouteChildren: AuthenticatedFormManagementRouteRouteChildren =
+  {
+    AuthenticatedFormManagementCreateRoute:
+      AuthenticatedFormManagementCreateRoute,
+    AuthenticatedFormManagementIndexRoute:
+      AuthenticatedFormManagementIndexRoute,
+    AuthenticatedFormManagementDetailsTemplateIdRoute:
+      AuthenticatedFormManagementDetailsTemplateIdRoute,
+    AuthenticatedFormManagementEditTemplateIdRoute:
+      AuthenticatedFormManagementEditTemplateIdRoute,
+  }
+
+const AuthenticatedFormManagementRouteRouteWithChildren =
+  AuthenticatedFormManagementRouteRoute._addFileChildren(
+    AuthenticatedFormManagementRouteRouteChildren,
+  )
 
 interface AuthenticatedSettingsRouteRouteChildren {
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
@@ -693,12 +795,12 @@ const AuthenticatedSettingsRouteRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedFormManagementRouteRoute: typeof AuthenticatedFormManagementRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
-  AuthenticatedFormManagementIndexRoute: typeof AuthenticatedFormManagementIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedReportManagementIndexRoute: typeof AuthenticatedReportManagementIndexRoute
   AuthenticatedSystemAdminIndexRoute: typeof AuthenticatedSystemAdminIndexRoute
@@ -707,12 +809,13 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedFormManagementRouteRoute:
+    AuthenticatedFormManagementRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
-  AuthenticatedFormManagementIndexRoute: AuthenticatedFormManagementIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedReportManagementIndexRoute:
     AuthenticatedReportManagementIndexRoute,

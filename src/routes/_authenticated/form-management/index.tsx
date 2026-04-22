@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { FormManagement } from '@/features/form-management'
+import { FormTemplateListPage } from '@/features/form-management/pages/form-template-list-page'
 
 export const Route = createFileRoute('/_authenticated/form-management/')({
-  component: FormManagement,
+  component: FormTemplateListPage,
 })

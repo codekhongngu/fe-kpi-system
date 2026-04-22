@@ -235,6 +235,8 @@ function defaultFieldsTemplate(templateId: string): TemplateField[] {
       required: true,
       visible: true,
       order: 1,
+      parentId: null,
+      level: 0,
       isSystemDefault: true,
     },
     {
@@ -245,6 +247,8 @@ function defaultFieldsTemplate(templateId: string): TemplateField[] {
       required: true,
       visible: true,
       order: 2,
+      parentId: null,
+      level: 0,
       isSystemDefault: true,
     },
   ]
@@ -260,6 +264,9 @@ function createImportedIndicator(template: FormTemplate, index: number): Templat
     type: 'input',
     group: 'Import Excel',
     formula: null,
+    parentId: null,
+    order: template.indicators.length + index + 1,
+    level: 0,
     hasReportData: false,
   }
 }
@@ -273,6 +280,8 @@ function createImportedField(template: FormTemplate, index: number): TemplateFie
     required: false,
     visible: true,
     order: template.fields.length + index + 1,
+    parentId: null,
+    level: 0,
     isSystemDefault: false,
   }
 }
@@ -435,6 +444,8 @@ export const formManagementMockApi = {
         ...input,
         key: input.key.trim(),
         label: input.label.trim(),
+        parentId: input.parentId ?? null,
+        level: input.level ?? 0,
         isSystemDefault: false,
       }
       template.fields.push(field)
@@ -509,6 +520,9 @@ export const formManagementMockApi = {
         group: input.group.trim(),
         unit: input.unit.trim(),
         formula: input.formula?.trim() ? input.formula.trim() : null,
+        parentId: input.parentId ?? null,
+        order: input.order ?? template.indicators.length + 1,
+        level: input.level ?? 0,
         hasReportData: false,
       }
       template.indicators.push(indicator)

@@ -1,6 +1,32 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileUp, PlusCircle, Trash2, UserPen } from 'lucide-react'
+import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
+import {
+  ChevronDown,
+  ChevronRight,
+  FileUp,
+  GripVertical,
+  PlusCircle,
+  Save,
+  Trash2,
+  UserPen,
+} from 'lucide-react'
+import { Provider } from 'react-redux'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,12 +67,37 @@ import { formManagementMockApi } from '../api/mock-form-management-api'
 import {
   fieldDataTypeOptions,
   indicatorTypeOptions,
-  type TemplateField,
-  type TemplateIndicator,
   type FieldDataType,
   type FormTemplate,
   type IndicatorType,
+  type TemplateField,
+  type TemplateIndicator,
 } from '../api/types'
+import { useFormBuilderDispatch, useFormBuilderSelector } from '../form-builder/store/form-builder-hooks'
+import {
+  type FormBuilderTreeNode,
+  attributeReorder,
+  attributeReparent,
+  clearBuilderState,
+  hydrateFromTemplate,
+  indicatorReorder,
+  indicatorReparent,
+  markBuilderClean,
+  selectAttributeRows,
+  selectAttributeTree,
+  selectAttributes,
+  selectBuilderDirty,
+  selectBuilderStatus,
+  selectExpandedAttributeIds,
+  selectExpandedIndicatorIds,
+  selectIndicatorRows,
+  selectIndicatorTree,
+  selectIndicators,
+  setBuilderStatus,
+  toggleAttributeExpanded,
+  toggleIndicatorExpanded,
+} from '../form-builder/store/form-builder-slice'
+import { createFormBuilderStore } from '../form-builder/store/form-builder-store'
 
 const EMPTY_TEMPLATES: FormTemplate[] = []
 
@@ -57,6 +108,7 @@ type FieldFormState = {
   required: boolean
   visible: boolean
   order: number
+  parentId: string | null
 }
 
 type IndicatorFormState = {
@@ -66,6 +118,15 @@ type IndicatorFormState = {
   type: IndicatorType
   group: string
   formula: string
+  order: number
+  parentId: string | null
+}
+
+type PreviewRow = {
+  id: string
+  code: string
+  name: string
+  depth: number
 }
 
 const defaultFieldForm: FieldFormState = {
@@ -75,6 +136,7 @@ const defaultFieldForm: FieldFormState = {
   required: false,
   visible: true,
   order: 1,
+  parentId: null,
 }
 
 const defaultIndicatorForm: IndicatorFormState = {
@@ -84,39 +146,376 @@ const defaultIndicatorForm: IndicatorFormState = {
   type: 'input',
   group: '',
   formula: '',
+  order: 1,
+  parentId: null,
 }
 
-export function TemplateStructureTab() {
-  const queryClient = useQueryClient()
+type TemplateStructureTabProps = {
+  initialTemplateId?: string
+  lockTemplateSelection?: boolean
+}
+
+function RootDropZone({ id, label }: { id: string; label: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground ${
+        isOver ? 'border-primary bg-primary/5' : ''
+      }`}
+    >
+      {label}
+    </div>
+  )
+}
+
+type IndicatorNodeProps = {
+  node: FormBuilderTreeNode<TemplateIndicator>
+  depth: number
+  expandedIds: string[]
+  onAddChild: (parentId: string | null) => void
+  onEdit: (item: TemplateIndicator) => void
+  onDelete: (item: TemplateIndicator) => void
+}
+
+function IndicatorSortableNode({
+  node,
+  depth,
+  expandedIds,
+  onAddChild,
+  onEdit,
+  onDelete,
+}: IndicatorNodeProps) {
+  const dispatch = useFormBuilderDispatch()
+  const isExpanded = expandedIds.includes(node.id)
+  const hasChildren = node.children.length > 0
+
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: node.id,
+  })
+  const { setNodeRef: setChildDropNodeRef, isOver: isChildDropOver } = useDroppable({
+    id: `indicator-child:${node.id}`,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div className='space-y-2'>
+      <div ref={setNodeRef} style={style} className='rounded-md border bg-card p-2'>
+        <div className='flex items-start justify-between gap-2'>
+          <div className='flex min-w-0 items-start gap-2'>
+            <button
+              className='mt-0.5 rounded p-0.5 hover:bg-muted'
+              onClick={() => dispatch(toggleIndicatorExpanded(node.id))}
+            >
+              {hasChildren ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+            <button
+              className='mt-0.5 cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted'
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical size={14} />
+            </button>
+
+            <div style={{ paddingInlineStart: `${depth * 14}px` }}>
+              <p className='text-xs text-muted-foreground'>
+                {node.code} · STT {node.order}
+              </p>
+              <p className='text-sm font-medium'>{node.name}</p>
+              <p className='text-xs text-muted-foreground'>{node.unit}</p>
+            </div>
+          </div>
+
+          <div className='flex gap-1'>
+            <Button size='icon' variant='outline' onClick={() => onAddChild(node.id)}>
+              <PlusCircle />
+            </Button>
+            <Button size='icon' variant='outline' onClick={() => onEdit(node)}>
+              <UserPen />
+            </Button>
+            <Button size='icon' variant='destructive' onClick={() => onDelete(node)}>
+              <Trash2 />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        ref={setChildDropNodeRef}
+        className={`rounded border border-dashed px-3 py-1 text-xs text-muted-foreground ${
+          isChildDropOver ? 'border-primary bg-primary/5' : ''
+        }`}
+      >
+        Thả vào đây để chuyển làm node con của {node.code}
+      </div>
+
+      {hasChildren && isExpanded && (
+        <SortableContext
+          items={node.children.map((child) => child.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className='space-y-2'>
+            {node.children.map((child) => (
+              <IndicatorSortableNode
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                expandedIds={expandedIds}
+                onAddChild={onAddChild}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      )}
+    </div>
+  )
+}
+
+type AttributeNodeProps = {
+  node: FormBuilderTreeNode<TemplateField>
+  depth: number
+  expandedIds: string[]
+  onAddChild: (parentId: string | null) => void
+  onEdit: (item: TemplateField) => void
+  onDelete: (item: TemplateField) => void
+}
+
+function AttributeSortableNode({
+  node,
+  depth,
+  expandedIds,
+  onAddChild,
+  onEdit,
+  onDelete,
+}: AttributeNodeProps) {
+  const dispatch = useFormBuilderDispatch()
+  const isExpanded = expandedIds.includes(node.id)
+  const hasChildren = node.children.length > 0
+
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: node.id,
+  })
+  const { setNodeRef: setChildDropNodeRef, isOver: isChildDropOver } = useDroppable({
+    id: `attribute-child:${node.id}`,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div className='space-y-2'>
+      <div ref={setNodeRef} style={style} className='rounded-md border bg-card p-2'>
+        <div className='flex items-start justify-between gap-2'>
+          <div className='flex min-w-0 items-start gap-2'>
+            <button
+              className='mt-0.5 rounded p-0.5 hover:bg-muted'
+              onClick={() => dispatch(toggleAttributeExpanded(node.id))}
+            >
+              {hasChildren ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+            <button
+              className='mt-0.5 cursor-grab rounded p-0.5 text-muted-foreground hover:bg-muted'
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical size={14} />
+            </button>
+
+            <div style={{ paddingInlineStart: `${depth * 14}px` }}>
+              <p className='text-xs text-muted-foreground'>
+                {node.key} · STT {node.order}
+              </p>
+              <p className='text-sm font-medium'>{node.label}</p>
+              <div className='mt-1 flex items-center gap-2'>
+                <Badge variant='outline'>{node.dataType}</Badge>
+                {node.required && <Badge>Bắt buộc</Badge>}
+              </div>
+            </div>
+          </div>
+
+          <div className='flex gap-1'>
+            <Button size='icon' variant='outline' onClick={() => onAddChild(node.id)}>
+              <PlusCircle />
+            </Button>
+            <Button size='icon' variant='outline' onClick={() => onEdit(node)}>
+              <UserPen />
+            </Button>
+            <Button size='icon' variant='destructive' onClick={() => onDelete(node)}>
+              <Trash2 />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        ref={setChildDropNodeRef}
+        className={`rounded border border-dashed px-3 py-1 text-xs text-muted-foreground ${
+          isChildDropOver ? 'border-primary bg-primary/5' : ''
+        }`}
+      >
+        Thả vào đây để chuyển làm node con của {node.key}
+      </div>
+
+      {hasChildren && isExpanded && (
+        <SortableContext
+          items={node.children.map((child) => child.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className='space-y-2'>
+            {node.children.map((child) => (
+              <AttributeSortableNode
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                expandedIds={expandedIds}
+                onAddChild={onAddChild}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      )}
+    </div>
+  )
+}
+
+export function TemplateStructureTab({
+  initialTemplateId,
+  lockTemplateSelection = false,
+}: TemplateStructureTabProps = {}) {
+  const store = useMemo(() => createFormBuilderStore(), [])
+
   const templatesQuery = useQuery({
     queryKey: ['form-management', 'templates'],
     queryFn: () => formManagementMockApi.listTemplates(),
   })
-
   const templates = templatesQuery.data ?? EMPTY_TEMPLATES
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
-  const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
-  const [editingField, setEditingField] = useState<TemplateField | null>(null)
-  const [fieldForm, setFieldForm] = useState<FieldFormState>(defaultFieldForm)
-  const [indicatorDialogOpen, setIndicatorDialogOpen] = useState(false)
-  const [editingIndicator, setEditingIndicator] = useState<TemplateIndicator | null>(null)
-  const [indicatorForm, setIndicatorForm] = useState<IndicatorFormState>(defaultIndicatorForm)
-
-  const currentTemplateId = selectedTemplateId || templates[0]?.id || ''
-
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplateId ?? '')
+  const currentTemplateId = selectedTemplateId || initialTemplateId || templates[0]?.id || ''
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === currentTemplateId) ?? null,
     [currentTemplateId, templates]
   )
 
+  return (
+    <Provider store={store}>
+      <TemplateStructureContent
+        templates={templates}
+        selectedTemplate={selectedTemplate}
+        currentTemplateId={currentTemplateId}
+        onTemplateChange={setSelectedTemplateId}
+        lockTemplateSelection={lockTemplateSelection}
+      />
+    </Provider>
+  )
+}
+
+type TemplateStructureContentProps = {
+  templates: FormTemplate[]
+  selectedTemplate: FormTemplate | null
+  currentTemplateId: string
+  onTemplateChange: (templateId: string) => void
+  lockTemplateSelection: boolean
+}
+
+function TemplateStructureContent({
+  templates,
+  selectedTemplate,
+  currentTemplateId,
+  onTemplateChange,
+  lockTemplateSelection,
+}: TemplateStructureContentProps) {
+  const queryClient = useQueryClient()
+  const dispatch = useFormBuilderDispatch()
+
+  const indicatorTree = useFormBuilderSelector(selectIndicatorTree)
+  const attributeTree = useFormBuilderSelector(selectAttributeTree)
+  const indicatorRows = useFormBuilderSelector(selectIndicatorRows)
+  const attributeRows = useFormBuilderSelector(selectAttributeRows)
+  const indicators = useFormBuilderSelector(selectIndicators)
+  const attributes = useFormBuilderSelector(selectAttributes)
+  const expandedIndicatorIds = useFormBuilderSelector(selectExpandedIndicatorIds)
+  const expandedAttributeIds = useFormBuilderSelector(selectExpandedAttributeIds)
+  const isDirty = useFormBuilderSelector(selectBuilderDirty)
+  const builderStatus = useFormBuilderSelector(selectBuilderStatus)
+
+  const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
+  const [editingField, setEditingField] = useState<TemplateField | null>(null)
+  const [fieldForm, setFieldForm] = useState<FieldFormState>(defaultFieldForm)
+
+  const [indicatorDialogOpen, setIndicatorDialogOpen] = useState(false)
+  const [editingIndicator, setEditingIndicator] = useState<TemplateIndicator | null>(null)
+  const [indicatorForm, setIndicatorForm] = useState<IndicatorFormState>(defaultIndicatorForm)
+
+  useEffect(() => {
+    if (!selectedTemplate) {
+      dispatch(clearBuilderState())
+      return
+    }
+    dispatch(
+      hydrateFromTemplate({
+        templateId: selectedTemplate.id,
+        indicators: selectedTemplate.indicators,
+        attributes: selectedTemplate.fields,
+      })
+    )
+  }, [dispatch, selectedTemplate])
+
+  const previewRows = useMemo<PreviewRow[]>(
+    () =>
+      indicatorRows.map((item) => ({
+        id: item.id,
+        code: item.code,
+        name: item.name,
+        depth: item.depth,
+      })),
+    [indicatorRows]
+  )
+
+  const previewColumns = useMemo<ColumnDef<PreviewRow>[]>(() => {
+    const cols: ColumnDef<PreviewRow>[] = [
+      {
+        id: 'indicator',
+        header: 'Chỉ tiêu',
+        cell: ({ row }) => (
+          <div style={{ paddingInlineStart: `${row.original.depth * 14}px` }}>
+            <div className='text-xs text-muted-foreground'>{row.original.code}</div>
+            <div className='font-medium'>{row.original.name}</div>
+          </div>
+        ),
+      },
+    ]
+
+    attributeRows.forEach((attr) => {
+      cols.push({
+        id: `attr_${attr.id}`,
+        header: attr.label,
+        cell: () => <span className='text-muted-foreground'>-</span>,
+      })
+    })
+
+    return cols
+  }, [attributeRows])
+
+  const previewTable = useReactTable({
+    data: previewRows,
+    columns: previewColumns,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
   const createFieldMutation = useMutation({
-    mutationFn: ({
-      templateId,
-      payload,
-    }: {
-      templateId: string
-      payload: FieldFormState
-    }) => formManagementMockApi.createField(templateId, payload),
+    mutationFn: ({ templateId, payload }: { templateId: string; payload: FieldFormState }) =>
+      formManagementMockApi.createField(templateId, payload),
     onSuccess: () => {
       toast.success('Đã thêm thuộc tính mới.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
@@ -163,13 +562,7 @@ export function TemplateStructureTab() {
   })
 
   const createIndicatorMutation = useMutation({
-    mutationFn: ({
-      templateId,
-      payload,
-    }: {
-      templateId: string
-      payload: IndicatorFormState
-    }) =>
+    mutationFn: ({ templateId, payload }: { templateId: string; payload: IndicatorFormState }) =>
       formManagementMockApi.createIndicator(templateId, {
         ...payload,
         formula: payload.formula || null,
@@ -229,18 +622,74 @@ export function TemplateStructureTab() {
     onError: (error) => toast.error(error.message),
   })
 
+  const saveBuilderMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      dispatch(setBuilderStatus('saving'))
+
+      await Promise.all(
+        indicators.map((item) =>
+          formManagementMockApi.updateIndicator(templateId, item.id, {
+            code: item.code,
+            name: item.name,
+            unit: item.unit,
+            type: item.type,
+            group: item.group,
+            formula: item.formula,
+            parentId: item.parentId ?? null,
+            order: item.order ?? 1,
+            level: item.level ?? 0,
+          })
+        )
+      )
+
+      await Promise.all(
+        attributes.map((item) =>
+          formManagementMockApi.updateField(templateId, item.id, {
+            key: item.key,
+            label: item.label,
+            dataType: item.dataType,
+            required: item.required,
+            visible: item.visible,
+            parentId: item.parentId ?? null,
+            order: item.order,
+            level: item.level ?? 0,
+          })
+        )
+      )
+    },
+    onSuccess: () => {
+      dispatch(setBuilderStatus('idle'))
+      dispatch(markBuilderClean())
+      toast.success('Đã lưu cấu hình Form Builder.')
+      queryClient.invalidateQueries({ queryKey: ['form-management'] })
+    },
+    onError: (error) => {
+      dispatch(setBuilderStatus('idle'))
+      toast.error(error.message)
+    },
+  })
+
   const closeFieldDialog = () => {
     setFieldDialogOpen(false)
     setEditingField(null)
     setFieldForm(defaultFieldForm)
   }
 
-  const openCreateFieldDialog = () => {
+  const closeIndicatorDialog = () => {
+    setIndicatorDialogOpen(false)
+    setEditingIndicator(null)
+    setIndicatorForm(defaultIndicatorForm)
+  }
+
+  const nextOrder = (items: Array<{ parentId?: string | null; order?: number }>, parentId: string | null) => {
+    const siblings = items.filter((item) => (item.parentId ?? null) === parentId)
+    if (siblings.length === 0) return 1
+    return Math.max(...siblings.map((item) => item.order ?? 0)) + 1
+  }
+
+  const openCreateFieldDialog = (parentId: string | null = null) => {
     setEditingField(null)
-    setFieldForm({
-      ...defaultFieldForm,
-      order: (selectedTemplate?.fields.length ?? 0) + 1,
-    })
+    setFieldForm({ ...defaultFieldForm, parentId, order: nextOrder(attributes, parentId) })
     setFieldDialogOpen(true)
   }
 
@@ -253,42 +702,18 @@ export function TemplateStructureTab() {
       required: field.required,
       visible: field.visible,
       order: field.order,
+      parentId: field.parentId ?? null,
     })
     setFieldDialogOpen(true)
   }
 
-  const submitFieldForm = () => {
-    if (!currentTemplateId) {
-      toast.error('Vui lòng chọn biểu mẫu.')
-      return
-    }
-    if (!fieldForm.key.trim() || !fieldForm.label.trim()) {
-      toast.error('Key và tên thuộc tính là bắt buộc.')
-      return
-    }
-    if (editingField) {
-      updateFieldMutation.mutate({
-        templateId: currentTemplateId,
-        fieldId: editingField.id,
-        payload: fieldForm,
-      })
-      return
-    }
-    createFieldMutation.mutate({
-      templateId: currentTemplateId,
-      payload: fieldForm,
+  const openCreateIndicatorDialog = (parentId: string | null = null) => {
+    setEditingIndicator(null)
+    setIndicatorForm({
+      ...defaultIndicatorForm,
+      parentId,
+      order: nextOrder(indicators, parentId),
     })
-  }
-
-  const closeIndicatorDialog = () => {
-    setIndicatorDialogOpen(false)
-    setEditingIndicator(null)
-    setIndicatorForm(defaultIndicatorForm)
-  }
-
-  const openCreateIndicatorDialog = () => {
-    setEditingIndicator(null)
-    setIndicatorForm(defaultIndicatorForm)
     setIndicatorDialogOpen(true)
   }
 
@@ -301,8 +726,32 @@ export function TemplateStructureTab() {
       type: indicator.type,
       group: indicator.group,
       formula: indicator.formula ?? '',
+      parentId: indicator.parentId ?? null,
+      order: indicator.order ?? 1,
     })
     setIndicatorDialogOpen(true)
+  }
+
+  const submitFieldForm = () => {
+    if (!currentTemplateId) {
+      toast.error('Vui lòng chọn biểu mẫu.')
+      return
+    }
+    if (!fieldForm.key.trim() || !fieldForm.label.trim()) {
+      toast.error('Key và tên thuộc tính là bắt buộc.')
+      return
+    }
+
+    if (editingField) {
+      updateFieldMutation.mutate({
+        templateId: currentTemplateId,
+        fieldId: editingField.id,
+        payload: fieldForm,
+      })
+      return
+    }
+
+    createFieldMutation.mutate({ templateId: currentTemplateId, payload: fieldForm })
   }
 
   const submitIndicatorForm = () => {
@@ -318,6 +767,7 @@ export function TemplateStructureTab() {
       toast.error('Chỉ tiêu tự động tính bắt buộc có công thức.')
       return
     }
+
     if (editingIndicator) {
       updateIndicatorMutation.mutate({
         templateId: currentTemplateId,
@@ -326,24 +776,118 @@ export function TemplateStructureTab() {
       })
       return
     }
-    createIndicatorMutation.mutate({
-      templateId: currentTemplateId,
-      payload: indicatorForm,
-    })
+
+    createIndicatorMutation.mutate({ templateId: currentTemplateId, payload: indicatorForm })
+  }
+
+  const indicatorSensors = useSensors(useSensor(PointerSensor))
+  const attributeSensors = useSensors(useSensor(PointerSensor))
+
+  const handleIndicatorDragEnd = (event: DragEndEvent) => {
+    const activeId = String(event.active.id)
+    const overId = event.over ? String(event.over.id) : null
+    if (!overId) return
+
+    if (overId === 'indicator-root-drop') {
+      dispatch(indicatorReparent({ activeId, newParentId: null }))
+      return
+    }
+    if (overId.startsWith('indicator-child:')) {
+      dispatch(
+        indicatorReparent({
+          activeId,
+          newParentId: overId.replace('indicator-child:', ''),
+        })
+      )
+      return
+    }
+
+    const activeItem = indicators.find((item) => item.id === activeId)
+    const overItem = indicators.find((item) => item.id === overId)
+    if (!activeItem || !overItem) return
+
+    const activeParentId = activeItem.parentId ?? null
+    const overParentId = overItem.parentId ?? null
+
+    if (activeParentId === overParentId) {
+      dispatch(indicatorReorder({ activeId, overId }))
+      return
+    }
+
+    dispatch(
+      indicatorReparent({
+        activeId,
+        newParentId: overParentId,
+        overId,
+      })
+    )
+  }
+
+  const handleAttributeDragEnd = (event: DragEndEvent) => {
+    const activeId = String(event.active.id)
+    const overId = event.over ? String(event.over.id) : null
+    if (!overId) return
+
+    if (overId === 'attribute-root-drop') {
+      dispatch(attributeReparent({ activeId, newParentId: null }))
+      return
+    }
+    if (overId.startsWith('attribute-child:')) {
+      dispatch(
+        attributeReparent({
+          activeId,
+          newParentId: overId.replace('attribute-child:', ''),
+        })
+      )
+      return
+    }
+
+    const activeItem = attributes.find((item) => item.id === activeId)
+    const overItem = attributes.find((item) => item.id === overId)
+    if (!activeItem || !overItem) return
+
+    const activeParentId = activeItem.parentId ?? null
+    const overParentId = overItem.parentId ?? null
+
+    if (activeParentId === overParentId) {
+      dispatch(attributeReorder({ activeId, overId }))
+      return
+    }
+
+    dispatch(
+      attributeReparent({
+        activeId,
+        newParentId: overParentId,
+        overId,
+      })
+    )
   }
 
   return (
     <>
       <Card>
         <CardHeader className='gap-4'>
-          <div>
-            <CardTitle>Thuộc tính và chỉ tiêu biểu mẫu</CardTitle>
-            <CardDescription>
-              Quản lý dữ liệu trường nhập và chỉ tiêu, hỗ trợ import Excel (mock) theo nghiệp vụ
-              FM-03.
-            </CardDescription>
+          <div className='flex flex-wrap items-start justify-between gap-3'>
+            <div>
+              <CardTitle>Cấu hình bảng biểu mẫu</CardTitle>
+              <CardDescription>
+                Store RTK riêng cho Form Builder + dnd-kit drag/drop theo rule reorder/reparent.
+              </CardDescription>
+            </div>
+            <Button
+              disabled={!selectedTemplate || !isDirty || builderStatus === 'saving'}
+              onClick={() => selectedTemplate && saveBuilderMutation.mutate(selectedTemplate.id)}
+            >
+              <Save />
+              {builderStatus === 'saving' ? 'Đang lưu...' : 'Lưu cấu hình'}
+            </Button>
           </div>
-          <Select value={currentTemplateId} onValueChange={setSelectedTemplateId}>
+
+          <Select
+            value={currentTemplateId}
+            onValueChange={onTemplateChange}
+            disabled={lockTemplateSelection}
+          >
             <SelectTrigger className='w-full sm:w-[460px]'>
               <SelectValue placeholder='Chọn biểu mẫu để cấu hình cấu trúc' />
             </SelectTrigger>
@@ -356,6 +900,7 @@ export function TemplateStructureTab() {
             </SelectContent>
           </Select>
         </CardHeader>
+
         <CardContent className='space-y-6'>
           {!selectedTemplate && (
             <div className='rounded-md border border-dashed p-6 text-sm text-muted-foreground'>
@@ -374,154 +919,162 @@ export function TemplateStructureTab() {
                 </span>
               </div>
 
-              <div className='grid gap-6 xl:grid-cols-2'>
-                <div className='space-y-3'>
-                  <div className='flex flex-wrap items-center justify-between gap-2'>
-                    <h4 className='text-base font-semibold'>Thuộc tính biểu mẫu</h4>
-                    <div className='flex gap-2'>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => importFieldsMutation.mutate(selectedTemplate.id)}
-                      >
-                        <FileUp />
-                        Import Excel
-                      </Button>
-                      <Button size='sm' onClick={openCreateFieldDialog}>
-                        <PlusCircle />
-                        Thêm thuộc tính
-                      </Button>
+              <div className='grid gap-4 xl:grid-cols-[1fr_1.4fr_1fr]'>
+                <Card className='h-fit'>
+                  <CardHeader className='pb-3'>
+                    <div className='flex flex-wrap items-center justify-between gap-2'>
+                      <CardTitle className='text-base'>IndicatorTree</CardTitle>
+                      <div className='flex gap-2'>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => importIndicatorsMutation.mutate(selectedTemplate.id)}
+                        >
+                          <FileUp />
+                          Import
+                        </Button>
+                        <Button size='sm' onClick={() => openCreateIndicatorDialog()}>
+                          <PlusCircle />
+                          Thêm
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className='overflow-hidden rounded-md border'>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Key</TableHead>
-                          <TableHead>Tên hiển thị</TableHead>
-                          <TableHead>Kiểu</TableHead>
-                          <TableHead>Bắt buộc</TableHead>
-                          <TableHead className='text-right'>Thao tác</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedTemplate.fields.map((field) => (
-                          <TableRow key={field.id}>
-                            <TableCell>{field.key}</TableCell>
-                            <TableCell>
-                              <div>{field.label}</div>
-                              {field.isSystemDefault && (
-                                <Badge variant='outline'>System</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>{field.dataType}</TableCell>
-                            <TableCell>{field.required ? 'Có' : 'Không'}</TableCell>
-                            <TableCell className='text-right'>
-                              <div className='flex justify-end gap-1'>
-                                <Button
-                                  size='icon'
-                                  variant='outline'
-                                  onClick={() => openEditFieldDialog(field)}
-                                >
-                                  <UserPen />
-                                </Button>
-                                <Button
-                                  size='icon'
-                                  variant='destructive'
-                                  onClick={() =>
-                                    deleteFieldMutation.mutate({
-                                      templateId: selectedTemplate.id,
-                                      fieldId: field.id,
-                                    })
-                                  }
-                                >
-                                  <Trash2 />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-
-                <div className='space-y-3'>
-                  <div className='flex flex-wrap items-center justify-between gap-2'>
-                    <h4 className='text-base font-semibold'>Chỉ tiêu biểu mẫu</h4>
-                    <div className='flex gap-2'>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => importIndicatorsMutation.mutate(selectedTemplate.id)}
+                  <CardContent className='space-y-2'>
+                    <DndContext
+                      sensors={indicatorSensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleIndicatorDragEnd}
+                    >
+                      <RootDropZone
+                        id='indicator-root-drop'
+                        label='Thả vào đây để chuyển node về cấp gốc'
+                      />
+                      <SortableContext
+                        items={indicatorTree.map((item) => item.id)}
+                        strategy={verticalListSortingStrategy}
                       >
-                        <FileUp />
-                        Import Excel
-                      </Button>
-                      <Button size='sm' onClick={openCreateIndicatorDialog}>
-                        <PlusCircle />
-                        Thêm chỉ tiêu
-                      </Button>
-                    </div>
-                  </div>
+                        <div className='space-y-2'>
+                          {indicatorTree.map((node) => (
+                            <IndicatorSortableNode
+                              key={node.id}
+                              node={node}
+                              depth={0}
+                              expandedIds={expandedIndicatorIds}
+                              onAddChild={openCreateIndicatorDialog}
+                              onEdit={openEditIndicatorDialog}
+                              onDelete={(item) =>
+                                deleteIndicatorMutation.mutate({
+                                  templateId: selectedTemplate.id,
+                                  indicatorId: item.id,
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </CardContent>
+                </Card>
 
-                  <div className='overflow-hidden rounded-md border'>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Mã</TableHead>
-                          <TableHead>Tên chỉ tiêu</TableHead>
-                          <TableHead>Loại</TableHead>
-                          <TableHead>Nhóm</TableHead>
-                          <TableHead className='text-right'>Thao tác</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedTemplate.indicators.map((indicator) => (
-                          <TableRow key={indicator.id}>
-                            <TableCell>{indicator.code}</TableCell>
-                            <TableCell>
-                              <div>{indicator.name}</div>
-                              <div className='text-xs text-muted-foreground'>
-                                {indicator.unit}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {indicator.type === 'calculated'
-                                ? 'Tự động tính'
-                                : 'Nhập tay'}
-                            </TableCell>
-                            <TableCell>{indicator.group}</TableCell>
-                            <TableCell className='text-right'>
-                              <div className='flex justify-end gap-1'>
-                                <Button
-                                  size='icon'
-                                  variant='outline'
-                                  onClick={() => openEditIndicatorDialog(indicator)}
-                                >
-                                  <UserPen />
-                                </Button>
-                                <Button
-                                  size='icon'
-                                  variant='destructive'
-                                  onClick={() =>
-                                    deleteIndicatorMutation.mutate({
-                                      templateId: selectedTemplate.id,
-                                      indicatorId: indicator.id,
-                                    })
-                                  }
-                                >
-                                  <Trash2 />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
+                <Card className='h-fit'>
+                  <CardHeader className='pb-3'>
+                    <CardTitle className='text-base'>PreviewTable</CardTitle>
+                    <CardDescription>Bảng chỉ đọc, đồng bộ theo state của RTK store.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className='overflow-auto rounded-md border'>
+                      <Table>
+                        <TableHeader>
+                          {previewTable.getHeaderGroups().map((headerGroup) => (
+                            <TableRow key={headerGroup.id}>
+                              {headerGroup.headers.map((header) => (
+                                <TableHead key={header.id}>
+                                  {header.isPlaceholder
+                                    ? null
+                                    : flexRender(
+                                        header.column.columnDef.header,
+                                        header.getContext()
+                                      )}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableHeader>
+                        <TableBody>
+                          {previewTable.getRowModel().rows.map((row) => (
+                            <TableRow key={row.id}>
+                              {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id}>
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className='h-fit'>
+                  <CardHeader className='pb-3'>
+                    <div className='flex flex-wrap items-center justify-between gap-2'>
+                      <CardTitle className='text-base'>AttributeTree</CardTitle>
+                      <div className='flex gap-2'>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => importFieldsMutation.mutate(selectedTemplate.id)}
+                        >
+                          <FileUp />
+                          Import
+                        </Button>
+                        <Button size='sm' onClick={() => openCreateFieldDialog()}>
+                          <PlusCircle />
+                          Thêm
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className='space-y-2'>
+                    <DndContext
+                      sensors={attributeSensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleAttributeDragEnd}
+                    >
+                      <RootDropZone
+                        id='attribute-root-drop'
+                        label='Thả vào đây để chuyển node về cấp gốc'
+                      />
+                      <SortableContext
+                        items={attributeTree.map((item) => item.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className='space-y-2'>
+                          {attributeTree.map((node) => (
+                            <AttributeSortableNode
+                              key={node.id}
+                              node={node}
+                              depth={0}
+                              expandedIds={expandedAttributeIds}
+                              onAddChild={openCreateFieldDialog}
+                              onEdit={openEditFieldDialog}
+                              onDelete={(item) =>
+                                deleteFieldMutation.mutate({
+                                  templateId: selectedTemplate.id,
+                                  fieldId: item.id,
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  </CardContent>
+                </Card>
               </div>
             </>
           )}
@@ -532,9 +1085,7 @@ export function TemplateStructureTab() {
         <DialogContent className='sm:max-w-xl'>
           <DialogHeader className='text-start'>
             <DialogTitle>{editingField ? 'Sửa thuộc tính' : 'Thêm thuộc tính'}</DialogTitle>
-            <DialogDescription>
-              Thuộc tính mặc định hệ thống không được phép xóa theo nghiệp vụ.
-            </DialogDescription>
+            <DialogDescription>Cấu hình thuộc tính theo phân cấp cây.</DialogDescription>
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
@@ -542,9 +1093,7 @@ export function TemplateStructureTab() {
               <Label>Key thuộc tính</Label>
               <Input
                 value={fieldForm.key}
-                onChange={(event) =>
-                  setFieldForm((prev) => ({ ...prev, key: event.target.value }))
-                }
+                onChange={(event) => setFieldForm((prev) => ({ ...prev, key: event.target.value }))}
               />
             </div>
             <div className='space-y-2'>
@@ -577,16 +1126,36 @@ export function TemplateStructureTab() {
               </Select>
             </div>
             <div className='space-y-2'>
-              <Label>Thứ tự hiển thị</Label>
+              <Label>Nút cha</Label>
+              <Select
+                value={fieldForm.parentId ?? 'root'}
+                onValueChange={(value) =>
+                  setFieldForm((prev) => ({ ...prev, parentId: value === 'root' ? null : value }))
+                }
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='root'>Gốc</SelectItem>
+                  {attributes
+                    .filter((item) => item.id !== editingField?.id)
+                    .map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.key} - {item.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label>Thứ tự</Label>
               <Input
                 type='number'
                 min={1}
                 value={fieldForm.order}
                 onChange={(event) =>
-                  setFieldForm((prev) => ({
-                    ...prev,
-                    order: Number(event.target.value || 1),
-                  }))
+                  setFieldForm((prev) => ({ ...prev, order: Number(event.target.value || 1) }))
                 }
               />
             </div>
@@ -633,10 +1202,7 @@ export function TemplateStructureTab() {
         <DialogContent className='sm:max-w-2xl'>
           <DialogHeader className='text-start'>
             <DialogTitle>{editingIndicator ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu'}</DialogTitle>
-            <DialogDescription>
-              `indicator_code` duy nhất trong biểu mẫu. Chỉ tiêu loại công thức bắt buộc có biểu
-              thức.
-            </DialogDescription>
+            <DialogDescription>Quản lý cây chỉ tiêu theo mã, nhóm và công thức.</DialogDescription>
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
@@ -673,6 +1239,43 @@ export function TemplateStructureTab() {
                 value={indicatorForm.group}
                 onChange={(event) =>
                   setIndicatorForm((prev) => ({ ...prev, group: event.target.value }))
+                }
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label>Nút cha</Label>
+              <Select
+                value={indicatorForm.parentId ?? 'root'}
+                onValueChange={(value) =>
+                  setIndicatorForm((prev) => ({
+                    ...prev,
+                    parentId: value === 'root' ? null : value,
+                  }))
+                }
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='root'>Gốc</SelectItem>
+                  {indicators
+                    .filter((item) => item.id !== editingIndicator?.id)
+                    .map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.code} - {item.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label>Thứ tự</Label>
+              <Input
+                type='number'
+                min={1}
+                value={indicatorForm.order}
+                onChange={(event) =>
+                  setIndicatorForm((prev) => ({ ...prev, order: Number(event.target.value || 1) }))
                 }
               />
             </div>
