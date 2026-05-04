@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Bell,
   Building2,
-  CalendarClock,
   ChartColumnBig,
   FileCheck2,
   FileSpreadsheet,
@@ -137,9 +136,9 @@ function buildNavGroups(role: AppRole): NavGroup[] {
             icon: Building2,
           },
           {
-            title: 'Kỳ báo cáo',
-            url: '/system-admin?tab=periods',
-            icon: CalendarClock,
+            title: 'Lĩnh vực biểu mẫu',
+            url: '/form-management',
+            icon: FileSpreadsheet,
           },
           {
             title: 'Tài khoản',
@@ -147,7 +146,7 @@ function buildNavGroups(role: AppRole): NavGroup[] {
             icon: Users,
           },
           {
-            title: 'Nhóm quyền',
+            title: 'Vai trò',
             url: '/system-admin?tab=roles',
             icon: ShieldCheck,
           },

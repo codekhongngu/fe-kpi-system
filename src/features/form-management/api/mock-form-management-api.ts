@@ -2,14 +2,17 @@ import {
   type CatalogOption,
   type CatalogStatusFilter,
   type CreateFieldInput,
+  type CreateFieldCategoryInput,
   type CreateIndicatorInput,
   type CreateTemplateInput,
   type FormTemplateListParams,
+  type FieldCategory,
   type FormTemplate,
   type TemplateCycle,
   type TemplateField,
   type TemplateIndicator,
   type UpdateFieldInput,
+  type UpdateFieldCategoryInput,
   type UpdateIndicatorInput,
   type UpdateTemplateInput,
 } from './types'
@@ -605,12 +608,113 @@ export const formManagementMockApi = {
 }
 
 export const formManagementApi = {
+  listFieldCategories: async () => {
+    type BeFieldCategory = {
+      id: string
+      code?: string
+      name?: string
+      description?: string | null
+      sortOrder?: number
+      sort_order?: number
+      isActive?: boolean
+      is_active?: boolean
+    }
+
+    const fetch = async (path: string) => {
+      const response = await apiClient.get<
+        | { items?: BeFieldCategory[] }
+        | { data?: BeFieldCategory[] }
+        | { data: BeFieldCategory[]; meta?: unknown }
+        | BeFieldCategory[]
+      >(path, { params: { page: 1, limit: 200 } })
+
+      const payload = response.data
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as { data?: unknown }).data)
+          ? ((payload as { data: BeFieldCategory[] }).data ?? [])
+          : (payload as { items?: BeFieldCategory[] }).items ?? []
+
+      return items.map<FieldCategory>((item) => ({
+        id: item.id,
+        code: item.code ?? '',
+        name: item.name ?? '',
+        description: typeof item.description === 'string' ? item.description : null,
+        sortOrder:
+          typeof item.sortOrder === 'number'
+            ? item.sortOrder
+            : typeof item.sort_order === 'number'
+              ? item.sort_order
+              : 0,
+        isActive:
+          typeof item.isActive === 'boolean'
+            ? item.isActive
+            : typeof item.is_active === 'boolean'
+              ? item.is_active
+              : true,
+      }))
+    }
+
+    try {
+      return await fetch('/field-categories')
+    } catch {
+      return await fetch('/field_categories')
+    }
+  },
+
+  createFieldCategory: async (input: CreateFieldCategoryInput) => {
+    const payload = {
+      code: input.code,
+      name: input.name,
+      description: input.description,
+      sortOrder: input.sortOrder,
+      isActive: input.isActive,
+    }
+
+    try {
+      const response = await apiClient.post<FieldCategory>('/field-categories', payload)
+      return response.data
+    } catch {
+      const response = await apiClient.post<FieldCategory>('/field_categories', payload)
+      return response.data
+    }
+  },
+
+  updateFieldCategory: async (id: string, input: UpdateFieldCategoryInput) => {
+    const payload = {
+      code: input.code,
+      name: input.name,
+      description: input.description,
+      sortOrder: input.sortOrder,
+      isActive: input.isActive,
+    }
+
+    try {
+      const response = await apiClient.patch<FieldCategory>(`/field-categories/${id}`, payload)
+      return response.data
+    } catch {
+      const response = await apiClient.patch<FieldCategory>(`/field_categories/${id}`, payload)
+      return response.data
+    }
+  },
+
+  deleteFieldCategory: async (id: string) => {
+    try {
+      await apiClient.delete(`/field-categories/${id}`)
+      return true
+    } catch {
+      await apiClient.delete(`/field_categories/${id}`)
+      return true
+    }
+  },
+
   listTemplates: async (params?: FormTemplateListParams) => {
     type ListPayload = {
       items?: FormTemplate[]
       data?: FormTemplate[]
       test?: FormTemplate[]
     }
+
     const response = await apiClient.get<FormTemplate[] | ListPayload>('/forms', {
       params: {
         search: params?.search ?? '',
@@ -621,6 +725,7 @@ export const formManagementApi = {
         category: params?.category ?? '',
       },
     })
+
     const payload = response.data
     if (Array.isArray(payload)) return payload
     return payload.items ?? payload.data ?? payload.test ?? []

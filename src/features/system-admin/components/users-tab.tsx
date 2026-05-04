@@ -404,8 +404,32 @@ export function UsersTab() {
           </div>
 
           <div className='space-y-2'>
-            <Label>Nhóm quyền</Label>
+            <Label>Vai trò</Label>
             <div className='grid max-h-40 grid-cols-2 gap-2 overflow-auto rounded-md border p-3'>
+              {rolesQuery.isLoading && (
+                <div className='col-span-2 text-sm text-muted-foreground'>
+                  Đang tải danh sách vai trò...
+                </div>
+              )}
+              {rolesQuery.isError && (
+                <div className='col-span-2 space-y-2'>
+                  <div className='text-sm text-destructive'>
+                    Không tải được danh sách vai trò. {rolesQuery.error.message}
+                  </div>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() => rolesQuery.refetch()}
+                  >
+                    Tải lại
+                  </Button>
+                </div>
+              )}
+              {!rolesQuery.isLoading && !rolesQuery.isError && roles.length === 0 && (
+                <div className='col-span-2 text-sm text-muted-foreground'>
+                  Chưa có vai trò.
+                </div>
+              )}
               {roles.map((role) => {
                 const checked = form.roleIds.includes(role.id)
                 return (

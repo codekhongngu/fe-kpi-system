@@ -5,7 +5,6 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
-import { PeriodsTab } from './components/periods-tab'
 import { RolesTab } from './components/roles-tab'
 import { UnitsTab } from './components/units-tab'
 import { UsersTab } from './components/users-tab'
@@ -15,7 +14,7 @@ export function SystemAdmin() {
   const activeTab = useMemo(() => {
     const url = new URL(href, window.location.origin)
     const tab = url.searchParams.get('tab')
-    if (tab === 'users' || tab === 'roles' || tab === 'units' || tab === 'periods') {
+    if (tab === 'users' || tab === 'roles' || tab === 'units') {
       return tab
     }
     return 'users'
@@ -35,7 +34,6 @@ export function SystemAdmin() {
         {activeTab === 'users' && <UsersTab />}
         {activeTab === 'roles' && <RolesTab />}
         {activeTab === 'units' && <UnitsTab />}
-        {activeTab === 'periods' && <PeriodsTab />}
       </Main>
     </>
   )

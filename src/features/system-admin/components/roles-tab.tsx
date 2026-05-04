@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
@@ -51,18 +51,78 @@ const EMPTY_ROLES: Role[] = []
 const EMPTY_USERS: SystemUser[] = []
 const EMPTY_PERMISSIONS: Permission[] = []
 
+const humanizePermissionCode = (code: string) => {
+  const normalized = (code ?? '').trim()
+  if (!normalized) return ''
+
+  const parts = normalized.split(/[.:]/g).filter(Boolean)
+  if (parts.length === 0) return normalized
+
+  const action = parts[parts.length - 1]
+  const resources = parts.slice(0, -1)
+
+  const actionMap: Record<string, string> = {
+    view: 'Xem',
+    read: 'Xem',
+    list: 'Xem danh sách',
+    create: 'Tạo mới',
+    update: 'Cập nhật',
+    edit: 'Cập nhật',
+    delete: 'Xóa',
+    remove: 'Xóa',
+    export: 'Xuất',
+    import: 'Nhập',
+    assign: 'Phân công',
+    approve: 'Phê duyệt',
+    reject: 'Từ chối',
+    manage: 'Quản lý',
+    lock: 'Khóa',
+    unlock: 'Mở khóa',
+  }
+
+  const resourceMap: Record<string, string> = {
+    feature: 'Chức năng',
+    report: 'Báo cáo',
+    reports: 'Báo cáo',
+    periods: 'Kỳ báo cáo',
+    forms: 'Biểu mẫu',
+    roles: 'Vai trò',
+    permissions: 'Quyền',
+    users: 'Người dùng',
+    orgs: 'Đơn vị',
+    organizations: 'Đơn vị',
+    units: 'Đơn vị',
+    system: 'Hệ thống',
+    admin: 'Quản trị',
+  }
+
+  const resourceLabel =
+    resources.length > 0
+      ? resources
+          .map((item) => resourceMap[item] ?? item.replace(/[-_]/g, ' '))
+          .join(' / ')
+      : ''
+
+  const actionLabel = actionMap[action] ?? action.replace(/[-_]/g, ' ')
+
+  if (resourceLabel) return `${resourceLabel} - ${actionLabel}`
+  return actionLabel || normalized
+}
+
 type RoleFormState = {
+  code: string
   name: string
   description: string
   dataScope: DataScope
-  permissions: string[]
+  permissionIds: string[]
 }
 
 const defaultForm: RoleFormState = {
+  code: '',
   name: '',
   description: '',
   dataScope: 'own_unit',
-  permissions: [],
+  permissionIds: [],
 }
 
 export function RolesTab() {
@@ -81,6 +141,7 @@ export function RolesTab() {
   })
 
   const [search, setSearch] = useState('')
+  const [permissionSearch, setPermissionSearch] = useState('')
   const [openForm, setOpenForm] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [form, setForm] = useState<RoleFormState>(defaultForm)
@@ -90,6 +151,20 @@ export function RolesTab() {
   const users = usersQuery.data ?? EMPTY_USERS
   const permissions = permissionsQuery.data ?? EMPTY_PERMISSIONS
 
+  const normalizePermissionIds = (role: Role): string[] => {
+    if (Array.isArray(role.permissionIds) && role.permissionIds.length > 0) {
+      return role.permissionIds
+    }
+
+    if (Array.isArray(role.permissions) && role.permissions.length > 0 && permissions.length > 0) {
+      return role.permissions
+        .map((code) => permissions.find((permission) => permission.code === code)?.id ?? '')
+        .filter((id) => Boolean(id))
+    }
+
+    return []
+  }
+
   const permissionOptions = useMemo(() => {
     if (permissions.length > 0) {
       return permissions
@@ -97,10 +172,50 @@ export function RolesTab() {
     return rolePermissionCatalog.map<Permission>((code) => ({
       id: code,
       code,
-      name: code,
+      name: humanizePermissionCode(code) || code,
       description: null,
     }))
   }, [permissions])
+
+  const filteredPermissionOptions = useMemo(() => {
+    const keyword = permissionSearch.trim().toLowerCase()
+    if (!keyword) return permissionOptions
+
+    return permissionOptions.filter((permission) =>
+      [permission.name, permission.code, permission.description ?? '']
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword),
+    )
+  }, [permissionOptions, permissionSearch])
+
+  const rolePermissionsLoadedRef = useRef(new Set<string>())
+
+  useEffect(() => {
+    const targetRoles = roles.filter(
+      (role) =>
+        !rolePermissionsLoadedRef.current.has(role.id) &&
+        role.permissionIds.length === 0 &&
+        role.permissions.length === 0,
+    )
+    if (targetRoles.length === 0) return
+
+    targetRoles.forEach((role) => {
+      rolePermissionsLoadedRef.current.add(role.id)
+      systemAdminMockApi
+        .getRolePermissions(role.id)
+        .then((permissionIds) => {
+          if (permissionIds.length === 0) return
+          queryClient.setQueryData<Role[]>(['system-admin', 'roles'], (current) => {
+            const items = current ?? []
+            return items.map((item) =>
+              item.id === role.id ? { ...item, permissionIds } : item,
+            )
+          })
+        })
+        .catch((error: Error) => toast.error(error.message))
+    })
+  }, [queryClient, roles])
 
   const memberByRole = useMemo(() => {
     const map = new Map<string, number>()
@@ -118,16 +233,29 @@ export function RolesTab() {
       return roles
     }
     return roles.filter((role) =>
-      [role.name, role.description].some((value) =>
+      [role.code, role.name, role.description].some((value) =>
         value.toLowerCase().includes(keyword)
       )
     )
   }, [search, roles])
 
   const createMutation = useMutation({
-    mutationFn: systemAdminMockApi.createRole,
+    mutationFn: (payload: RoleFormState) => {
+      const permissionCodes = payload.permissionIds
+        .map((id) => permissionOptions.find((permission) => permission.id === id)?.code ?? '')
+        .filter((code) => Boolean(code))
+
+      return systemAdminMockApi.createRole({
+        code: payload.code,
+        name: payload.name,
+        description: payload.description,
+        dataScope: payload.dataScope,
+        permissionIds: payload.permissionIds,
+        permissions: permissionCodes,
+      })
+    },
     onSuccess: () => {
-      toast.success('Đã tạo nhóm quyền mới.')
+      toast.success('Đã tạo vai trò mới.')
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
     },
@@ -136,9 +264,18 @@ export function RolesTab() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: RoleFormState }) =>
-      systemAdminMockApi.updateRole(id, payload),
+      systemAdminMockApi.updateRole(id, {
+        code: payload.code,
+        name: payload.name,
+        description: payload.description,
+        dataScope: payload.dataScope,
+        permissionIds: payload.permissionIds,
+        permissions: payload.permissionIds
+          .map((permissionId) => permissionOptions.find((p) => p.id === permissionId)?.code ?? '')
+          .filter((code) => Boolean(code)),
+      }),
     onSuccess: () => {
-      toast.success('Đã cập nhật nhóm quyền.')
+      toast.success('Đã cập nhật vai trò.')
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
     },
@@ -148,7 +285,7 @@ export function RolesTab() {
   const deleteMutation = useMutation({
     mutationFn: systemAdminMockApi.deleteRole,
     onSuccess: () => {
-      toast.success('Đã xóa nhóm quyền.')
+      toast.success('Đã xóa vai trò.')
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       setDeletingRole(null)
     },
@@ -159,35 +296,65 @@ export function RolesTab() {
     setOpenForm(false)
     setEditingRole(null)
     setForm(defaultForm)
+    setPermissionSearch('')
   }
 
   const openCreateDialog = () => {
     setEditingRole(null)
     setForm(defaultForm)
+    setPermissionSearch('')
     setOpenForm(true)
   }
 
   const openEditDialog = (role: Role) => {
+    const permissionIds = normalizePermissionIds(role)
     setEditingRole(role)
     setForm({
+      code: role.code,
       name: role.name,
       description: role.description,
       dataScope: role.dataScope,
-      permissions: role.permissions,
+      permissionIds,
     })
+    setPermissionSearch('')
     setOpenForm(true)
+
+    if (permissionIds.length === 0) {
+      systemAdminMockApi
+        .getRolePermissions(role.id)
+        .then((ids) => {
+          if (ids.length === 0) return
+          setForm((prev) => ({ ...prev, permissionIds: ids }))
+          queryClient.setQueryData<Role[]>(['system-admin', 'roles'], (current) => {
+            const items = current ?? []
+            return items.map((item) => (item.id === role.id ? { ...item, permissionIds: ids } : item))
+          })
+        })
+        .catch((error: Error) => toast.error(error.message))
+    }
   }
 
   const submitForm = () => {
-    if (!form.name.trim() || form.permissions.length === 0) {
-      toast.error('Vui lòng nhập tên nhóm quyền và chọn ít nhất 1 quyền.')
+    const code = form.code.trim()
+    const name = form.name.trim()
+    const description = form.description.trim()
+    const permissionIds = Array.isArray(form.permissionIds) ? form.permissionIds : []
+
+    if (!code || !name || permissionIds.length === 0) {
+      toast.error('Vui lòng nhập mã role, tên role và chọn ít nhất 1 quyền.')
+      return
+    }
+    if (!/^[a-z0-9_]{1,50}$/.test(code)) {
+      toast.error('Mã role chỉ gồm chữ thường, số và dấu gạch dưới (tối đa 50 ký tự).')
       return
     }
 
     const payload: RoleFormState = {
       ...form,
-      name: form.name.trim(),
-      description: form.description.trim(),
+      code,
+      name,
+      description,
+      permissionIds,
     }
 
     if (editingRole) {
@@ -206,7 +373,7 @@ export function RolesTab() {
         <div>
           <CardTitle>Roles & Permissions (RBAC)</CardTitle>
           <CardDescription>
-            Quản lý nhóm quyền, quyền chi tiết và phạm vi dữ liệu áp dụng.
+            Quản lý vai trò, quyền chi tiết và phạm vi dữ liệu áp dụng.
           </CardDescription>
         </div>
         <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
@@ -218,7 +385,7 @@ export function RolesTab() {
           />
           <Button onClick={openCreateDialog}>
             <PlusCircle />
-            Thêm nhóm quyền
+            Thêm vai trò
           </Button>
         </div>
       </CardHeader>
@@ -227,6 +394,7 @@ export function RolesTab() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Mã role</TableHead>
                 <TableHead>Tên role</TableHead>
                 <TableHead>Phạm vi dữ liệu</TableHead>
                 <TableHead>Số quyền</TableHead>
@@ -237,13 +405,14 @@ export function RolesTab() {
             <TableBody>
               {filteredRoles.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className='h-20 text-center'>
-                    Không có dữ liệu nhóm quyền.
+                  <TableCell colSpan={6} className='h-20 text-center'>
+                    Không có dữ liệu vai trò.
                   </TableCell>
                 </TableRow>
               )}
               {filteredRoles.map((role) => (
                 <TableRow key={role.id}>
+                  <TableCell className='font-medium'>{role.code || '—'}</TableCell>
                   <TableCell>
                     <div className='flex items-center gap-2'>
                       <span className='font-medium'>{role.name}</span>
@@ -254,7 +423,9 @@ export function RolesTab() {
                     </div>
                   </TableCell>
                   <TableCell>{getScopeLabel(role.dataScope)}</TableCell>
-                  <TableCell>{role.permissions.length}</TableCell>
+                  <TableCell>
+                    {role.permissionIds.length > 0 ? role.permissionIds.length : role.permissions.length}
+                  </TableCell>
                   <TableCell>{memberByRole.get(role.id) ?? 0}</TableCell>
                   <TableCell className='text-right'>
                     <div className='flex justify-end gap-1'>
@@ -287,16 +458,26 @@ export function RolesTab() {
         <DialogContent className='sm:max-w-2xl'>
           <DialogHeader className='text-start'>
             <DialogTitle>
-              {editingRole ? 'Cập nhật nhóm quyền' : 'Tạo nhóm quyền mới'}
+              {editingRole ? 'Cập nhật vai trò' : 'Tạo vai trò mới'}
             </DialogTitle>
             <DialogDescription>
-              4 nhóm mặc định không được xóa theo nghiệp vụ hệ thống.
+              4 vai trò mặc định không được xóa theo nghiệp vụ hệ thống.
             </DialogDescription>
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label>Tên nhóm quyền</Label>
+              <Label>Mã role</Label>
+              <Input
+                value={form.code}
+                disabled={Boolean(editingRole)}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, code: event.target.value }))
+                }
+              />
+            </div>
+            <div className='space-y-2'>
+              <Label>Tên vai trò</Label>
               <Input
                 value={form.name}
                 onChange={(event) =>
@@ -336,9 +517,15 @@ export function RolesTab() {
           </div>
           <div className='space-y-2'>
             <Label>Danh sách quyền</Label>
+            <Input
+              placeholder='Tìm quyền theo tên hoặc mã...'
+              value={permissionSearch}
+              onChange={(event) => setPermissionSearch(event.target.value)}
+            />
             <div className='grid max-h-48 grid-cols-2 gap-2 overflow-auto rounded-md border p-3'>
-              {permissionOptions.map((permission) => {
-                const checked = form.permissions.includes(permission.code)
+              {filteredPermissionOptions.map((permission) => {
+                const checked =
+                  Array.isArray(form.permissionIds) && form.permissionIds.includes(permission.id)
                 return (
                   <label
                     key={permission.id}
@@ -349,22 +536,30 @@ export function RolesTab() {
                       type='checkbox'
                       checked={checked}
                       onChange={(event) => {
+                        const current = Array.isArray(form.permissionIds) ? form.permissionIds : []
                         if (event.target.checked) {
                           setForm((prev) => ({
                             ...prev,
-                            permissions: [...prev.permissions, permission.code],
+                            permissionIds: [...current, permission.id],
                           }))
                           return
                         }
                         setForm((prev) => ({
                           ...prev,
-                          permissions: prev.permissions.filter((item) => item !== permission.code),
+                          permissionIds: current.filter((item) => item !== permission.id),
                         }))
                       }}
                     />
-                    <span className='truncate'>
-                      {permission.name || permission.code}
-                    </span>
+                    <div className='min-w-0'>
+                      <div className='truncate'>
+                        {permission.name || permission.code}
+                      </div>
+                      {permission.code && (
+                        <div className='truncate text-xs text-muted-foreground'>
+                          {permission.code}
+                        </div>
+                      )}
+                    </div>
                   </label>
                 )
               })}
@@ -392,15 +587,15 @@ export function RolesTab() {
             setDeletingRole(null)
           }
         }}
-        title='Xóa nhóm quyền'
+        title='Xóa vai trò'
         desc={
           deletingRole
-            ? `Xóa nhóm quyền ${deletingRole.name}. Hệ thống sẽ chặn nếu role mặc định hoặc còn người dùng.`
+            ? `Xóa vai trò ${deletingRole.name}. Hệ thống sẽ chặn nếu role mặc định hoặc còn người dùng.`
             : ''
         }
         destructive
         handleConfirm={() => deletingRole && deleteMutation.mutate(deletingRole.id)}
-        confirmText='Xóa role'
+        confirmText='Xóa vai trò'
         isLoading={deleteMutation.isPending}
       />
     </Card>

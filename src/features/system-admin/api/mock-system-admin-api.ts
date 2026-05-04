@@ -24,18 +24,87 @@ const DEFAULT_ROLE_NAMES = new Set([
 
 const NETWORK_DELAY_MS = 220
 
+function titleize(value: string) {
+  if (!value) return ''
+  return value
+    .split(/\s+/g)
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ''))
+    .join(' ')
+    .trim()
+}
+
+function humanizePermissionCode(code: string) {
+  const normalized = (code ?? '').trim()
+  if (!normalized) return ''
+
+  const parts = normalized.split(/[.:]/g).filter(Boolean)
+  if (parts.length === 0) return normalized
+
+  const action = parts[parts.length - 1]
+  const resources = parts.slice(0, -1)
+
+  const actionMap: Record<string, string> = {
+    view: 'Xem',
+    read: 'Xem',
+    list: 'Xem danh sách',
+    create: 'Tạo mới',
+    update: 'Cập nhật',
+    edit: 'Cập nhật',
+    delete: 'Xóa',
+    remove: 'Xóa',
+    export: 'Xuất',
+    import: 'Nhập',
+    assign: 'Phân công',
+    approve: 'Phê duyệt',
+    reject: 'Từ chối',
+    manage: 'Quản lý',
+    lock: 'Khóa',
+    unlock: 'Mở khóa',
+  }
+
+  const resourceMap: Record<string, string> = {
+    feature: 'Chức năng',
+    report: 'Báo cáo',
+    reports: 'Báo cáo',
+    periods: 'Kỳ báo cáo',
+    'report-periods': 'Kỳ báo cáo',
+    forms: 'Biểu mẫu',
+    roles: 'Vai trò',
+    permissions: 'Quyền',
+    users: 'Người dùng',
+    orgs: 'Đơn vị',
+    organizations: 'Đơn vị',
+    units: 'Đơn vị',
+    system: 'Hệ thống',
+    admin: 'Quản trị',
+  }
+
+  const resourceLabel =
+    resources.length > 0
+      ? resources
+          .map((item) => resourceMap[item] ?? titleize(item.replace(/[-_]/g, ' ')))
+          .join(' / ')
+      : ''
+
+  const actionLabel = actionMap[action] ?? titleize(action.replace(/[-_]/g, ' '))
+
+  if (resourceLabel) return `${resourceLabel} - ${actionLabel}`
+  return actionLabel || normalized
+}
+
 const db: {
   users: SystemUser[]
   roles: Role[]
   units: OrganizationUnit[]
-  periods: ReportPeriod[]
 } = {
   roles: [
     {
       id: 'r1',
+      code: 'system_admin',
       name: 'System Admin',
       description: 'Quản trị toàn bộ hệ thống',
       dataScope: 'all_units',
+      permissionIds: [],
       permissions: [
         'feature:view',
         'feature:create',
@@ -49,9 +118,11 @@ const db: {
     },
     {
       id: 'r2',
+      code: 'data_manager',
       name: 'Data Manager',
       description: 'Điều phối giao và tổng hợp báo cáo',
       dataScope: 'child_units',
+      permissionIds: [],
       permissions: [
         'feature:view',
         'feature:create',
@@ -63,17 +134,21 @@ const db: {
     },
     {
       id: 'r3',
+      code: 'data_entry',
       name: 'Data Entry',
       description: 'Nhập và gửi báo cáo đơn vị',
       dataScope: 'own_unit',
+      permissionIds: [],
       permissions: ['feature:view', 'feature:create', 'feature:update'],
       isDefault: true,
     },
     {
       id: 'r4',
+      code: 'approver',
       name: 'Approver',
       description: 'Phê duyệt hoặc từ chối báo cáo',
       dataScope: 'child_units',
+      permissionIds: [],
       permissions: ['feature:view', 'feature:export', 'report:approve'],
       isDefault: true,
     },
@@ -165,38 +240,6 @@ const db: {
       isDeleted: false,
     },
   ],
-  periods: [
-    {
-      id: 'p1',
-      code: 'M-2026-04',
-      name: 'Kỳ tháng 04/2026',
-      type: 'month',
-      startDate: '2026-04-01',
-      endDate: '2026-04-30',
-      status: 'open',
-      assignedFormsCount: 6,
-    },
-    {
-      id: 'p2',
-      code: 'Q2-2026',
-      name: 'Kỳ quý II/2026',
-      type: 'quarter',
-      startDate: '2026-04-01',
-      endDate: '2026-06-30',
-      status: 'open',
-      assignedFormsCount: 2,
-    },
-    {
-      id: 'p3',
-      code: 'Y-2025',
-      name: 'Kỳ năm 2025',
-      type: 'year',
-      startDate: '2025-01-01',
-      endDate: '2025-12-31',
-      status: 'closed',
-      assignedFormsCount: 0,
-    },
-  ],
 }
 
 const wait = (ms = NETWORK_DELAY_MS) =>
@@ -251,34 +294,8 @@ function ensureUnitExists(unitId: string) {
 function ensureRolesExist(roleIds: string[]) {
   const missingRole = roleIds.find((roleId) => !db.roles.some((role) => role.id === roleId))
   if (missingRole) {
-    throw new Error('Nhóm quyền không hợp lệ.')
+    throw new Error('Vai trò không hợp lệ.')
   }
-}
-
-function ensurePeriodDateRange(startDate: string, endDate: string) {
-  const start = new Date(startDate).getTime()
-  const end = new Date(endDate).getTime()
-  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
-    throw new Error('Ngày kết thúc phải lớn hơn ngày bắt đầu.')
-  }
-}
-
-function hasPeriodOverlap(
-  type: ReportPeriod['type'],
-  startDate: string,
-  endDate: string,
-  skipId?: string
-) {
-  const start = new Date(startDate).getTime()
-  const end = new Date(endDate).getTime()
-  return db.periods.some((period) => {
-    if (period.id === skipId || period.type !== type) {
-      return false
-    }
-    const currentStart = new Date(period.startDate).getTime()
-    const currentEnd = new Date(period.endDate).getTime()
-    return start <= currentEnd && end >= currentStart
-  })
 }
 
 function nextId(prefix: string, items: Array<{ id: string }>) {
@@ -294,8 +311,6 @@ const legacyMockRuntime = {
   uniqueUserConstraint,
   ensureUnitExists,
   ensureRolesExist,
-  ensurePeriodDateRange,
-  hasPeriodOverlap,
   nextId,
 }
 void legacyMockRuntime
@@ -339,18 +354,33 @@ export const systemAdminMockApi = {
   },
 
   createUser: async (input: CreateUserInput) => {
-    const response = await apiClient.post('/users', {
-      code: input.userCode,
-      fullName: input.fullName,
-      email: input.email,
-      username: input.username,
-      orgId: input.unitId || null,
-      roleIds: input.roleIds,
-      isActive: input.status === 'active',
-    })
+    let response: { data?: unknown }
+    try {
+      response = await apiClient.post('/users', {
+        code: input.userCode,
+        fullName: input.fullName,
+        email: input.email,
+        username: input.username,
+        orgId: input.unitId || null,
+        roleIds: input.roleIds,
+        isActive: input.status === 'active',
+      })
+    } catch (error) {
+      response = await apiClient.post('/users', {
+        code: input.userCode,
+        fullName: input.fullName,
+        email: input.email,
+        username: input.username,
+        orgId: input.unitId || null,
+        isActive: input.status === 'active',
+      })
+    }
 
     const created = response.data as { id?: string } | SystemUser | undefined
     if (created && typeof created === 'object' && 'id' in created && typeof created.id === 'string') {
+      if (input.roleIds.length > 0) {
+        await systemAdminMockApi.assignRolesToUser(created.id, input.roleIds)
+      }
       const users = await systemAdminMockApi.listUsers()
       return users.find((user) => user.id === created.id) ?? (created as SystemUser)
     }
@@ -365,9 +395,12 @@ export const systemAdminMockApi = {
       email: input.email,
       username: input.username,
       orgId: input.unitId || null,
-      roleIds: input.roleIds,
       isActive: input.status === 'active',
     })
+
+    if (input.roleIds.length > 0) {
+      await systemAdminMockApi.assignRolesToUser(userId, input.roleIds)
+    }
 
     const users = await systemAdminMockApi.listUsers()
     const updated = users.find((user) => user.id === userId)
@@ -375,6 +408,33 @@ export const systemAdminMockApi = {
       throw new Error('Không tìm thấy người dùng.')
     }
     return updated
+  },
+
+  assignRolesToUser: async (userId: string, roleIds: string[]) => {
+    await apiClient.patch(`/users/${userId}/roles`, { roleIds })
+
+    const users = await systemAdminMockApi.listUsers()
+    const updated = users.find((user) => user.id === userId)
+    if (!updated) {
+      throw new Error('Không tìm thấy người dùng.')
+    }
+    return updated
+  },
+
+  getUserPermissions: async (userId: string) => {
+    const response = await apiClient.get<
+      | string[]
+      | { items?: string[] }
+      | Array<{ code?: string }>
+      | { items?: Array<{ code?: string }> }
+    >(`/users/${userId}/permissions`)
+
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+
+    return items
+      .map((item) => (typeof item === 'string' ? item : item.code ?? ''))
+      .filter((value) => Boolean(value))
   },
 
   toggleUserStatus: async (userId: string) => {
@@ -420,107 +480,339 @@ export const systemAdminMockApi = {
       code?: string
       name?: string
       description?: string | null
+      category?: string | null
     }
 
-    const response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
-      '/permissions',
-    )
+    let response: { data: { items?: BePermission[] } | BePermission[] }
+    try {
+      response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
+        '/permissions',
+        { params: { page: 1, limit: 200 } },
+      )
+    } catch (error) {
+      response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
+        '/permissions',
+      )
+    }
     const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    const items = Array.isArray(payload)
+      ? payload
+      : Array.isArray((payload as { data?: unknown }).data)
+        ? ((payload as { data: BePermission[] }).data ?? [])
+        : (payload as { items?: BePermission[] }).items ?? []
 
     return items
       .filter((permission) => Boolean(permission.id) && Boolean(permission.code))
-      .map<Permission>((permission) => ({
-        id: permission.id,
-        code: permission.code ?? '',
-        name: permission.name ?? permission.code ?? '',
-        description: permission.description ?? null,
-      }))
+      .map<Permission>((permission) => {
+        const code = (permission.code ?? '').trim()
+        const rawName = (permission.name ?? '').trim()
+        const name = !rawName || rawName === code ? humanizePermissionCode(code) : rawName
+        return {
+          id: permission.id,
+          code,
+          name: name || code,
+          description: permission.description ?? null,
+        }
+      })
   },
 
   listRoles: async () => {
-    type BeRoleGroup = {
+    type BeRole = {
       id: string
+      code?: string
       name?: string
       description?: string | null
-      permissions?: string[]
+      permissions?:
+        | string[]
+        | Array<{ id?: string; code?: string; permissionId?: string; permission?: { id?: string; code?: string } }>
+        | { items?: unknown[]; data?: unknown[] }
       permissionCodes?: string[]
       permissionIds?: string[]
+      rolePermissions?: Array<{ permissionId?: string; permission?: { id?: string; code?: string } }>
       isDefault?: boolean
       isSystem?: boolean
     }
 
-    let response: { data: { items?: BeRoleGroup[] } | BeRoleGroup[] }
-    try {
-      response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
-        '/role-groups',
-        { params: { page: 1, limit: 200 } },
-      )
-    } catch (error) {
-      try {
-        response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
-          '/role-groups',
-        )
-      } catch (nestedError) {
-        try {
-          response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
-            '/roles',
-            { params: { page: 1, limit: 200 } },
-          )
-        } catch (finalError) {
-          response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>('/roles')
+    const extractPermissions = (role: BeRole): { permissionIds: string[]; permissionCodes: string[] } => {
+      const collect = (raw: unknown): { permissionIds: string[]; permissionCodes: string[] } => {
+        const ids: string[] = []
+        const codes: string[] = []
+
+        const arr =
+          Array.isArray(raw)
+            ? raw
+            : raw && typeof raw === 'object'
+              ? (Array.isArray((raw as { items?: unknown }).items)
+                  ? (raw as { items: unknown[] }).items
+                  : Array.isArray((raw as { data?: unknown }).data)
+                    ? (raw as { data: unknown[] }).data
+                    : [])
+              : []
+
+        arr.forEach((item) => {
+          if (typeof item === 'string') {
+            codes.push(item)
+            return
+          }
+
+          if (!item || typeof item !== 'object') return
+
+          const asAny = item as {
+            id?: unknown
+            code?: unknown
+            permissionId?: unknown
+            permission?: { id?: unknown; code?: unknown }
+          }
+
+          if (typeof asAny.id === 'string') ids.push(asAny.id)
+          if (typeof asAny.code === 'string') codes.push(asAny.code)
+          if (typeof asAny.permissionId === 'string') ids.push(asAny.permissionId)
+          if (asAny.permission && typeof asAny.permission === 'object') {
+            if (typeof asAny.permission.id === 'string') ids.push(asAny.permission.id)
+            if (typeof asAny.permission.code === 'string') codes.push(asAny.permission.code)
+          }
+        })
+
+        return {
+          permissionIds: ids.filter(Boolean),
+          permissionCodes: codes.filter(Boolean),
         }
       }
+
+      const fromPermissions = collect(role.permissions)
+      if (fromPermissions.permissionIds.length > 0 || fromPermissions.permissionCodes.length > 0) {
+        return fromPermissions
+      }
+
+      const fromRolePermissions = collect(role.rolePermissions)
+      return fromRolePermissions
+    }
+
+    const loadRolePermissions = async (roleId: string) => {
+      try {
+        const response = await apiClient.get<BeRole>(`/roles/${roleId}`)
+        return extractPermissions(response.data)
+      } catch (error) {
+        try {
+          const response = await apiClient.get<
+            | { permissionIds?: string[]; permissionCodes?: string[]; permissions?: unknown }
+            | unknown[]
+            | { items?: unknown[]; data?: unknown[] }
+          >(`/roles/${roleId}/permissions`)
+
+          const payload = response.data
+          const collectedFromPayload = extractPermissions({ id: roleId, permissions: payload } as BeRole)
+
+          if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+            const obj = payload as { permissionIds?: unknown; permissionCodes?: unknown; permissions?: unknown }
+            const permissionIds = Array.isArray(obj.permissionIds)
+              ? obj.permissionIds.filter((item): item is string => typeof item === 'string')
+              : []
+            const permissionCodes = Array.isArray(obj.permissionCodes)
+              ? obj.permissionCodes.filter((item): item is string => typeof item === 'string')
+              : []
+
+            return {
+              permissionIds: permissionIds.length > 0 ? permissionIds : collectedFromPayload.permissionIds,
+              permissionCodes: permissionCodes.length > 0 ? permissionCodes : collectedFromPayload.permissionCodes,
+            }
+          }
+
+          return collectedFromPayload
+        } catch (nestedError) {
+          void nestedError
+        }
+      }
+      return { permissionIds: [], permissionCodes: [] }
+    }
+
+    let response: { data: { items?: BeRole[] } | { data?: BeRole[] } | BeRole[] }
+    try {
+      response = await apiClient.get<{ items: BeRole[] } | { data?: BeRole[] } | BeRole[]>(
+        '/roles',
+        { params: { page: 1, limit: 500 } },
+      )
+    } catch (error) {
+      response = await apiClient.get<{ items: BeRole[] } | { data?: BeRole[] } | BeRole[]>(
+        '/roles',
+      )
     }
     const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    const items = Array.isArray(payload)
+      ? payload
+      : Array.isArray((payload as { data?: unknown }).data)
+        ? ((payload as { data: BeRole[] }).data ?? [])
+        : (payload as { items?: BeRole[] }).items ?? []
 
-    return items.map<Role>((role) => ({
-      id: role.id,
-      name: role.name ?? '',
-      description: role.description ?? '',
-      dataScope: 'own_unit',
-      permissions:
-        role.permissions ??
-        role.permissionCodes ??
-        role.permissionIds ??
-        [],
-      isDefault: role.isDefault ?? role.isSystem ?? DEFAULT_ROLE_NAMES.has(role.name ?? ''),
-    }))
+    const baseRoles = items.map<Role>((role) => {
+      const extracted = extractPermissions(role)
+
+      const permissionIds = Array.isArray(role.permissionIds)
+        ? role.permissionIds
+        : extracted.permissionIds
+
+      const permissionCodes = Array.isArray(role.permissionCodes)
+        ? role.permissionCodes
+        : extracted.permissionCodes
+
+      return {
+        id: role.id,
+        code: role.code ?? '',
+        name: role.name ?? '',
+        description: role.description ?? '',
+        dataScope: 'own_unit',
+        permissionIds,
+        permissions: permissionCodes,
+        isDefault: role.isDefault ?? role.isSystem ?? DEFAULT_ROLE_NAMES.has(role.name ?? ''),
+      }
+    })
+
+    const needsEnrich = baseRoles.some(
+      (role) => role.permissionIds.length === 0 && role.permissions.length === 0,
+    )
+
+    if (!needsEnrich) return baseRoles
+
+    const enriched = await Promise.all(
+      baseRoles.map(async (role) => {
+        if (role.permissionIds.length > 0 || role.permissions.length > 0) return role
+
+        const loaded = await loadRolePermissions(role.id)
+        return {
+          ...role,
+          permissionIds: loaded.permissionIds,
+          permissions: loaded.permissionCodes,
+        }
+      }),
+    )
+
+    return enriched
+  },
+
+  getRolePermissions: async (roleId: string) => {
+    type RolePermissionsItem =
+      | string
+      | { id?: unknown; code?: unknown; permissionId?: unknown; permission?: { id?: unknown; code?: unknown } }
+
+    const collect = (raw: unknown): { permissionIds: string[]; permissionCodes: string[] } => {
+      const ids: string[] = []
+      const codes: string[] = []
+
+      const arr =
+        Array.isArray(raw)
+          ? raw
+          : raw && typeof raw === 'object'
+            ? (Array.isArray((raw as { items?: unknown }).items)
+                ? (raw as { items: unknown[] }).items
+                : Array.isArray((raw as { data?: unknown }).data)
+                  ? (raw as { data: unknown[] }).data
+                  : [])
+            : []
+
+      ;(arr as RolePermissionsItem[]).forEach((item) => {
+        if (typeof item === 'string') {
+          codes.push(item)
+          return
+        }
+        if (!item || typeof item !== 'object') return
+
+        const asAny = item as {
+          id?: unknown
+          code?: unknown
+          permissionId?: unknown
+          permission?: { id?: unknown; code?: unknown }
+        }
+
+        if (typeof asAny.id === 'string') ids.push(asAny.id)
+        if (typeof asAny.code === 'string') codes.push(asAny.code)
+        if (typeof asAny.permissionId === 'string') ids.push(asAny.permissionId)
+        if (asAny.permission && typeof asAny.permission === 'object') {
+          if (typeof asAny.permission.id === 'string') ids.push(asAny.permission.id)
+          if (typeof asAny.permission.code === 'string') codes.push(asAny.permission.code)
+        }
+      })
+
+      return { permissionIds: ids.filter(Boolean), permissionCodes: codes.filter(Boolean) }
+    }
+
+    const extract = (payload: unknown) => {
+      if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        const obj = payload as { permissionIds?: unknown; permissionCodes?: unknown; permissions?: unknown }
+        const permissionIds = Array.isArray(obj.permissionIds)
+          ? obj.permissionIds.filter((item): item is string => typeof item === 'string')
+          : []
+        const permissionCodes = Array.isArray(obj.permissionCodes)
+          ? obj.permissionCodes.filter((item): item is string => typeof item === 'string')
+          : []
+
+        const fromPermissions = collect(obj.permissions)
+        const fromPayload = collect(payload)
+
+        return {
+          permissionIds:
+            permissionIds.length > 0
+              ? permissionIds
+              : fromPermissions.permissionIds.length > 0
+                ? fromPermissions.permissionIds
+                : fromPayload.permissionIds,
+          permissionCodes:
+            permissionCodes.length > 0
+              ? permissionCodes
+              : fromPermissions.permissionCodes.length > 0
+                ? fromPermissions.permissionCodes
+                : fromPayload.permissionCodes,
+        }
+      }
+
+      return collect(payload)
+    }
+
+    try {
+      const response = await apiClient.get(`/roles/${roleId}`)
+      const extracted = extract(response.data)
+      return extracted.permissionIds
+    } catch (error) {
+      try {
+        const response = await apiClient.get(`/roles/${roleId}/permissions`)
+        const extracted = extract(response.data)
+        return extracted.permissionIds
+      } catch (nestedError) {
+        void nestedError
+      }
+    }
+    return []
   },
 
   createRole: async (input: CreateRoleInput) => {
-    const tryCreate = async (path: string) => {
-      try {
-        return await apiClient.post(path, {
-          name: input.name,
-          description: input.description,
-          permissionCodes: input.permissions,
-        })
-      } catch (error) {
-        return await apiClient.post(path, {
-          name: input.name,
-          description: input.description,
-          permissions: input.permissions,
-        })
-      }
+    const mapCodesToIds = async (codes: string[]) => {
+      if (codes.length === 0) return []
+      const permissions = await systemAdminMockApi.listPermissions()
+      return codes
+        .map((code) => permissions.find((item) => item.code === code)?.id ?? '')
+        .filter((id) => Boolean(id))
     }
 
-    let response: { data?: unknown }
-    try {
-      response = await tryCreate('/role-groups')
-    } catch (error) {
-      response = await tryCreate('/roles')
-    }
+    const permissionIds =
+      input.permissionIds.length > 0 ? input.permissionIds : await mapCodesToIds(input.permissions)
+
+    const response = await apiClient.post('/roles', {
+      code: input.code,
+      name: input.name,
+      description: input.description,
+    })
 
     const created = response.data as { id?: string } | undefined
     if (created?.id) {
+      await apiClient.patch(`/roles/${created.id}/permissions`, { permissionIds })
+
       const roles = await systemAdminMockApi.listRoles()
       return roles.find((role) => role.id === created.id) ?? {
         id: created.id,
+        code: input.code,
         name: input.name,
         description: input.description,
         dataScope: input.dataScope,
+        permissionIds,
         permissions: input.permissions,
         isDefault: false,
       }
@@ -531,27 +823,23 @@ export const systemAdminMockApi = {
   },
 
   updateRole: async (roleId: string, input: UpdateRoleInput) => {
-    const tryUpdate = async (path: string) => {
-      try {
-        await apiClient.patch(path, {
-          name: input.name,
-          description: input.description,
-          permissionCodes: input.permissions,
-        })
-      } catch (error) {
-        await apiClient.patch(path, {
-          name: input.name,
-          description: input.description,
-          permissions: input.permissions,
-        })
-      }
+    const mapCodesToIds = async (codes: string[]) => {
+      if (codes.length === 0) return []
+      const permissions = await systemAdminMockApi.listPermissions()
+      return codes
+        .map((code) => permissions.find((item) => item.code === code)?.id ?? '')
+        .filter((id) => Boolean(id))
     }
 
-    try {
-      await tryUpdate(`/role-groups/${roleId}`)
-    } catch (error) {
-      await tryUpdate(`/roles/${roleId}`)
-    }
+    const permissionIds =
+      input.permissionIds.length > 0 ? input.permissionIds : await mapCodesToIds(input.permissions)
+
+    await apiClient.patch(`/roles/${roleId}`, {
+      name: input.name,
+      description: input.description,
+    })
+
+    await apiClient.patch(`/roles/${roleId}/permissions`, { permissionIds })
 
     const roles = await systemAdminMockApi.listRoles()
     const updated = roles.find((role) => role.id === roleId)
@@ -562,11 +850,7 @@ export const systemAdminMockApi = {
   },
 
   deleteRole: async (roleId: string) => {
-    try {
-      await apiClient.delete(`/role-groups/${roleId}`)
-    } catch (error) {
-      await apiClient.delete(`/roles/${roleId}`)
-    }
+    await apiClient.delete(`/roles/${roleId}`)
     return true
   },
 
@@ -691,12 +975,23 @@ export const systemAdminMockApi = {
       status?: 'open' | 'closed' | string
     }
 
-    const response = await apiClient.get<{ items: BeReportPeriod[] } | BeReportPeriod[]>(
-      '/report-periods',
-      { params: { page: 1, limit: 200 } },
-    )
+    let response: { data: { items?: BeReportPeriod[] } | { data?: BeReportPeriod[] } | BeReportPeriod[] }
+    try {
+      response = await apiClient.get<{ items: BeReportPeriod[] } | { data?: BeReportPeriod[] } | BeReportPeriod[]>(
+        '/report-periods',
+        { params: { page: 1, limit: 200 } },
+      )
+    } catch {
+      response = await apiClient.get<{ items: BeReportPeriod[] } | { data?: BeReportPeriod[] } | BeReportPeriod[]>(
+        '/report-periods',
+      )
+    }
     const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    const items = Array.isArray(payload)
+      ? payload
+      : Array.isArray((payload as { data?: unknown }).data)
+        ? ((payload as { data: BeReportPeriod[] }).data ?? [])
+        : (payload as { items?: BeReportPeriod[] }).items ?? []
 
     return items.map<ReportPeriod>((period) => ({
       id: period.id,

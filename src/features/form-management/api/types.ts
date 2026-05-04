@@ -19,6 +19,15 @@ export type FormTemplateListParams = {
   category?: string
 }
 
+export type FieldCategory = {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  sortOrder: number
+  isActive: boolean
+}
+
 export type TemplateField = {
   id: string
   key: string
@@ -81,6 +90,9 @@ export type UpdateFieldInput = Omit<TemplateField, 'id' | 'isSystemDefault'>
 
 export type CreateIndicatorInput = Omit<TemplateIndicator, 'id' | 'hasReportData'>
 export type UpdateIndicatorInput = Omit<TemplateIndicator, 'id' | 'hasReportData'>
+
+export type CreateFieldCategoryInput = Omit<FieldCategory, 'id'>
+export type UpdateFieldCategoryInput = Omit<FieldCategory, 'id'>
 
 export const templateCycleOptions: Array<{ value: TemplateCycle; label: string }> = [
   { value: 'week', label: 'Tuần' },

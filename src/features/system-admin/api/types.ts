@@ -19,9 +19,11 @@ export type SystemUser = {
 
 export type Role = {
   id: string
+  code: string
   name: string
   description: string
   dataScope: DataScope
+  permissionIds: string[]
   permissions: string[]
   isDefault: boolean
 }

@@ -246,7 +246,7 @@ export function PeriodsTab() {
     <Card>
       <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
-          <CardTitle>Catalog kỳ báo cáo</CardTitle>
+          <CardTitle>Kỳ báo cáo</CardTitle>
           <CardDescription>
             Quản lý kỳ tuần/tháng/quý/năm với quy tắc chống trùng thời gian theo loại kỳ.
           </CardDescription>

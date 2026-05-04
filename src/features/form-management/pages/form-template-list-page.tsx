@@ -1,16 +1,22 @@
-﻿import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { PlusCircle } from 'lucide-react'
-import { PageBreadcrumb } from '@/components/page-breadcrumb'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { PlusCircle, Trash2, UserPen } from 'lucide-react'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -19,191 +25,323 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  useFieldCategoriesCatalogQuery,
-} from '../api/catalog-queries'
+import { Textarea } from '@/components/ui/textarea'
 import { formManagementApi } from '../api/mock-form-management-api'
-import { templateCycleOptions, type FormTemplate } from '../api/types'
-import { TemplateListFilter } from '../components/template-list-filter'
-import { TemplateListTable } from '../components/template-list-table'
+import { type FieldCategory } from '../api/types'
 
-const EMPTY_TEMPLATES: FormTemplate[] = []
-const REPORT_PERIOD_OPTIONS = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'TUAN', label: 'Tuần' },
-  { value: 'THANG', label: 'Tháng' },
-  { value: 'QUY', label: 'Quý' },
-  { value: 'NAM', label: 'Năm' },
-]
+const EMPTY_CATEGORIES: FieldCategory[] = []
+
+type FieldCategoryFormState = {
+  code: string
+  name: string
+  description: string
+  sortOrder: string
+  isActive: boolean
+}
+
+const defaultForm: FieldCategoryFormState = {
+  code: '',
+  name: '',
+  description: '',
+  sortOrder: '0',
+  isActive: true,
+}
 
 export function FormTemplateListPage() {
-  const [search, setSearch] = useState('')
-  const [selectedPeriod, setSelectedPeriod] = useState('all')
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
-  const [previewTemplate, setPreviewTemplate] = useState<FormTemplate | null>(null)
+  const queryClient = useQueryClient()
 
-  const templatesQuery = useQuery({
-    queryKey: [
-      'form-management',
-      'templates',
-      {
-        search,
-        page: 1,
-        limit: 20,
-        status: selectedStatus,
-        period: selectedPeriod,
-        category: selectedCategory,
-      },
-    ],
-    queryFn: () =>
-      formManagementApi.listTemplates({
-        search,
-        page: 1,
-        limit: 20,
-        status: selectedStatus as 'all' | 'true' | 'false',
-        period: selectedPeriod === 'all' ? '' : selectedPeriod,
-        category: selectedCategory === 'all' ? '' : selectedCategory,
-      }),
+  const categoriesQuery = useQuery({
+    queryKey: ['form-management', 'field-categories'],
+    queryFn: () => formManagementApi.listFieldCategories(),
   })
 
-  const categoriesQuery = useFieldCategoriesCatalogQuery()
+  const categories = categoriesQuery.data ?? EMPTY_CATEGORIES
 
-  const templates = templatesQuery.data ?? EMPTY_TEMPLATES
-  const categories = categoriesQuery.data ?? []
+  const [search, setSearch] = useState('')
+  const [openForm, setOpenForm] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<FieldCategory | null>(null)
+  const [form, setForm] = useState<FieldCategoryFormState>(defaultForm)
+  const [deletingCategory, setDeletingCategory] = useState<FieldCategory | null>(null)
 
-  const cycleLabel = (cycle: string) =>
-    templateCycleOptions.find((item) => item.value === cycle)?.label ?? cycle
+  const filteredCategories = useMemo(() => {
+    const keyword = search.trim().toLowerCase()
+    if (!keyword) return categories
+    return categories.filter((item) => {
+      const parts = [item.code, item.name, item.description ?? '']
+      return parts.some((value) => value.toLowerCase().includes(keyword))
+    })
+  }, [categories, search])
+
+  const closeForm = () => {
+    setOpenForm(false)
+    setEditingCategory(null)
+    setForm(defaultForm)
+  }
+
+  const openCreateDialog = () => {
+    setEditingCategory(null)
+    setForm(defaultForm)
+    setOpenForm(true)
+  }
+
+  const openEditDialog = (category: FieldCategory) => {
+    setEditingCategory(category)
+    setForm({
+      code: category.code,
+      name: category.name,
+      description: category.description ?? '',
+      sortOrder: String(category.sortOrder ?? 0),
+      isActive: category.isActive,
+    })
+    setOpenForm(true)
+  }
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      formManagementApi.createFieldCategory({
+        code: form.code.trim(),
+        name: form.name.trim(),
+        description: form.description.trim().length > 0 ? form.description.trim() : null,
+        sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
+        isActive: form.isActive,
+      }),
+    onSuccess: () => {
+      toast.success('Đã tạo lĩnh vực biểu mẫu.')
+      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
+      closeForm()
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      if (!editingCategory) {
+        throw new Error('Không tìm thấy lĩnh vực.')
+      }
+      return formManagementApi.updateFieldCategory(editingCategory.id, {
+        code: form.code.trim(),
+        name: form.name.trim(),
+        description: form.description.trim().length > 0 ? form.description.trim() : null,
+        sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
+        isActive: form.isActive,
+      })
+    },
+    onSuccess: () => {
+      toast.success('Đã cập nhật lĩnh vực biểu mẫu.')
+      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
+      closeForm()
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => formManagementApi.deleteFieldCategory(id),
+    onSuccess: () => {
+      toast.success('Đã xóa lĩnh vực biểu mẫu.')
+      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
+      setDeletingCategory(null)
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
 
   return (
-    <>
-      <div className='flex w-full flex-col gap-4'>
-        <PageBreadcrumb
-          title='Danh sách biểu mẫu'
-          subtitle='Theo dõi biểu mẫu theo lĩnh vực, chu kỳ và trạng thái. Chọn thao tác để đi đến luồng tạo, chỉnh sửa hoặc xem chi tiết.'
-        >
-          <Button asChild>
-            <Link to='/form-management/create'>
-              <PlusCircle />
-              Thêm mới
-            </Link>
+    <Card>
+      <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
+        <div>
+          <CardTitle>Lĩnh vực biểu mẫu</CardTitle>
+          <CardDescription>Quản lý danh mục lĩnh vực biểu mẫu để phân nhóm biểu mẫu.</CardDescription>
+        </div>
+
+        <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
+          <Input
+            className='sm:w-80'
+            placeholder='Tìm theo mã, tên hoặc mô tả...'
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <Button onClick={openCreateDialog}>
+            <PlusCircle />
+            Thêm lĩnh vực
           </Button>
-        </PageBreadcrumb>
-
-        <TemplateListFilter
-          search={search}
-          selectedPeriod={selectedPeriod}
-          selectedCategory={selectedCategory}
-          selectedStatus={selectedStatus}
-          periodOptions={REPORT_PERIOD_OPTIONS}
-          categories={categories}
-          onSearchChange={setSearch}
-          onPeriodChange={setSelectedPeriod}
-          onCategoryChange={setSelectedCategory}
-          onStatusChange={setSelectedStatus}
-        />
-
-        <TemplateListTable
-          templates={templates}
-          cycleLabel={cycleLabel}
-          onPreview={setPreviewTemplate}
-        />
-      </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className='overflow-hidden rounded-md border'>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mã</TableHead>
+                <TableHead>Tên lĩnh vực</TableHead>
+                <TableHead className='w-[120px]'>Thứ tự</TableHead>
+                <TableHead className='w-[140px]'>Trạng thái</TableHead>
+                <TableHead>Mô tả</TableHead>
+                <TableHead className='w-[120px] text-right'>Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {categoriesQuery.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={6} className='h-20 text-center text-sm text-muted-foreground'>
+                    Đang tải danh sách lĩnh vực...
+                  </TableCell>
+                </TableRow>
+              )}
+              {categoriesQuery.isError && (
+                <TableRow>
+                  <TableCell colSpan={6} className='h-20 text-center text-sm text-destructive'>
+                    Không tải được danh sách lĩnh vực.
+                  </TableCell>
+                </TableRow>
+              )}
+              {!categoriesQuery.isLoading && !categoriesQuery.isError && filteredCategories.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className='h-20 text-center'>
+                    Chưa có lĩnh vực biểu mẫu.
+                  </TableCell>
+                </TableRow>
+              )}
+              {filteredCategories.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className='font-medium'>{item.code}</TableCell>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell>{item.sortOrder}</TableCell>
+                  <TableCell>
+                    <Badge variant={item.isActive ? 'default' : 'secondary'}>
+                      {item.isActive ? 'Hoạt động' : 'Ngừng'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className='max-w-[420px] truncate'>{item.description ?? '-'}</TableCell>
+                  <TableCell className='text-right'>
+                    <div className='flex justify-end gap-1'>
+                      <Button
+                        size='icon'
+                        variant='outline'
+                        onClick={() => openEditDialog(item)}
+                        title='Sửa lĩnh vực'
+                      >
+                        <UserPen />
+                      </Button>
+                      <Button
+                        size='icon'
+                        variant='destructive'
+                        onClick={() => setDeletingCategory(item)}
+                        title='Xóa lĩnh vực'
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
 
       <Dialog
-        open={Boolean(previewTemplate)}
+        open={openForm}
         onOpenChange={(open) => {
-          if (!open) {
-            setPreviewTemplate(null)
-          }
+          setOpenForm(open)
+          if (!open) closeForm()
         }}
       >
-        <DialogContent className='sm:max-w-3xl'>
+        <DialogContent className='sm:max-w-xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>
-              {previewTemplate?.code} - {previewTemplate?.name}
-            </DialogTitle>
-            <DialogDescription>
-              Xem nhanh dữ liệu nhập liệu với danh sách thuộc tính và chỉ tiêu hiện có.
-            </DialogDescription>
+            <DialogTitle>{editingCategory ? 'Cập nhật lĩnh vực' : 'Thêm lĩnh vực'}</DialogTitle>
+            <DialogDescription>Quản lý danh mục lĩnh vực biểu mẫu.</DialogDescription>
           </DialogHeader>
 
-          {previewTemplate && (
-            <div className='space-y-4'>
-              <div className='grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-3'>
-                <div>
-                  <span className='text-muted-foreground'>Lĩnh vực: </span>
-                  {previewTemplate.domain}
-                </div>
-                <div>
-                  <span className='text-muted-foreground'>Chu kỳ: </span>
-                  {cycleLabel(previewTemplate.cycle)}
-                </div>
-                <div>
-                  <span className='text-muted-foreground'>Trạng thái: </span>
-                  {previewTemplate.status === 'active' ? 'Hoạt động' : 'Ngừng sử dụng'}
-                </div>
-              </div>
-
-              <div>
-                <p className='mb-2 text-sm font-medium'>Thuộc tính biểu mẫu</p>
-                <div className='overflow-hidden rounded-md border'>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Khóa</TableHead>
-                        <TableHead>Tên hiển thị</TableHead>
-                        <TableHead>Kiểu dữ liệu</TableHead>
-                        <TableHead>Bắt buộc</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {previewTemplate.fields.map((field) => (
-                        <TableRow key={field.id}>
-                          <TableCell>{field.key}</TableCell>
-                          <TableCell>{field.label}</TableCell>
-                          <TableCell>{field.dataType}</TableCell>
-                          <TableCell>{field.required ? 'Có' : 'Không'}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-
-              <div>
-                <p className='mb-2 text-sm font-medium'>Chỉ tiêu chính</p>
-                <div className='overflow-hidden rounded-md border'>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Mã</TableHead>
-                        <TableHead>Tên chỉ tiêu</TableHead>
-                        <TableHead>Đơn vị</TableHead>
-                        <TableHead>Loại</TableHead>
-                        <TableHead>Nhóm</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {previewTemplate.indicators.map((indicator) => (
-                        <TableRow key={indicator.id}>
-                          <TableCell>{indicator.code}</TableCell>
-                          <TableCell>{indicator.name}</TableCell>
-                          <TableCell>{indicator.unit}</TableCell>
-                          <TableCell>
-                            {indicator.type === 'calculated' ? 'Tự động tính' : 'Nhập tay'}
-                          </TableCell>
-                          <TableCell>{indicator.group}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+          <div className='grid gap-4 sm:grid-cols-2'>
+            <div className='space-y-2'>
+              <Label>Mã lĩnh vực</Label>
+              <Input
+                value={form.code}
+                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+                placeholder='vd: qldl'
+              />
             </div>
-          )}
+            <div className='space-y-2'>
+              <Label>Thứ tự hiển thị</Label>
+              <Input
+                inputMode='numeric'
+                value={form.sortOrder}
+                onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+                placeholder='0'
+              />
+            </div>
+            <div className='space-y-2 sm:col-span-2'>
+              <Label>Tên lĩnh vực</Label>
+              <Input
+                value={form.name}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder='vd: Quản lý dữ liệu'
+              />
+            </div>
+            <div className='space-y-2 sm:col-span-2'>
+              <Label>Mô tả</Label>
+              <Textarea
+                value={form.description}
+                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder='Mô tả ngắn...'
+              />
+            </div>
+            <div className='flex items-center justify-between gap-2 rounded-md border p-3 sm:col-span-2'>
+              <div className='space-y-0.5'>
+                <div className='text-sm font-medium'>Trạng thái</div>
+                <div className='text-xs text-muted-foreground'>
+                  {form.isActive ? 'Hoạt động' : 'Ngừng sử dụng'}
+                </div>
+              </div>
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant='outline' onClick={closeForm}>
+              Hủy
+            </Button>
+            <Button
+              onClick={() => {
+                const code = form.code.trim()
+                const name = form.name.trim()
+                if (!code || !name) {
+                  toast.error('Mã lĩnh vực và tên lĩnh vực là bắt buộc.')
+                  return
+                }
+                if (editingCategory) {
+                  updateMutation.mutate()
+                } else {
+                  createMutation.mutate()
+                }
+              }}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              Lưu
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+
+      <ConfirmDialog
+        open={Boolean(deletingCategory)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingCategory(null)
+        }}
+        title='Xóa lĩnh vực biểu mẫu'
+        desc='Bạn chắc chắn muốn xóa lĩnh vực này?'
+        confirmText='Xóa'
+        cancelBtnText='Hủy'
+        destructive
+        isLoading={deleteMutation.isPending}
+        disabled={deleteMutation.isPending}
+        handleConfirm={() => {
+          if (!deletingCategory) return
+          deleteMutation.mutate(deletingCategory.id)
+        }}
+      />
+    </Card>
   )
 }
