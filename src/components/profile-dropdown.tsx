@@ -13,9 +13,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SignOutDialog } from '@/components/sign-out-dialog'
+import { useAuthStore } from '@/stores/auth-store'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function getDisplayName(user: unknown) {
+  if (isRecord(user)) {
+    const fullName = typeof user.fullName === 'string' ? user.fullName.trim() : ''
+    if (fullName) return fullName
+    const username = typeof user.username === 'string' ? user.username.trim() : ''
+    if (username) return username
+    const email = typeof user.email === 'string' ? user.email.trim() : ''
+    if (email) return email
+  }
+  return 'Tài khoản'
+}
+
+function getDisplayEmail(user: unknown) {
+  if (isRecord(user)) {
+    const email = typeof user.email === 'string' ? user.email.trim() : ''
+    if (email) return email
+  }
+  return ''
+}
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
+  const authUser = useAuthStore((state) => state.auth.user)
+  const displayName = getDisplayName(authUser)
+  const displayEmail = getDisplayEmail(authUser)
 
   return (
     <>
@@ -31,37 +59,36 @@ export function ProfileDropdown() {
         <DropdownMenuContent className='w-56' align='end' forceMount>
           <DropdownMenuLabel className='font-normal'>
             <div className='flex flex-col gap-1.5'>
-              <p className='text-sm leading-none font-medium'>satnaing</p>
-              <p className='text-xs leading-none text-muted-foreground'>
-                satnaingdev@gmail.com
-              </p>
+              <p className='text-sm leading-none font-medium'>{displayName}</p>
+              {displayEmail ? (
+                <p className='text-xs leading-none text-muted-foreground'>{displayEmail}</p>
+              ) : null}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
               <Link to='/settings'>
-                Profile
+                Hồ sơ cá nhân
                 <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to='/settings'>
-                Billing
+              <Link to='/settings/account'>
+                Tài khoản
                 <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to='/settings'>
-                Settings
+              <Link to='/settings/notifications'>
+                Thông báo
                 <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>New Team</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant='destructive' onClick={() => setOpen(true)}>
-            Sign out
+            Đăng xuất
             <DropdownMenuShortcut className='text-current'>
               ⇧⌘Q
             </DropdownMenuShortcut>

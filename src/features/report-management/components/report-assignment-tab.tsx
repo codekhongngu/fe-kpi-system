@@ -36,7 +36,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { reportManagementMockApi } from '../api/mock-report-management-api'
+import { reportManagementApi } from '../api/mock-report-management-api'
 import { type ReportAssignment } from '../api/types'
 
 const EMPTY_ASSIGNMENTS: ReportAssignment[] = []
@@ -61,11 +61,11 @@ export function ReportAssignmentTab() {
   const queryClient = useQueryClient()
   const refsQuery = useQuery({
     queryKey: ['report-management', 'refs'],
-    queryFn: () => reportManagementMockApi.listReferenceData(),
+    queryFn: () => reportManagementApi.listReferenceData(),
   })
   const assignmentsQuery = useQuery({
     queryKey: ['report-management', 'assignments'],
-    queryFn: () => reportManagementMockApi.listAssignments(),
+    queryFn: () => reportManagementApi.listAssignments(),
   })
 
   const forms = refsQuery.data?.forms ?? []
@@ -92,7 +92,7 @@ export function ReportAssignmentTab() {
   }, [search, assignments])
 
   const createMutation = useMutation({
-    mutationFn: reportManagementMockApi.createAssignments,
+    mutationFn: reportManagementApi.createAssignments,
     onSuccess: (result) => {
       toast.success(`Đã giao ${result.length} báo cáo và tạo instance tương ứng.`)
       queryClient.invalidateQueries({ queryKey: ['report-management'] })
@@ -104,7 +104,7 @@ export function ReportAssignmentTab() {
 
   const cancelMutation = useMutation({
     mutationFn: ({ assignmentId, reason }: { assignmentId: string; reason: string }) =>
-      reportManagementMockApi.cancelAssignment(assignmentId, reason),
+      reportManagementApi.cancelAssignment(assignmentId, reason),
     onSuccess: () => {
       toast.success('Đã hủy giao báo cáo.')
       queryClient.invalidateQueries({ queryKey: ['report-management'] })

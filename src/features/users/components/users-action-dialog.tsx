@@ -3,7 +3,8 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -24,20 +25,19 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 import { SelectDropdown } from '@/components/select-dropdown'
-import { roles } from '../data/data'
+import { rolesApi, usersApi } from '../api/users-api'
 import { type User } from '../data/schema'
 
 const formSchema = z
   .object({
-    firstName: z.string().min(1, 'First Name is required.'),
-    lastName: z.string().min(1, 'Last Name is required.'),
-    username: z.string().min(1, 'Username is required.'),
-    phoneNumber: z.string().min(1, 'Phone number is required.'),
+    fullName: z.string().min(1, 'Vui lòng nhập họ và tên.'),
+    username: z.string().min(1, 'Vui lòng nhập tài khoản.'),
+    phone: z.string().optional(),
     email: z.email({
-      error: (iss) => (iss.input === '' ? 'Email is required.' : undefined),
+      error: (iss) => (iss.input === '' ? 'Vui lòng nhập email.' : 'Email không hợp lệ.'),
     }),
     password: z.string().transform((pwd) => pwd.trim()),
-    role: z.string().min(1, 'Role is required.'),
+    roleId: z.string().min(1, 'Vui lòng chọn vai trò.'),
     confirmPassword: z.string().transform((pwd) => pwd.trim()),
     isEdit: z.boolean(),
   })
@@ -47,7 +47,7 @@ const formSchema = z
       return data.password.length > 0
     },
     {
-      message: 'Password is required.',
+      message: 'Vui lòng nhập mật khẩu.',
       path: ['password'],
     }
   )
@@ -57,7 +57,7 @@ const formSchema = z
       return password.length >= 8
     },
     {
-      message: 'Password must be at least 8 characters long.',
+      message: 'Mật khẩu phải có ít nhất 8 ký tự.',
       path: ['password'],
     }
   )
@@ -67,7 +67,7 @@ const formSchema = z
       return /[a-z]/.test(password)
     },
     {
-      message: 'Password must contain at least one lowercase letter.',
+      message: 'Mật khẩu phải có ít nhất 1 chữ thường.',
       path: ['password'],
     }
   )
@@ -77,7 +77,7 @@ const formSchema = z
       return /\d/.test(password)
     },
     {
-      message: 'Password must contain at least one number.',
+      message: 'Mật khẩu phải có ít nhất 1 chữ số.',
       path: ['password'],
     }
   )
@@ -87,7 +87,7 @@ const formSchema = z
       return password === confirmPassword
     },
     {
-      message: "Passwords don't match.",
+      message: 'Mật khẩu nhập lại không khớp.',
       path: ['confirmPassword'],
     }
   )
@@ -105,32 +105,87 @@ export function UsersActionDialog({
   onOpenChange,
 }: UserActionDialogProps) {
   const isEdit = !!currentRow
+  const queryClient = useQueryClient()
+
+  const rolesQuery = useQuery({
+    queryKey: ['roles', { page: 1, limit: 200 }],
+    queryFn: () => rolesApi.list({ page: 1, limit: 200 }),
+  })
+
   const form = useForm<UserForm>({
     resolver: zodResolver(formSchema),
     defaultValues: isEdit
       ? {
-          ...currentRow,
+          fullName: currentRow.fullName,
+          username: currentRow.username,
+          email: currentRow.email,
+          phone: '',
+          roleId: currentRow.roleIds[0] ?? '',
           password: '',
           confirmPassword: '',
           isEdit,
         }
       : {
-          firstName: '',
-          lastName: '',
+          fullName: '',
           username: '',
           email: '',
-          role: '',
-          phoneNumber: '',
+          phone: '',
+          roleId: '',
           password: '',
           confirmPassword: '',
           isEdit,
         },
   })
 
-  const onSubmit = (values: UserForm) => {
-    form.reset()
-    showSubmittedData(values)
-    onOpenChange(false)
+  const createMutation = useMutation({
+    mutationFn: usersApi.create,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: { id: string; input: Parameters<typeof usersApi.update>[1] }) =>
+      usersApi.update(payload.id, payload.input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+
+  const onSubmit = async (values: UserForm) => {
+    const roleIds = values.roleId ? [values.roleId] : []
+    const phone = values.phone?.trim() ? values.phone.trim() : undefined
+
+    try {
+      if (isEdit && currentRow) {
+        const input = {
+          fullName: values.fullName.trim(),
+          username: values.username.trim(),
+          email: values.email.trim(),
+          phone,
+          roleIds,
+          ...(values.password ? { password: values.password } : {}),
+        }
+        await updateMutation.mutateAsync({ id: currentRow.id, input })
+        toast.success('Đã cập nhật người dùng')
+      } else {
+        const input = {
+          fullName: values.fullName.trim(),
+          username: values.username.trim(),
+          email: values.email.trim(),
+          phone,
+          roleIds,
+          password: values.password,
+        }
+        await createMutation.mutateAsync(input)
+        toast.success('Đã tạo người dùng')
+      }
+
+      form.reset()
+      onOpenChange(false)
+    } catch {
+      // handled globally
+    }
   }
 
   const isPasswordTouched = !!form.formState.dirtyFields.password
@@ -145,10 +200,14 @@ export function UsersActionDialog({
     >
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader className='text-start'>
-          <DialogTitle>{isEdit ? 'Edit User' : 'Add New User'}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? 'Cập nhật người dùng' : 'Thêm người dùng'}
+          </DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update the user here. ' : 'Create new user here. '}
-            Click save when you&apos;re done.
+            {isEdit
+              ? 'Cập nhật thông tin người dùng.'
+              : 'Tạo mới người dùng.'}{' '}
+            Nhấn lưu khi hoàn tất.
           </DialogDescription>
         </DialogHeader>
         <div className='h-105 w-[calc(100%+0.75rem)] overflow-y-auto py-1 pe-3'>
@@ -160,35 +219,15 @@ export function UsersActionDialog({
             >
               <FormField
                 control={form.control}
-                name='firstName'
+                name='fullName'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      First Name
+                      Họ và tên
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='John'
-                        className='col-span-4'
-                        autoComplete='off'
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className='col-span-4 col-start-3' />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='lastName'
-                render={({ field }) => (
-                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      Last Name
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder='Doe'
+                        placeholder='Nguyễn Văn A'
                         className='col-span-4'
                         autoComplete='off'
                         {...field}
@@ -204,11 +243,11 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Username
+                      Tài khoản
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='john_doe'
+                        placeholder='nguyenvana'
                         className='col-span-4'
                         {...field}
                       />
@@ -225,7 +264,7 @@ export function UsersActionDialog({
                     <FormLabel className='col-span-2 text-end'>Email</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='john.doe@gmail.com'
+                        placeholder='nguyenvana@gmail.com'
                         className='col-span-4'
                         {...field}
                       />
@@ -236,15 +275,15 @@ export function UsersActionDialog({
               />
               <FormField
                 control={form.control}
-                name='phoneNumber'
+                name='phone'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Phone Number
+                      Số điện thoại
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='+123456789'
+                        placeholder='VD: 0901234567'
                         className='col-span-4'
                         {...field}
                       />
@@ -255,18 +294,18 @@ export function UsersActionDialog({
               />
               <FormField
                 control={form.control}
-                name='role'
+                name='roleId'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>Role</FormLabel>
+                    <FormLabel className='col-span-2 text-end'>Vai trò</FormLabel>
                     <SelectDropdown
                       defaultValue={field.value}
                       onValueChange={field.onChange}
-                      placeholder='Select a role'
+                      placeholder='Chọn vai trò'
                       className='col-span-4'
-                      items={roles.map(({ label, value }) => ({
-                        label,
-                        value,
+                      items={(rolesQuery.data?.data ?? []).map((role) => ({
+                        label: role.name,
+                        value: role.id,
                       }))}
                     />
                     <FormMessage className='col-span-4 col-start-3' />
@@ -279,11 +318,11 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Password
+                      Mật khẩu
                     </FormLabel>
                     <FormControl>
                       <PasswordInput
-                        placeholder='e.g., S3cur3P@ssw0rd'
+                        placeholder='VD: S3cur3P@ssw0rd'
                         className='col-span-4'
                         {...field}
                       />
@@ -298,12 +337,12 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Confirm Password
+                      Nhập lại mật khẩu
                     </FormLabel>
                     <FormControl>
                       <PasswordInput
                         disabled={!isPasswordTouched}
-                        placeholder='e.g., S3cur3P@ssw0rd'
+                        placeholder='Nhập lại mật khẩu'
                         className='col-span-4'
                         {...field}
                       />
@@ -317,7 +356,7 @@ export function UsersActionDialog({
         </div>
         <DialogFooter>
           <Button type='submit' form='user-form'>
-            Save changes
+            Lưu
           </Button>
         </DialogFooter>
       </DialogContent>

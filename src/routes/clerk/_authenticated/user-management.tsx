@@ -6,6 +6,7 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { SignedIn, useAuth, UserButton } from '@clerk/clerk-react'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { ClerkLogo } from '@/assets/clerk-logo'
@@ -19,7 +20,7 @@ import { UsersDialogs } from '@/features/users/components/users-dialogs'
 import { UsersPrimaryButtons } from '@/features/users/components/users-primary-buttons'
 import { UsersProvider } from '@/features/users/components/users-provider'
 import { UsersTable } from '@/features/users/components/users-table'
-import { users } from '@/features/users/data/users'
+import { rolesApi, usersApi } from '@/features/users/api/users-api'
 
 export const Route = createFileRoute('/clerk/_authenticated/user-management')({
   component: UserManagement,
@@ -31,6 +32,33 @@ function UserManagement() {
 
   const [opened, setOpened] = useState(true)
   const { isLoaded, isSignedIn } = useAuth()
+
+  const page =
+    typeof (search as Record<string, unknown>).page === 'number'
+      ? ((search as Record<string, unknown>).page as number)
+      : Number((search as Record<string, unknown>).page) || 1
+  const pageSize =
+    typeof (search as Record<string, unknown>).pageSize === 'number'
+      ? ((search as Record<string, unknown>).pageSize as number)
+      : Number((search as Record<string, unknown>).pageSize) || 10
+
+  const rolesQuery = useQuery({
+    queryKey: ['roles', { page: 1, limit: 200 }],
+    queryFn: () => rolesApi.list({ page: 1, limit: 200 }),
+  })
+
+  const usersQuery = useQuery({
+    queryKey: ['users', { page, pageSize }],
+    queryFn: () => usersApi.list({ page, limit: pageSize }),
+    staleTime: 10_000,
+  })
+
+  const rolesById = Object.fromEntries(
+    (rolesQuery.data?.data ?? []).map((r) => [r.id, r.name] as const)
+  )
+
+  const total = usersQuery.data?.meta.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
 
   if (!isLoaded) {
     return (
@@ -90,7 +118,14 @@ function UserManagement() {
               <UsersPrimaryButtons />
             </div>
             <div className='-mx-4 flex-1 overflow-auto px-4 py-1 lg:flex-row lg:space-y-0 lg:space-x-12'>
-              <UsersTable data={users} navigate={navigate} search={search} />
+              <UsersTable
+                data={usersQuery.data?.items ?? []}
+                navigate={navigate}
+                search={search}
+                pageCount={pageCount}
+                roles={rolesQuery.data?.data ?? []}
+                rolesById={rolesById}
+              />
             </div>
           </Main>
 

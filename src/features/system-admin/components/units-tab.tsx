@@ -1,8 +1,31 @@
-﻿import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, PlusCircle, Trash2, UserPen } from 'lucide-react'
+import { AxiosError } from 'axios'
+import {
+  Building2,
+  ChevronRight,
+  Lock,
+  PlusCircle,
+  Trash2,
+  Unlock,
+  UserPen,
+} from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  flexRender,
+  getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from '@/components/data-table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,6 +45,9 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -30,6 +56,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import {
   Table,
   TableBody,
   TableCell,
@@ -37,7 +68,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { systemAdminMockApi } from '../api/mock-system-admin-api'
+import { cn } from '@/lib/utils'
+import { organizationsApi } from '../api/mock-system-admin-api'
 import {
   type OrganizationUnit,
   unitLevelOptions,
@@ -46,32 +78,238 @@ import {
 
 const EMPTY_UNITS: OrganizationUnit[] = []
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function getApiErrorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const payload = error.response?.data
+    if (isRecord(payload)) {
+      const message =
+        (typeof payload.message === 'string' && payload.message) ||
+        (typeof payload.error === 'string' && payload.error)
+      if (message) return message
+      if (isRecord(payload.error) && typeof payload.error.message === 'string') {
+        return payload.error.message
+      }
+    }
+    return error.message
+  }
+
+  if (error instanceof Error) return error.message
+  return 'Có lỗi xảy ra.'
+}
+
 type UnitFormState = {
   code: string
   name: string
   level: OrganizationUnit['level']
   parentId: string | null
-  leaderName: string
-  status: UnitStatus
+  description: string
 }
 
 const defaultForm: UnitFormState = {
   code: '',
   name: '',
-  level: 'department',
+  level: 1,
   parentId: null,
-  leaderName: '',
-  status: 'active',
+  description: '',
+}
+
+function getUnitLevelLabel(level: OrganizationUnit['level']) {
+  return unitLevelOptions.find((option) => option.value === level)?.label ?? level
+}
+
+function getAncestors(unitId: string, parentById: Map<string, string | null>) {
+  const ancestors: string[] = []
+  let current = parentById.get(unitId) ?? null
+  while (current) {
+    ancestors.push(current)
+    current = parentById.get(current) ?? null
+  }
+  return ancestors
+}
+
+type OrganizationTreeProps = {
+  units: OrganizationUnit[]
+  selectedUnitId: string | null
+  onSelect: (unitId: string) => void
+  keyword: string
+  expandedIds: Set<string>
+  setExpandedIds: React.Dispatch<React.SetStateAction<Set<string>>>
+}
+
+function OrganizationTree({
+  units,
+  selectedUnitId,
+  onSelect,
+  keyword,
+  expandedIds,
+  setExpandedIds,
+}: OrganizationTreeProps) {
+  const normalized = keyword.trim().toLowerCase()
+
+  const { rootUnits, childrenByParentId, parentById } = useMemo(() => {
+    const parentMap = new Map<string, string | null>()
+    const childrenMap = new Map<string | null, OrganizationUnit[]>()
+
+    for (const unit of units) {
+      parentMap.set(unit.id, unit.parentId)
+      const parentId = unit.parentId ?? null
+      const current = childrenMap.get(parentId)
+      if (current) {
+        current.push(unit)
+      } else {
+        childrenMap.set(parentId, [unit])
+      }
+    }
+
+    for (const value of childrenMap.values()) {
+      value.sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    return {
+      parentById: parentMap,
+      childrenByParentId: childrenMap,
+      rootUnits: childrenMap.get(null) ?? [],
+    }
+  }, [units])
+
+  const visibleIds = useMemo(() => {
+    if (!normalized) return null
+    const ids = new Set<string>()
+    for (const unit of units) {
+      const haystack = `${unit.code} ${unit.name}`.toLowerCase()
+      if (!haystack.includes(normalized)) continue
+      ids.add(unit.id)
+      for (const ancestorId of getAncestors(unit.id, parentById)) {
+        ids.add(ancestorId)
+      }
+    }
+    return ids
+  }, [normalized, parentById, units])
+
+  const renderNode = (unit: OrganizationUnit, depth: number) => {
+    const children = childrenByParentId.get(unit.id) ?? []
+    const hasChildren = children.length > 0
+    const isOpen = expandedIds.has(unit.id)
+    const isSelected = unit.id === selectedUnitId
+    const isVisible = visibleIds ? visibleIds.has(unit.id) : true
+
+    if (!isVisible) return null
+
+    const row = (
+      <div
+        className={cn(
+          'flex items-center gap-1 rounded-md px-1 py-0.5',
+          unit.status === 'locked' && 'opacity-70',
+          isSelected && 'bg-accent'
+        )}
+      >
+        <div className='flex size-7 items-center justify-center'>
+          {hasChildren ? (
+            <CollapsibleTrigger asChild>
+              <Button
+                type='button'
+                variant='ghost'
+                size='icon'
+                className='size-7'
+                onClick={(event) => event.stopPropagation()}
+                title={isOpen ? 'Thu gọn' : 'Mở rộng'}
+              >
+                <ChevronRight
+                  className={cn(
+                    'size-4 transition-transform',
+                    isOpen && 'rotate-90'
+                  )}
+                />
+              </Button>
+            </CollapsibleTrigger>
+          ) : (
+            <div className='size-7' />
+          )}
+        </div>
+        <button
+          type='button'
+          className={cn(
+            'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-start text-sm hover:bg-accent/60',
+            depth > 0 && 'ms-0'
+          )}
+          onClick={() => onSelect(unit.id)}
+          title={unit.name}
+        >
+          <span className='truncate font-medium'>{unit.name}</span>
+          {unit.status === 'locked' && (
+            <span className='shrink-0 text-xs text-muted-foreground'>
+              Đã khóa
+            </span>
+          )}
+        </button>
+      </div>
+    )
+
+    if (!hasChildren) {
+      return (
+        <div key={unit.id} className='space-y-1'>
+          {row}
+        </div>
+      )
+    }
+
+    return (
+      <Collapsible
+        key={unit.id}
+        open={isOpen}
+        onOpenChange={(open) =>
+          setExpandedIds((prev) => {
+            const next = new Set(prev)
+            if (open) next.add(unit.id)
+            else next.delete(unit.id)
+            return next
+          })
+        }
+      >
+        <div className='space-y-1'>
+          {row}
+          <CollapsibleContent className='ms-3 border-s ps-3'>
+            <div className='space-y-1'>
+              {children.map((child) => renderNode(child, depth + 1))}
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    )
+  }
+
+  return (
+    <div className='space-y-1'>
+      {rootUnits.length === 0 ? (
+        <div className='py-6 text-center text-sm text-muted-foreground'>
+          Chưa có đơn vị.
+        </div>
+      ) : (
+        rootUnits.map((unit) => renderNode(unit, 0))
+      )}
+    </div>
+  )
 }
 
 export function UnitsTab() {
   const queryClient = useQueryClient()
+  const [includeLockedUnits, setIncludeLockedUnits] = useState(true)
   const unitsQuery = useQuery({
-    queryKey: ['system-admin', 'units'],
-    queryFn: () => systemAdminMockApi.listUnits(),
+    queryKey: ['organizations', 'tree', { includeLockedUnits }],
+    queryFn: () =>
+      organizationsApi.list({
+        q: '',
+        isActive: includeLockedUnits ? undefined : true,
+      }),
   })
 
-  const [search, setSearch] = useState('')
+  const [treeSearch, setTreeSearch] = useState('')
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
   const [openForm, setOpenForm] = useState(false)
   const [editingUnit, setEditingUnit] = useState<OrganizationUnit | null>(null)
   const [form, setForm] = useState<UnitFormState>(defaultForm)
@@ -79,86 +317,118 @@ export function UnitsTab() {
 
   const units = unitsQuery.data ?? EMPTY_UNITS
 
-  const filteredUnits = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    if (!keyword) {
-      return units
-    }
-    return units.filter((unit) =>
-      [unit.code, unit.name, unit.leaderName].some((value) =>
-        value.toLowerCase().includes(keyword)
-      )
-    )
-  }, [search, units])
+  const unitsById = useMemo(() => new Map(units.map((unit) => [unit.id, unit])), [units])
+  const parentById = useMemo(
+    () => new Map(units.map((unit) => [unit.id, unit.parentId])),
+    [units]
+  )
+
+  const selectedUnit = useMemo(() => {
+    if (!selectedUnitId) return null
+    return unitsById.get(selectedUnitId) ?? null
+  }, [selectedUnitId, unitsById])
+
+  const selectedUnitPathLabel = useMemo(() => {
+    if (!selectedUnit) return 'Tất cả đơn vị'
+    const ancestors = getAncestors(selectedUnit.id, parentById)
+      .map((id) => unitsById.get(id))
+      .filter(Boolean)
+      .reverse() as OrganizationUnit[]
+    const parts = [...ancestors, selectedUnit].map((unit) => unit.name)
+    return parts.join(' / ')
+  }, [parentById, selectedUnit, unitsById])
+
+  useEffect(() => {
+    if (selectedUnitId && unitsById.has(selectedUnitId)) return
+    if (units.length === 0) return
+    const firstRoot = units.find((unit) => !unit.parentId) ?? units[0]
+    setSelectedUnitId(firstRoot?.id ?? null)
+  }, [selectedUnitId, units, unitsById])
+
+  useEffect(() => {
+    if (!selectedUnit) return
+    const ancestors = getAncestors(selectedUnit.id, parentById)
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      for (const id of ancestors) next.add(id)
+      return next
+    })
+  }, [parentById, selectedUnit])
 
   const createMutation = useMutation({
-    mutationFn: systemAdminMockApi.createUnit,
+    mutationFn: organizationsApi.create,
     onSuccess: () => {
       toast.success('Đã tạo đơn vị mới.')
-      queryClient.invalidateQueries({ queryKey: ['system-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UnitFormState }) =>
-      systemAdminMockApi.updateUnit(id, payload),
+      organizationsApi.update(id, payload),
     onSuccess: () => {
       toast.success('Đã cập nhật thông tin đơn vị.')
-      queryClient.invalidateQueries({ queryKey: ['system-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
-  const toggleMutation = useMutation({
-    mutationFn: systemAdminMockApi.toggleUnitStatus,
+  const statusMutation = useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'lock' | 'unlock' }) => {
+      if (action === 'lock') {
+        return organizationsApi.lock(id)
+      }
+      return organizationsApi.unlock(id)
+    },
     onSuccess: () => {
       toast.success('Đã cập nhật trạng thái đơn vị.')
-      queryClient.invalidateQueries({ queryKey: ['system-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: systemAdminMockApi.deleteUnit,
+    mutationFn: organizationsApi.delete,
     onSuccess: () => {
       toast.success('Đã xóa đơn vị.')
-      queryClient.invalidateQueries({ queryKey: ['system-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['organizations'] })
       setDeletingUnit(null)
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
-  const closeForm = () => {
+  const closeForm = useCallback(() => {
     setOpenForm(false)
     setEditingUnit(null)
     setForm(defaultForm)
-  }
+  }, [])
 
-  const openCreateDialog = () => {
+  const openCreateDialog = useCallback((parentId: string | null = null) => {
     setEditingUnit(null)
-    setForm(defaultForm)
+    const parent = parentId ? unitsById.get(parentId) : undefined
+    const suggestedLevel = parent ? Math.min(parent.level + 1, 4) : 1
+    setForm({ ...defaultForm, parentId, level: suggestedLevel })
     setOpenForm(true)
-  }
+  }, [unitsById])
 
-  const openEditDialog = (unit: OrganizationUnit) => {
+  const openEditDialog = useCallback((unit: OrganizationUnit) => {
     setEditingUnit(unit)
     setForm({
       code: unit.code,
       name: unit.name,
       level: unit.level,
       parentId: unit.parentId,
-      leaderName: unit.leaderName,
-      status: unit.status,
+      description: unit.description ?? '',
     })
     setOpenForm(true)
-  }
+  }, [])
 
-  const submitForm = () => {
-    if (!form.code.trim() || !form.name.trim() || !form.leaderName.trim()) {
-      toast.error('Vui lòng nhập đủ mã đơn vị, tên đơn vị, trưởng đơn vị.')
+  const submitForm = useCallback(() => {
+    if (!form.code.trim() || !form.name.trim()) {
+      toast.error('Vui lòng nhập đủ mã đơn vị và tên đơn vị.')
       return
     }
 
@@ -166,7 +436,7 @@ export function UnitsTab() {
       ...form,
       code: form.code.trim(),
       name: form.name.trim(),
-      leaderName: form.leaderName.trim(),
+      description: form.description.trim(),
     }
 
     if (editingUnit) {
@@ -174,10 +444,154 @@ export function UnitsTab() {
       return
     }
     createMutation.mutate(payload)
-  }
+  }, [createMutation, editingUnit, form, updateMutation])
 
-  const parentLabel = (parentId: string | null) =>
-    units.find((item) => item.id === parentId)?.name ?? '--'
+  const subUnits = useMemo(() => {
+    if (!selectedUnitId) return units.filter((unit) => !unit.parentId)
+    return units.filter((unit) => unit.parentId === selectedUnitId)
+  }, [selectedUnitId, units])
+
+  const columns = useMemo<ColumnDef<OrganizationUnit>[]>(() => {
+    return [
+      {
+        accessorKey: 'code',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Mã đơn vị' />
+        ),
+        cell: ({ row }) => <div className='font-medium'>{row.original.code}</div>,
+      },
+      {
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Tên đơn vị' />
+        ),
+        cell: ({ row }) => (
+          <div className='min-w-0'>
+            <div className='max-w-[320px] truncate' title={row.original.name}>
+              {row.original.name}
+            </div>
+            <div
+              className='max-w-[320px] truncate text-xs text-muted-foreground'
+              title={row.original.description ?? ''}
+            >
+              {row.original.description ?? ''}
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'level',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Cấp bậc' />
+        ),
+        cell: ({ row }) => (
+          <div className='text-sm'>{getUnitLevelLabel(row.original.level)}</div>
+        ),
+        filterFn: (row, id, value) => {
+          if (!value || (Array.isArray(value) && value.length === 0)) return true
+          const level = row.getValue(id) as number
+          const key = String(level)
+          if (Array.isArray(value)) return value.includes(key)
+          return value === key
+        },
+      },
+      {
+        accessorKey: 'memberCount',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Thành viên' />
+        ),
+        cell: ({ row }) => (
+          <div className='text-sm'>
+            {row.original.memberCount} user | {row.original.activeAssignments} đang giao
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='Trạng thái' />
+        ),
+        cell: ({ row }) => (
+          <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'}>
+            {row.original.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
+          </Badge>
+        ),
+        filterFn: (row, id, value) => {
+          if (!value || (Array.isArray(value) && value.length === 0)) return true
+          const status = row.getValue(id) as UnitStatus
+          if (Array.isArray(value)) return value.includes(status)
+          return value === status
+        },
+      },
+      {
+        id: 'actions',
+        header: () => <div className='text-right'>Thao tác</div>,
+        cell: ({ row }) => {
+          const unit = row.original
+          return (
+            <div className='flex justify-end gap-1'>
+              <Button
+                size='icon'
+                variant='outline'
+                onClick={() => openEditDialog(unit)}
+                title='Sửa đơn vị'
+              >
+                <UserPen />
+              </Button>
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() =>
+                  statusMutation.mutate({
+                    id: unit.id,
+                    action: unit.status === 'active' ? 'lock' : 'unlock',
+                  })
+                }
+              >
+                {unit.status === 'active' ? 'Khóa' : 'Mở'}
+              </Button>
+              <Button
+                size='icon'
+                variant='destructive'
+                onClick={() => setDeletingUnit(unit)}
+                title='Xóa đơn vị'
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          )
+        },
+      },
+    ]
+  }, [openEditDialog, statusMutation])
+
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+
+  const table = useReactTable({
+    data: subUnits,
+    columns,
+    state: { sorting, columnFilters, globalFilter },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: { pageSize: 10, pageIndex: 0 },
+    },
+  })
+
+  useEffect(() => {
+    table.setPageIndex(0)
+    table.resetColumnFilters()
+    table.setGlobalFilter('')
+  }, [selectedUnitId, table])
 
   return (
     <Card>
@@ -185,90 +599,233 @@ export function UnitsTab() {
         <div>
           <CardTitle>Quản lý đơn vị</CardTitle>
           <CardDescription>
-            Quản lý cây đơn vị, khóa/mở khóa đơn vị và ràng buộc xóa theo nghiệp vụ.
+            Cơ cấu Hành chính & Đơn vị
           </CardDescription>
-        </div>
-        <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
-          <Input
-            className='sm:w-80'
-            placeholder='Tìm theo mã, tên, trưởng đơn vị...'
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <Button onClick={openCreateDialog}>
-            <PlusCircle />
-            Thêm đơn vị
-          </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <div className='overflow-hidden rounded-md border'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã đơn vị</TableHead>
-                <TableHead>Tên đơn vị</TableHead>
-                <TableHead>Đơn vị cha</TableHead>
-                <TableHead>Thành viên</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className='text-right'>Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUnits.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center'>
-                    Không có dữ liệu đơn vị.
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredUnits.map((unit) => (
-                <TableRow key={unit.id}>
-                  <TableCell className='font-medium'>{unit.code}</TableCell>
-                  <TableCell>
-                    <div>{unit.name}</div>
-                    <div className='text-xs text-muted-foreground'>{unit.leaderName}</div>
-                  </TableCell>
-                  <TableCell>{parentLabel(unit.parentId)}</TableCell>
-                  <TableCell>
-                    {unit.memberCount} user | {unit.activeAssignments} đang giao
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={unit.status === 'active' ? 'default' : 'secondary'}>
-                      {unit.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className='text-right'>
-                    <div className='flex justify-end gap-1'>
-                      <Button
-                        size='icon'
-                        variant='outline'
-                        onClick={() => openEditDialog(unit)}
-                        title='Sửa đơn vị'
+        <div className='grid grid-cols-1 items-start gap-4 lg:grid-cols-[360px_1fr]'>
+          <Card className='overflow-hidden'>
+            <CardHeader className='flex-row items-center justify-between gap-3 bg-muted/30'>
+              <div className='min-w-0'>
+                <CardTitle className='text-base'>Cây tổ chức</CardTitle>
+                <CardDescription className='truncate'>
+                  Chọn đơn vị để xem danh sách trực thuộc
+                </CardDescription>
+              </div>
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={() => openCreateDialog(null)}
+              >
+                <PlusCircle />
+                Thêm
+              </Button>
+            </CardHeader>
+            <CardContent className='space-y-3 p-4'>
+              <Input
+                placeholder='Tìm theo mã/tên...'
+                value={treeSearch}
+                onChange={(event) => setTreeSearch(event.target.value)}
+              />
+              <div className='flex items-center justify-between'>
+                <div className='text-sm text-muted-foreground'>
+                  Bao gồm đơn vị đã khóa
+                </div>
+                <Switch
+                  checked={includeLockedUnits}
+                  onCheckedChange={setIncludeLockedUnits}
+                />
+              </div>
+              <ScrollArea className='h-[520px]'>
+                {unitsQuery.isLoading ? (
+                  <div className='py-6 text-center text-sm text-muted-foreground'>
+                    Đang tải đơn vị...
+                  </div>
+                ) : unitsQuery.isError ? (
+                  <div className='space-y-1 py-6 text-center text-sm text-destructive'>
+                    <div>Không tải được danh sách đơn vị.</div>
+                    {'error' in unitsQuery && unitsQuery.error instanceof Error ? (
+                      <div className='text-xs text-muted-foreground'>
+                        {unitsQuery.error.message}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <OrganizationTree
+                    units={units}
+                    selectedUnitId={selectedUnitId}
+                    onSelect={(unitId) => setSelectedUnitId(unitId)}
+                    keyword={treeSearch}
+                    expandedIds={expandedIds}
+                    setExpandedIds={setExpandedIds}
+                  />
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          <div className='min-w-0 space-y-4'>
+            <Card className='overflow-hidden'>
+              <CardHeader className='flex flex-col gap-3 bg-muted/30'>
+                <div className='min-w-0 space-y-2'>
+                  <div>
+                    <CardTitle className='text-base'>
+                      {selectedUnit?.name ?? 'Tên đơn vị'}
+                    </CardTitle>
+                    <CardDescription className='truncate'>
+                      {selectedUnitPathLabel}
+                    </CardDescription>
+                  </div>
+                  {selectedUnit && (
+                    <div className='flex flex-wrap gap-2'>
+                      <Badge variant='secondary'>Mã: {selectedUnit.code}</Badge>
+                      <Badge variant='secondary'>
+                        Cấp: {getUnitLevelLabel(selectedUnit.level)}
+                      </Badge>
+                      <Badge
+                        variant={
+                          selectedUnit.status === 'active' ? 'default' : 'secondary'
+                        }
                       >
-                        <UserPen />
-                      </Button>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => toggleMutation.mutate(unit.id)}
-                      >
-                        {unit.status === 'active' ? 'Khóa' : 'Mở'}
-                      </Button>
-                      <Button
-                        size='icon'
-                        variant='destructive'
-                        onClick={() => setDeletingUnit(unit)}
-                        title='Xóa đơn vị'
-                      >
-                        <Trash2 />
-                      </Button>
+                        Trạng thái:{' '}
+                        {selectedUnit.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
+                      </Badge>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  )}
+                </div>
+                <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end'>
+                  <Button
+                    size='sm'
+                    onClick={() => openCreateDialog(selectedUnitId)}
+                    disabled={!selectedUnitId}
+                  >
+                    <PlusCircle />
+                    Thêm trực thuộc
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() => selectedUnit && openEditDialog(selectedUnit)}
+                    disabled={!selectedUnit}
+                  >
+                    <UserPen />
+                    Sửa
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() =>
+                      selectedUnit &&
+                      statusMutation.mutate({
+                        id: selectedUnit.id,
+                        action: selectedUnit.status === 'active' ? 'lock' : 'unlock',
+                      })
+                    }
+                    disabled={!selectedUnit}
+                  >
+                    {selectedUnit?.status === 'active' ? (
+                      <>
+                        <Lock />
+                        Khóa
+                      </>
+                    ) : (
+                      <>
+                        <Unlock />
+                        Mở
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card className='overflow-hidden'>
+              <CardContent className='space-y-3 p-4'>
+                <div className='text-sm font-medium'>Đơn vị trực thuộc</div>
+                <DataTableToolbar
+                  table={table}
+                  searchPlaceholder='Tìm theo mã, tên, mô tả...'
+                  filters={[
+                    {
+                      columnId: 'level',
+                      title: 'Cấp',
+                      options: unitLevelOptions.map((option) => ({
+                        label: option.label,
+                        value: String(option.value),
+                      })),
+                    },
+                    {
+                      columnId: 'status',
+                      title: 'Trạng thái',
+                      options: [
+                        { label: 'Hoạt động', value: 'active' },
+                        { label: 'Đã khóa', value: 'locked' },
+                      ],
+                    },
+                  ]}
+                />
+
+                <div className='overflow-hidden rounded-md border'>
+                  <Table>
+                    <TableHeader>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <TableHead
+                              key={header.id}
+                              className={cn(
+                                header.column.id === 'actions' && 'text-right'
+                              )}
+                            >
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {table.getRowModel().rows.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={table.getAllLeafColumns().length}
+                            className='h-24 text-center'
+                          >
+                            Không có dữ liệu.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        table.getRowModel().rows.map((row) => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                              <TableCell
+                                key={cell.id}
+                                className={cn(
+                                  cell.column.id === 'actions' && 'text-right'
+                                )}
+                              >
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <DataTablePagination table={table} />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </CardContent>
 
@@ -303,9 +860,12 @@ export function UnitsTab() {
             <div className='space-y-2'>
               <Label>Cấp bậc</Label>
               <Select
-                value={form.level}
-                onValueChange={(value: OrganizationUnit['level']) =>
-                  setForm((prev) => ({ ...prev, level: value }))
+                value={String(form.level)}
+                onValueChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    level: Number.parseInt(value, 10),
+                  }))
                 }
               >
                 <SelectTrigger className='w-full'>
@@ -313,7 +873,7 @@ export function UnitsTab() {
                 </SelectTrigger>
                 <SelectContent>
                   {unitLevelOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem key={option.value} value={String(option.value)}>
                       {option.label}
                     </SelectItem>
                   ))}
@@ -347,11 +907,11 @@ export function UnitsTab() {
               </Select>
             </div>
             <div className='space-y-2 sm:col-span-2'>
-              <Label>Trưởng đơn vị</Label>
-              <Input
-                value={form.leaderName}
+              <Label>Mô tả</Label>
+              <Textarea
+                value={form.description}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, leaderName: event.target.value }))
+                  setForm((prev) => ({ ...prev, description: event.target.value }))
                 }
               />
             </div>

@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { reportManagementMockApi } from '../api/mock-report-management-api'
+import { reportManagementApi } from '../api/mock-report-management-api'
 import { type AggregateResult, type ReportInstance } from '../api/types'
 
 const EMPTY_PENDING: ReportInstance[] = []
@@ -35,11 +35,11 @@ const EMPTY_PENDING: ReportInstance[] = []
 export function ReportAnalyticsTab() {
   const refsQuery = useQuery({
     queryKey: ['report-management', 'refs'],
-    queryFn: () => reportManagementMockApi.listReferenceData(),
+    queryFn: () => reportManagementApi.listReferenceData(),
   })
   const pendingQuery = useQuery({
     queryKey: ['report-management', 'pending-approvals'],
-    queryFn: () => reportManagementMockApi.listPendingApprovals(),
+    queryFn: () => reportManagementApi.listPendingApprovals(),
   })
 
   const forms = refsQuery.data?.forms ?? []
@@ -52,7 +52,7 @@ export function ReportAnalyticsTab() {
 
   const aggregateMutation = useMutation({
     mutationFn: ({ formId, periodId }: { formId: string; periodId: string }) =>
-      reportManagementMockApi.aggregateReports(formId, periodId),
+      reportManagementApi.aggregateReports(formId, periodId),
     onSuccess: (result) => {
       setAggregateResult(result)
       toast.success('Đã tổng hợp số liệu báo cáo.')
@@ -61,7 +61,7 @@ export function ReportAnalyticsTab() {
   })
 
   const exportMutation = useMutation({
-    mutationFn: (format: 'excel' | 'pdf') => reportManagementMockApi.exportReports(format),
+    mutationFn: (format: 'excel' | 'pdf') => reportManagementApi.exportReports(format),
     onSuccess: (result) => {
       toast.success(`Đã xuất file ${result.fileName} (${result.format.toUpperCase()}).`)
     },

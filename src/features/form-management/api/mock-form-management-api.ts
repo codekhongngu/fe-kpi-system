@@ -10,6 +10,7 @@ import {
   type UpdateIndicatorInput,
   type UpdateTemplateInput,
 } from './types'
+import { apiClient } from '@/lib/api-client'
 
 const NETWORK_DELAY_MS = 220
 
@@ -598,4 +599,157 @@ export const formManagementMockApi = {
         activeTemplates: activeCount,
       }
     }),
+}
+
+export const formManagementApi = {
+  listTemplates: async () => {
+    const response = await apiClient.get<FormTemplate[]>('/forms', {
+      params: { page: 1, limit: 500 },
+    })
+    return response.data
+  },
+
+  listDomains: async () => {
+    const templates = await formManagementApi.listTemplates()
+    const domainSet = new Set<string>()
+    templates.forEach((item) => {
+      if (item.domain) {
+        domainSet.add(item.domain)
+      }
+    })
+    return Array.from(domainSet).sort((a, b) => a.localeCompare(b))
+  },
+
+  getTemplate: async (templateId: string) => {
+    const response = await apiClient.get<FormTemplate>(`/forms/${templateId}`)
+    return response.data
+  },
+
+  createTemplate: async (input: CreateTemplateInput) => {
+    const response = await apiClient.post<FormTemplate>('/forms', input)
+    return response.data
+  },
+
+  updateTemplate: async (templateId: string, input: UpdateTemplateInput) => {
+    const response = await apiClient.patch<FormTemplate>(`/forms/${templateId}`, input)
+    return response.data
+  },
+
+  deleteTemplate: async (templateId: string, mode: 'hard' | 'inactive') => {
+    if (mode === 'hard') {
+      await apiClient.delete(`/forms/${templateId}`)
+      return true
+    }
+
+    await apiClient.patch(`/forms/${templateId}`, { status: 'inactive' })
+    return true
+  },
+
+  addReferenceFile: async (templateId: string, fileName: string) => {
+    const template = await formManagementApi.getTemplate(templateId)
+    const value = fileName.trim()
+    const referenceFiles = template.referenceFiles ?? []
+    const next = referenceFiles.some((item) => item.trim().toLowerCase() === value.toLowerCase())
+      ? referenceFiles
+      : [...referenceFiles, value]
+    const response = await apiClient.patch<FormTemplate>(`/forms/${templateId}`, {
+      referenceFiles: next,
+    })
+    return response.data
+  },
+
+  removeReferenceFile: async (templateId: string, fileName: string) => {
+    const template = await formManagementApi.getTemplate(templateId)
+    const referenceFiles = (template.referenceFiles ?? []).filter(
+      (item) => item.trim().toLowerCase() !== fileName.trim().toLowerCase(),
+    )
+    const response = await apiClient.patch<FormTemplate>(`/forms/${templateId}`, {
+      referenceFiles,
+    })
+    return response.data
+  },
+
+  createField: async (templateId: string, input: CreateFieldInput) => {
+    const response = await apiClient.post<TemplateField>(`/forms/${templateId}/attributes`, input)
+    return response.data
+  },
+
+  updateField: async (templateId: string, fieldId: string, input: UpdateFieldInput) => {
+    const response = await apiClient.patch<TemplateField>(
+      `/forms/${templateId}/attributes/${fieldId}`,
+      input,
+    )
+    return response.data
+  },
+
+  deleteField: async (templateId: string, fieldId: string) => {
+    await apiClient.delete(`/forms/${templateId}/attributes/${fieldId}`)
+    return true
+  },
+
+  importFieldsFromExcel: async (templateId: string) => {
+    const response = await apiClient.post<FormTemplate>(`/forms/${templateId}/attributes/import`)
+    return response.data
+  },
+
+  createIndicator: async (templateId: string, input: CreateIndicatorInput) => {
+    const response = await apiClient.post<TemplateIndicator>(
+      `/forms/${templateId}/indicators`,
+      input,
+    )
+    return response.data
+  },
+
+  updateIndicator: async (
+    templateId: string,
+    indicatorId: string,
+    input: UpdateIndicatorInput,
+  ) => {
+    const response = await apiClient.patch<TemplateIndicator>(
+      `/forms/${templateId}/indicators/${indicatorId}`,
+      input,
+    )
+    return response.data
+  },
+
+  deleteIndicator: async (templateId: string, indicatorId: string) => {
+    await apiClient.delete(`/forms/${templateId}/indicators/${indicatorId}`)
+    return true
+  },
+
+  importIndicatorsFromExcel: async (templateId: string) => {
+    const response = await apiClient.post<FormTemplate>(`/forms/${templateId}/indicators/import`)
+    return response.data
+  },
+
+  reorderFields: async (
+    templateId: string,
+    items: Array<{ id: string; parentId?: string | null }>,
+  ) => {
+    await apiClient.post(`/forms/${templateId}/attributes/reorder`, { items })
+    return true
+  },
+
+  reorderIndicators: async (
+    templateId: string,
+    items: Array<{ id: string; parentId?: string | null }>,
+  ) => {
+    await apiClient.post(`/forms/${templateId}/indicators/reorder`, { items })
+    return true
+  },
+
+  getTemplateCompletionByCycle: async (cycle: TemplateCycle) => {
+    const templates = await formManagementApi.listTemplates()
+    const byCycle = templates.filter((item) => item.cycle === cycle)
+    if (byCycle.length === 0) {
+      return { cycle, averageCompletion: 0, activeTemplates: 0 }
+    }
+    const total = byCycle.reduce((sum, item) => sum + (item.completionRate ?? 0), 0)
+    const activeCount = byCycle.filter((item) => item.status === 'active').length
+    return {
+      cycle,
+      averageCompletion: Math.round(total / byCycle.length),
+      activeTemplates: activeCount,
+    }
+  },
 }

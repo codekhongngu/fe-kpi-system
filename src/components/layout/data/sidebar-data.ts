@@ -1,28 +1,261 @@
 import {
-  Construction,
   LayoutDashboard,
-  Monitor,
-  Bug,
-  ListTodo,
-  FileX,
-  HelpCircle,
-  Lock,
   Bell,
-  Package,
-  FileSpreadsheet,
+  Building2,
+  CalendarClock,
+  ChartColumnBig,
   FileCheck2,
-  Palette,
-  ServerOff,
-  Settings,
-  Wrench,
-  UserCog,
-  UserX,
+  FileSpreadsheet,
+  SearchCheck,
+  SendToBack,
   Users,
-  MessagesSquare,
   ShieldCheck,
 } from 'lucide-react'
-import { ClerkLogo } from '@/assets/clerk-logo'
-import { type SidebarData } from '../types'
+import { type NavGroup, type SidebarData } from '../types'
+
+export type AppRole = 'SYSTEM_ADMIN' | 'DATA_MANAGER' | 'DATA_ENTRY' | 'APPROVER'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function normalizeToken(value: string) {
+  return value.trim().toUpperCase()
+}
+
+function getRoleIdsFromUser(user: unknown): string[] {
+  if (!isRecord(user)) return []
+  const roleIds = user.roleIds
+  if (Array.isArray(roleIds)) {
+    return roleIds.filter((item): item is string => typeof item === 'string')
+  }
+  return []
+}
+
+function isUuidLike(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  )
+}
+
+export function getRoleCodesForUser(
+  user: unknown,
+  rolesById?: Record<string, string>
+): string[] {
+  const roleIds = getRoleIdsFromUser(user)
+  if (roleIds.length === 0) return []
+
+  if (rolesById) {
+    const codes = roleIds
+      .map((id) => rolesById[id])
+      .filter((code): code is string => typeof code === 'string' && code.length > 0)
+    if (codes.length > 0) {
+      return codes.map(normalizeToken)
+    }
+  }
+
+  const isAllUuid = roleIds.every(isUuidLike)
+  if (isAllUuid) return []
+
+  return roleIds.map(normalizeToken)
+}
+
+export function getAppRoleForUser(
+  user: unknown,
+  rolesById?: Record<string, string>
+): AppRole {
+  if (isRecord(user)) {
+    const username = typeof user.username === 'string' ? user.username.trim().toLowerCase() : ''
+    const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : ''
+    if (username.includes('system_admin') || email.startsWith('system_admin@')) {
+      return 'SYSTEM_ADMIN'
+    }
+  }
+
+  const codes = getRoleCodesForUser(user, rolesById)
+
+  const has = (predicate: (code: string) => boolean) => codes.some(predicate)
+  const matchAny = (tokens: string[]) =>
+    has((code) => tokens.includes(code) || tokens.some((t) => code.includes(t)))
+
+  if (
+    matchAny(['SYSTEM_ADMIN', 'SYS_ADMIN', 'ADMIN', 'SUPER_ADMIN', 'QUAN_TRI'])
+  ) {
+    return 'SYSTEM_ADMIN'
+  }
+  if (matchAny(['DATA_MANAGER', 'MANAGER', 'QLDL', 'QUAN_LY_DU_LIEU'])) {
+    return 'DATA_MANAGER'
+  }
+  if (matchAny(['APPROVER', 'PHE_DUYET', 'LEADER', 'LANH_DAO'])) {
+    return 'APPROVER'
+  }
+
+  return 'DATA_ENTRY'
+}
+
+function buildNavGroups(role: AppRole): NavGroup[] {
+  const utilities: NavGroup = {
+    title: 'Tiện ích',
+    items: [
+      ...(role === 'SYSTEM_ADMIN' || role === 'DATA_MANAGER' || role === 'APPROVER'
+        ? [
+            {
+              title: 'Thống kê & Phân tích',
+              url: '/report-management?tab=analytics',
+              icon: ChartColumnBig,
+            },
+          ]
+        : []),
+      {
+        title: 'Thông báo',
+        url: '/settings/notifications',
+        icon: Bell,
+      },
+    ],
+  }
+
+  const overview: NavGroup = {
+    title: 'Tổng quan',
+    items: [
+      {
+        title: 'Dashboard',
+        url: '/',
+        icon: LayoutDashboard,
+      },
+    ],
+  }
+
+  if (role === 'SYSTEM_ADMIN') {
+    return [
+      overview,
+      {
+        title: 'Quản trị hệ thống',
+        items: [
+          {
+            title: 'Quản lý đơn vị',
+            url: '/system-admin?tab=units',
+            icon: Building2,
+          },
+          {
+            title: 'Kỳ báo cáo',
+            url: '/system-admin?tab=periods',
+            icon: CalendarClock,
+          },
+          {
+            title: 'Tài khoản',
+            url: '/system-admin?tab=users',
+            icon: Users,
+          },
+          {
+            title: 'Nhóm quyền',
+            url: '/system-admin?tab=roles',
+            icon: ShieldCheck,
+          },
+        ],
+      },
+      {
+        title: 'Nghiệp vụ',
+        items: [
+          {
+            title: 'Thiết kế biểu mẫu',
+            url: '/form-management',
+            icon: FileSpreadsheet,
+          },
+          {
+            title: 'Giao báo cáo',
+            url: '/report-management?tab=assignment',
+            icon: SendToBack,
+          },
+          {
+            title: 'Tổng hợp',
+            url: '/report-management?tab=analytics',
+            icon: ChartColumnBig,
+          },
+          {
+            title: 'Theo dõi trạng thái',
+            url: '/report-management?tab=list',
+            icon: SearchCheck,
+          },
+        ],
+      },
+      utilities,
+    ]
+  }
+
+  if (role === 'DATA_MANAGER') {
+    return [
+      overview,
+      {
+        title: 'Nghiệp vụ',
+        items: [
+          {
+            title: 'Thiết kế biểu mẫu',
+            url: '/form-management',
+            icon: FileSpreadsheet,
+          },
+          {
+            title: 'Giao báo cáo',
+            url: '/report-management?tab=assignment',
+            icon: SendToBack,
+          },
+          {
+            title: 'Tổng hợp',
+            url: '/report-management?tab=analytics',
+            icon: ChartColumnBig,
+          },
+          {
+            title: 'Theo dõi trạng thái',
+            url: '/report-management?tab=list',
+            icon: SearchCheck,
+          },
+        ],
+      },
+      utilities,
+    ]
+  }
+
+  if (role === 'APPROVER') {
+    return [
+      overview,
+      {
+        title: 'Công việc của tôi',
+        items: [
+          {
+            title: 'Phê duyệt',
+            url: '/report-management?tab=editing',
+            icon: FileCheck2,
+          },
+          {
+            title: 'Xem báo cáo đã duyệt',
+            url: '/report-management?tab=list',
+            icon: ChartColumnBig,
+          },
+        ],
+      },
+      utilities,
+    ]
+  }
+
+  return [
+    overview,
+    {
+      title: 'Công việc của tôi',
+      items: [
+        {
+          title: 'Nhập liệu báo cáo',
+          url: '/report-management?tab=editing',
+          icon: FileSpreadsheet,
+        },
+        {
+          title: 'Xem báo cáo đã gửi',
+          url: '/report-management?tab=list',
+          icon: ChartColumnBig,
+        },
+      ],
+    },
+    utilities,
+  ]
+}
 
 export const sidebarData: SidebarData = {
   user: {
@@ -30,173 +263,13 @@ export const sidebarData: SidebarData = {
     email: 'satnaingdev@gmail.com',
     avatar: '/avatars/shadcn.jpg',
   },
-  navGroups: [
-    {
-      title: 'General',
-      items: [
-        {
-          title: 'Dashboard',
-          url: '/',
-          icon: LayoutDashboard,
-        },
-        {
-          title: 'Tasks',
-          url: '/tasks',
-          icon: ListTodo,
-        },
-        {
-          title: 'Apps',
-          url: '/apps',
-          icon: Package,
-        },
-        {
-          title: 'Chats',
-          url: '/chats',
-          badge: '3',
-          icon: MessagesSquare,
-        },
-        {
-          title: 'Users',
-          url: '/users',
-          icon: Users,
-        },
-        {
-          title: 'Quản trị hệ thống',
-          url: '/system-admin',
-          icon: ShieldCheck,
-        },
-        {
-          title: 'Quản lí biểu mẫu',
-          url: '/form-management',
-          icon: FileSpreadsheet,
-        },
-        {
-          title: 'Quản lý báo cáo',
-          url: '/report-management',
-          icon: FileCheck2,
-        },
-        {
-          title: 'Secured by Clerk',
-          icon: ClerkLogo,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/clerk/sign-in',
-            },
-            {
-              title: 'Sign Up',
-              url: '/clerk/sign-up',
-            },
-            {
-              title: 'User Management',
-              url: '/clerk/user-management',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      title: 'Pages',
-      items: [
-        {
-          title: 'Auth',
-          icon: ShieldCheck,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/sign-in',
-            },
-            {
-              title: 'Sign In (2 Col)',
-              url: '/sign-in-2',
-            },
-            {
-              title: 'Sign Up',
-              url: '/sign-up',
-            },
-            {
-              title: 'Forgot Password',
-              url: '/forgot-password',
-            },
-            {
-              title: 'OTP',
-              url: '/otp',
-            },
-          ],
-        },
-        {
-          title: 'Errors',
-          icon: Bug,
-          items: [
-            {
-              title: 'Unauthorized',
-              url: '/errors/unauthorized',
-              icon: Lock,
-            },
-            {
-              title: 'Forbidden',
-              url: '/errors/forbidden',
-              icon: UserX,
-            },
-            {
-              title: 'Not Found',
-              url: '/errors/not-found',
-              icon: FileX,
-            },
-            {
-              title: 'Internal Server Error',
-              url: '/errors/internal-server-error',
-              icon: ServerOff,
-            },
-            {
-              title: 'Maintenance Error',
-              url: '/errors/maintenance-error',
-              icon: Construction,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      title: 'Other',
-      items: [
-        {
-          title: 'Settings',
-          icon: Settings,
-          items: [
-            {
-              title: 'Profile',
-              url: '/settings',
-              icon: UserCog,
-            },
-            {
-              title: 'Account',
-              url: '/settings/account',
-              icon: Wrench,
-            },
-            {
-              title: 'Appearance',
-              url: '/settings/appearance',
-              icon: Palette,
-            },
-            {
-              title: 'Notifications',
-              url: '/settings/notifications',
-              icon: Bell,
-            },
-            {
-              title: 'Display',
-              url: '/settings/display',
-              icon: Monitor,
-            },
-          ],
-        },
-        {
-          title: 'Help Center',
-          url: '/help-center',
-          icon: HelpCircle,
-        },
-      ],
-    },
-  ],
+  navGroups: buildNavGroups('SYSTEM_ADMIN'),
+}
+
+export function getSidebarNavGroupsForUser(
+  user: unknown,
+  rolesById?: Record<string, string>
+) {
+  const role = getAppRoleForUser(user, rolesById)
+  return buildNavGroups(role)
 }

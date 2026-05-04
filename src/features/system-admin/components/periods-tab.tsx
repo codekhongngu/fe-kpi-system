@@ -1,5 +1,6 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { CalendarPlus, PlusCircle, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -29,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -37,7 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { systemAdminMockApi } from '../api/mock-system-admin-api'
+import { periodsApi } from '../api/mock-system-admin-api'
 import { periodTypeOptions, type PeriodType, type ReportPeriod } from '../api/types'
 
 const EMPTY_PERIODS: ReportPeriod[] = []
@@ -45,26 +47,67 @@ const EMPTY_PERIODS: ReportPeriod[] = []
 type PeriodFormState = {
   code: string
   name: string
-  type: PeriodType
-  startDate: string
-  endDate: string
-  status: 'open' | 'closed'
+  periodType: PeriodType
+  dateFrom: string
+  dateTo: string
+  isActive: boolean
 }
 
 const defaultForm: PeriodFormState = {
   code: '',
   name: '',
-  type: 'month',
-  startDate: '',
-  endDate: '',
-  status: 'open',
+  periodType: 'THANG',
+  dateFrom: '',
+  dateTo: '',
+  isActive: true,
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function getApiErrorMessage(error: unknown) {
+  if (error instanceof AxiosError) {
+    const payload = error.response?.data
+    if (isRecord(payload)) {
+      if (payload.message === 'PERIOD_CODE_DUPLICATE') {
+        return 'Mã kỳ bị trùng (PERIOD_CODE_DUPLICATE). Vui lòng chọn loại kỳ/khoảng ngày khác hoặc tạo kỳ mới.'
+      }
+      if (payload.message === 'PERIOD_DUPLICATE') {
+        return 'Kỳ báo cáo bị trùng (PERIOD_DUPLICATE). Đã tồn tại kỳ với loại kỳ và khoảng ngày này.'
+      }
+      const message =
+        (typeof payload.message === 'string' && payload.message) ||
+        (Array.isArray(payload.message) &&
+          payload.message.length > 0 &&
+          typeof payload.message[0] === 'string' &&
+          payload.message[0]) ||
+        (typeof payload.error === 'string' && payload.error)
+      if (message) return message
+      if (isRecord(payload.error) && typeof payload.error.message === 'string') {
+        const details = payload.error.details
+        if (Array.isArray(details) && details.length > 0) {
+          const first = details[0]
+          if (isRecord(first) && typeof first.message === 'string') {
+            return first.message
+          }
+          if (typeof first === 'string') return first
+        }
+        return payload.error.message
+      }
+    }
+    return error.message
+  }
+
+  if (error instanceof Error) return error.message
+  return 'Có lỗi xảy ra.'
 }
 
 export function PeriodsTab() {
   const queryClient = useQueryClient()
   const periodsQuery = useQuery({
-    queryKey: ['system-admin', 'periods'],
-    queryFn: () => systemAdminMockApi.listPeriods(),
+    queryKey: ['periods', 'list'],
+    queryFn: () => periodsApi.list(),
   })
 
   const [search, setSearch] = useState('')
@@ -86,34 +129,44 @@ export function PeriodsTab() {
   }, [search, periods])
 
   const createMutation = useMutation({
-    mutationFn: systemAdminMockApi.createPeriod,
+    mutationFn: periodsApi.create,
     onSuccess: () => {
       toast.success('Đã tạo kỳ báo cáo mới.')
-      queryClient.invalidateQueries({ queryKey: ['system-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['periods'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: PeriodFormState }) =>
-      systemAdminMockApi.updatePeriod(id, payload),
+      periodsApi.update(id, payload),
     onSuccess: () => {
       toast.success('Đã cập nhật kỳ báo cáo.')
-      queryClient.invalidateQueries({ queryKey: ['system-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['periods'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  })
+
+  const setActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      periodsApi.setActive(id, isActive),
+    onSuccess: () => {
+      toast.success('Đã cập nhật trạng thái kỳ báo cáo.')
+      queryClient.invalidateQueries({ queryKey: ['periods'] })
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: systemAdminMockApi.deletePeriod,
+    mutationFn: periodsApi.delete,
     onSuccess: () => {
       toast.success('Đã xóa kỳ báo cáo.')
-      queryClient.invalidateQueries({ queryKey: ['system-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['periods'] })
       setDeletingPeriod(null)
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const closeForm = () => {
@@ -133,18 +186,32 @@ export function PeriodsTab() {
     setForm({
       code: period.code,
       name: period.name,
-      type: period.type,
-      startDate: period.startDate,
-      endDate: period.endDate,
-      status: period.status,
+      periodType: period.periodType,
+      dateFrom: period.dateFrom,
+      dateTo: period.dateTo,
+      isActive: period.isActive,
     })
     setOpenForm(true)
   }
 
   const submitForm = () => {
-    if (!form.code.trim() || !form.name.trim() || !form.startDate || !form.endDate) {
+    if (
+      (!editingPeriod && !form.code.trim()) ||
+      !form.name.trim() ||
+      !form.dateFrom ||
+      !form.dateTo
+    ) {
       toast.error('Vui lòng nhập đủ mã kỳ, tên kỳ và khoảng thời gian.')
       return
+    }
+
+    if (form.dateFrom && form.dateTo) {
+      const start = new Date(form.dateFrom).getTime()
+      const end = new Date(form.dateTo).getTime()
+      if (!Number.isNaN(start) && !Number.isNaN(end) && start > end) {
+        toast.error('Ngày bắt đầu không được lớn hơn ngày kết thúc.')
+        return
+      }
     }
 
     const payload: PeriodFormState = {
@@ -154,6 +221,18 @@ export function PeriodsTab() {
     }
 
     if (editingPeriod) {
+      const onlyActiveChanged =
+        payload.name === editingPeriod.name &&
+        payload.periodType === editingPeriod.periodType &&
+        payload.dateFrom === editingPeriod.dateFrom &&
+        payload.dateTo === editingPeriod.dateTo &&
+        payload.isActive !== editingPeriod.isActive
+
+      if (onlyActiveChanged) {
+        setActiveMutation.mutate({ id: editingPeriod.id, isActive: payload.isActive })
+        return
+      }
+
       updateMutation.mutate({ id: editingPeriod.id, payload })
       return
     }
@@ -215,13 +294,13 @@ export function PeriodsTab() {
                       Đã giao {period.assignedFormsCount} biểu mẫu
                     </div>
                   </TableCell>
-                  <TableCell>{periodTypeLabel(period.type)}</TableCell>
+                  <TableCell>{periodTypeLabel(period.periodType)}</TableCell>
                   <TableCell>
-                    {period.startDate} → {period.endDate}
+                    {period.dateFrom} → {period.dateTo}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={period.status === 'open' ? 'default' : 'secondary'}>
-                      {period.status === 'open' ? 'Đang mở' : 'Đã đóng'}
+                    <Badge variant={period.isActive ? 'default' : 'secondary'}>
+                      {period.isActive ? 'Hoạt động' : 'Đã khóa'}
                     </Badge>
                   </TableCell>
                   <TableCell className='text-right'>
@@ -267,6 +346,8 @@ export function PeriodsTab() {
               <Label>Mã kỳ</Label>
               <Input
                 value={form.code}
+                placeholder='Nhập mã kỳ'
+                disabled={Boolean(editingPeriod)}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, code: event.target.value }))
                 }
@@ -284,9 +365,9 @@ export function PeriodsTab() {
             <div className='space-y-2'>
               <Label>Loại kỳ</Label>
               <Select
-                value={form.type}
+                value={form.periodType}
                 onValueChange={(value: PeriodType) =>
-                  setForm((prev) => ({ ...prev, type: value }))
+                  setForm((prev) => ({ ...prev, periodType: value }))
                 }
               >
                 <SelectTrigger className='w-full'>
@@ -303,28 +384,31 @@ export function PeriodsTab() {
             </div>
             <div className='space-y-2'>
               <Label>Trạng thái</Label>
-              <Select
-                value={form.status}
-                onValueChange={(value: 'open' | 'closed') =>
-                  setForm((prev) => ({ ...prev, status: value }))
-                }
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='open'>Đang mở</SelectItem>
-                  <SelectItem value='closed'>Đã đóng</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className='flex h-10 items-center justify-between rounded-md border px-3'>
+                <div
+                  className={
+                    form.isActive
+                      ? 'text-sm text-muted-foreground'
+                      : 'text-sm font-medium text-destructive'
+                  }
+                >
+                  {form.isActive ? 'Hoạt động' : 'Đã khóa'}
+                </div>
+                <Switch
+                  checked={form.isActive}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({ ...prev, isActive: checked }))
+                  }
+                />
+              </div>
             </div>
             <div className='space-y-2'>
               <Label>Từ ngày</Label>
               <Input
                 type='date'
-                value={form.startDate}
+                value={form.dateFrom}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, startDate: event.target.value }))
+                  setForm((prev) => ({ ...prev, dateFrom: event.target.value }))
                 }
               />
             </div>
@@ -332,9 +416,9 @@ export function PeriodsTab() {
               <Label>Đến ngày</Label>
               <Input
                 type='date'
-                value={form.endDate}
+                value={form.dateTo}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, endDate: event.target.value }))
+                  setForm((prev) => ({ ...prev, dateTo: event.target.value }))
                 }
               />
             </div>
@@ -346,7 +430,11 @@ export function PeriodsTab() {
             </Button>
             <Button
               onClick={submitForm}
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending ||
+                setActiveMutation.isPending
+              }
             >
               <CalendarPlus />
               {editingPeriod ? 'Lưu thay đổi' : 'Tạo kỳ'}

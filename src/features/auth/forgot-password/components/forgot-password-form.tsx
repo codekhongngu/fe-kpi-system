@@ -3,9 +3,8 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from '@tanstack/react-router'
-import { ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { sleep, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -16,10 +15,11 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { authApi } from '@/features/auth/api/auth-api'
 
 const formSchema = z.object({
   email: z.email({
-    error: (iss) => (iss.input === '' ? 'Please enter your email' : undefined),
+    error: (iss) => (iss.input === '' ? 'Vui lòng nhập email' : undefined),
   }),
 })
 
@@ -37,18 +37,19 @@ export function ForgotPasswordForm({
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(data)
+    const promise = authApi.forgotPassword(data)
+    promise.finally(() => setIsLoading(false))
 
-    toast.promise(sleep(2000), {
-      loading: 'Sending email...',
-      success: () => {
-        setIsLoading(false)
+    toast.promise(promise, {
+      loading: 'Đang gửi email...',
+      success: (result) => {
         form.reset()
-        navigate({ to: '/otp' })
-        return `Email sent to ${data.email}`
+        navigate({ to: '/sign-in', replace: true })
+        return result.message
       },
-      error: 'Error',
+      error: (error) => {
+        return error instanceof Error ? error.message : 'Không thể gửi email.'
+      },
     })
   }
 
@@ -66,7 +67,7 @@ export function ForgotPasswordForm({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} />
+                <Input placeholder='Email' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -74,7 +75,7 @@ export function ForgotPasswordForm({
         />
         <Button className='mt-2' disabled={isLoading}>
           Continue
-          {isLoading ? <Loader2 className='animate-spin' /> : <ArrowRight />}
+          Gửi link đặt lại mật khẩu
         </Button>
       </form>
     </Form>

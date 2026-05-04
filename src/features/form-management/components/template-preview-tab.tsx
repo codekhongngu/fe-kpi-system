@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formManagementMockApi } from '../api/mock-form-management-api'
+import { formManagementApi } from '../api/mock-form-management-api'
 import { type FormTemplate } from '../api/types'
 
 const EMPTY_TEMPLATES: FormTemplate[] = []
@@ -39,7 +39,7 @@ export function TemplatePreviewTab({
 }: TemplatePreviewTabProps = {}) {
   const templatesQuery = useQuery({
     queryKey: ['form-management', 'templates'],
-    queryFn: () => formManagementMockApi.listTemplates(),
+    queryFn: () => formManagementApi.listTemplates(),
   })
 
   const templates = templatesQuery.data ?? EMPTY_TEMPLATES

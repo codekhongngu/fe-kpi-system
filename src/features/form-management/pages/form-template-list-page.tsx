@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { PlusCircle } from 'lucide-react'
@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formManagementMockApi } from '../api/mock-form-management-api'
+import { formManagementApi } from '../api/mock-form-management-api'
 import { templateCycleOptions, type FormTemplate } from '../api/types'
 import { TemplateListFilter } from '../components/template-list-filter'
 import { TemplateListTable } from '../components/template-list-table'
@@ -29,11 +29,11 @@ const EMPTY_TEMPLATES: FormTemplate[] = []
 export function FormTemplateListPage() {
   const templatesQuery = useQuery({
     queryKey: ['form-management', 'templates'],
-    queryFn: () => formManagementMockApi.listTemplates(),
+    queryFn: () => formManagementApi.listTemplates(),
   })
   const domainsQuery = useQuery({
     queryKey: ['form-management', 'domains'],
-    queryFn: () => formManagementMockApi.listDomains(),
+    queryFn: () => formManagementApi.listDomains(),
   })
 
   const templates = templatesQuery.data ?? EMPTY_TEMPLATES

@@ -1,7 +1,7 @@
-﻿export type UserStatus = 'active' | 'inactive'
+export type UserStatus = 'active' | 'inactive'
 export type UnitStatus = 'active' | 'locked'
 export type DataScope = 'all_units' | 'own_unit' | 'child_units'
-export type PeriodType = 'week' | 'month' | 'quarter' | 'year'
+export type PeriodType = 'TUAN' | 'THANG' | 'QUY' | 'NAM'
 
 export type SystemUser = {
   id: string
@@ -26,13 +26,20 @@ export type Role = {
   isDefault: boolean
 }
 
+export type Permission = {
+  id: string
+  code: string
+  name: string
+  description?: string | null
+}
+
 export type OrganizationUnit = {
   id: string
   code: string
   name: string
-  level: 'agency' | 'department' | 'team' | 'group'
+  level: number
   parentId: string | null
-  leaderName: string
+  description: string | null
   status: UnitStatus
   memberCount: number
   activeAssignments: number
@@ -42,10 +49,10 @@ export type ReportPeriod = {
   id: string
   code: string
   name: string
-  type: PeriodType
-  startDate: string
-  endDate: string
-  status: 'open' | 'closed'
+  periodType: PeriodType
+  dateFrom: string
+  dateTo: string
+  isActive: boolean
   assignedFormsCount: number
 }
 
@@ -60,12 +67,15 @@ export type CreateRoleInput = Omit<Role, 'id' | 'isDefault'>
 
 export type UpdateRoleInput = Omit<Role, 'id' | 'isDefault'>
 
-export type CreateUnitInput = Omit<OrganizationUnit, 'id' | 'memberCount' | 'activeAssignments'>
+export type CreateUnitInput = {
+  code: string
+  name: string
+  parentId: string | null
+  level: number
+  description: string
+}
 
-export type UpdateUnitInput = Omit<
-  OrganizationUnit,
-  'id' | 'memberCount' | 'activeAssignments'
->
+export type UpdateUnitInput = CreateUnitInput
 
 export type CreatePeriodInput = Omit<ReportPeriod, 'id' | 'assignedFormsCount'>
 
@@ -88,18 +98,18 @@ export const rolePermissionCatalog: string[] = [
 ]
 
 export const periodTypeOptions: Array<{ value: PeriodType; label: string }> = [
-  { value: 'week', label: 'Tuần' },
-  { value: 'month', label: 'Tháng' },
-  { value: 'quarter', label: 'Quý' },
-  { value: 'year', label: 'Năm' },
+  { value: 'TUAN', label: 'Tuần' },
+  { value: 'THANG', label: 'Tháng' },
+  { value: 'QUY', label: 'Quý' },
+  { value: 'NAM', label: 'Năm' },
 ]
 
 export const unitLevelOptions: Array<{
   value: OrganizationUnit['level']
   label: string
 }> = [
-  { value: 'agency', label: 'Cơ quan' },
-  { value: 'department', label: 'Phòng ban' },
-  { value: 'team', label: 'Bộ phận' },
-  { value: 'group', label: 'Nhóm' },
+  { value: 1, label: 'Cơ quan' },
+  { value: 2, label: 'Phòng ban' },
+  { value: 3, label: 'Bộ phận' },
+  { value: 4, label: 'Nhóm' },
 ]

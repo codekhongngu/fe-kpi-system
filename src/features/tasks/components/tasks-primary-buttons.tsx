@@ -11,10 +11,10 @@ export function TasksPrimaryButtons() {
         className='space-x-1'
         onClick={() => setOpen('import')}
       >
-        <span>Import</span> <Download size={18} />
+        <span>Nhập dữ liệu</span> <Download size={18} />
       </Button>
       <Button className='space-x-1' onClick={() => setOpen('create')}>
-        <span>Create</span> <Plus size={18} />
+        <span>Tạo mới</span> <Plus size={18} />
       </Button>
     </div>
   )

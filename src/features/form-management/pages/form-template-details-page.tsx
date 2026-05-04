@@ -1,4 +1,4 @@
-﻿import { Link } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, PencilLine } from 'lucide-react'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formManagementMockApi } from '../api/mock-form-management-api'
+import { formManagementApi } from '../api/mock-form-management-api'
 import { templateCycleOptions } from '../api/types'
 
 type FormTemplateDetailsPageProps = {
@@ -23,7 +23,7 @@ type FormTemplateDetailsPageProps = {
 export function FormTemplateDetailsPage({ templateId }: FormTemplateDetailsPageProps) {
   const templateQuery = useQuery({
     queryKey: ['form-management', 'template', templateId],
-    queryFn: () => formManagementMockApi.getTemplate(templateId),
+    queryFn: () => formManagementApi.getTemplate(templateId),
   })
 
   const template = templateQuery.data

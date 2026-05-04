@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { authApi } from '@/features/auth/api/auth-api'
 
 interface SignOutDialogProps {
   open: boolean
@@ -13,6 +14,10 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const { auth } = useAuthStore()
 
   const handleSignOut = () => {
+    const refreshToken = auth.refreshToken || undefined
+    if (auth.accessToken) {
+      authApi.logout(refreshToken).catch(() => {})
+    }
     auth.reset()
     // Preserve current location for redirect after sign-in
     const currentPath = location.href
@@ -27,9 +32,9 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     <ConfirmDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Sign out'
-      desc='Are you sure you want to sign out? You will need to sign in again to access your account.'
-      confirmText='Sign out'
+      title='Đăng xuất'
+      desc='Bạn có chắc muốn đăng xuất? Bạn sẽ cần đăng nhập lại để tiếp tục sử dụng hệ thống.'
+      confirmText='Đăng xuất'
       destructive
       handleConfirm={handleSignOut}
       className='sm:max-w-sm'

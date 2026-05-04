@@ -37,7 +37,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { reportManagementMockApi } from '../api/mock-report-management-api'
+import { reportManagementApi } from '../api/mock-report-management-api'
 import { type ReportInstance, type ReportStatus } from '../api/types'
 
 const EMPTY_REPORTS: ReportInstance[] = []
@@ -62,7 +62,7 @@ export function ReportEditingTab() {
   const queryClient = useQueryClient()
   const reportsQuery = useQuery({
     queryKey: ['report-management', 'reports'],
-    queryFn: () => reportManagementMockApi.listReports(),
+    queryFn: () => reportManagementApi.listReports(),
   })
   const reports = reportsQuery.data ?? EMPTY_REPORTS
 
@@ -88,7 +88,7 @@ export function ReportEditingTab() {
       reportId: string
       rowId: string
       value: number | null
-    }) => reportManagementMockApi.updateReportValue(reportId, rowId, value),
+    }) => reportManagementApi.updateReportValue(reportId, rowId, value),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['report-management', 'reports'] })
       setDirty(true)
@@ -97,7 +97,7 @@ export function ReportEditingTab() {
   })
 
   const autosaveMutation = useMutation({
-    mutationFn: (reportId: string) => reportManagementMockApi.autosaveReport(reportId),
+    mutationFn: (reportId: string) => reportManagementApi.autosaveReport(reportId),
     onSuccess: () => {
       toast.success('Đã auto-save báo cáo.')
       queryClient.invalidateQueries({ queryKey: ['report-management', 'reports'] })
@@ -108,9 +108,9 @@ export function ReportEditingTab() {
   const { mutate: autosaveNow } = autosaveMutation
 
   const importMutation = useMutation({
-    mutationFn: (reportId: string) => reportManagementMockApi.importExcelData(reportId),
+    mutationFn: (reportId: string) => reportManagementApi.importExcelData(reportId),
     onSuccess: () => {
-      toast.success('Đã import dữ liệu từ Excel (mock).')
+      toast.success('Đã import dữ liệu từ Excel.')
       queryClient.invalidateQueries({ queryKey: ['report-management'] })
       setDirty(true)
     },
@@ -118,7 +118,7 @@ export function ReportEditingTab() {
   })
 
   const copyMutation = useMutation({
-    mutationFn: (reportId: string) => reportManagementMockApi.copyPreviousPeriod(reportId),
+    mutationFn: (reportId: string) => reportManagementApi.copyPreviousPeriod(reportId),
     onSuccess: () => {
       toast.success('Đã sao chép dữ liệu kỳ trước.')
       queryClient.invalidateQueries({ queryKey: ['report-management'] })
@@ -129,7 +129,7 @@ export function ReportEditingTab() {
 
   const submitMutation = useMutation({
     mutationFn: ({ reportId, note }: { reportId: string; note: string }) =>
-      reportManagementMockApi.submitReport(reportId, note),
+      reportManagementApi.submitReport(reportId, note),
     onSuccess: () => {
       toast.success('Đã gửi duyệt báo cáo.')
       queryClient.invalidateQueries({ queryKey: ['report-management'] })
@@ -142,7 +142,7 @@ export function ReportEditingTab() {
 
   const approveMutation = useMutation({
     mutationFn: ({ reportId, note }: { reportId: string; note: string }) =>
-      reportManagementMockApi.approveReport(reportId, note),
+      reportManagementApi.approveReport(reportId, note),
     onSuccess: () => {
       toast.success('Đã phê duyệt báo cáo.')
       queryClient.invalidateQueries({ queryKey: ['report-management'] })
@@ -154,7 +154,7 @@ export function ReportEditingTab() {
 
   const rejectMutation = useMutation({
     mutationFn: ({ reportId, note }: { reportId: string; note: string }) =>
-      reportManagementMockApi.rejectReport(reportId, note),
+      reportManagementApi.rejectReport(reportId, note),
     onSuccess: () => {
       toast.success('Đã từ chối báo cáo.')
       queryClient.invalidateQueries({ queryKey: ['report-management'] })
@@ -166,7 +166,7 @@ export function ReportEditingTab() {
 
   const softDeleteMutation = useMutation({
     mutationFn: ({ reportId, reason }: { reportId: string; reason: string }) =>
-      reportManagementMockApi.softDeleteReport(reportId, reason),
+      reportManagementApi.softDeleteReport(reportId, reason),
     onSuccess: () => {
       toast.success('Đã soft delete báo cáo.')
       queryClient.invalidateQueries({ queryKey: ['report-management'] })

@@ -16,11 +16,10 @@ export function ForgotPassword() {
       <Card className='gap-4'>
         <CardHeader>
           <CardTitle className='text-lg tracking-tight'>
-            Forgot Password
+            Quên mật khẩu
           </CardTitle>
           <CardDescription>
-            Enter your registered email and <br /> we will send you a link to
-            reset your password.
+            Nhập email đã đăng ký, hệ thống sẽ gửi link <br /> để bạn đặt lại mật khẩu.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -28,12 +27,12 @@ export function ForgotPassword() {
         </CardContent>
         <CardFooter>
           <p className='mx-auto px-8 text-center text-sm text-balance text-muted-foreground'>
-            Don't have an account?{' '}
+            Chưa có tài khoản?{' '}
             <Link
               to='/sign-up'
               className='underline underline-offset-4 hover:text-primary'
             >
-              Sign up
+              Đăng ký
             </Link>
             .
           </p>

@@ -1,4 +1,4 @@
-﻿import { Link } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Eye, SlidersHorizontal } from 'lucide-react'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { formManagementMockApi } from '../api/mock-form-management-api'
+import { formManagementApi } from '../api/mock-form-management-api'
 import { templateCycleOptions } from '../api/types'
 import { TemplatePreviewTab } from '../components/template-preview-tab'
 import { TemplateStructureTab } from '../components/template-structure-tab'
@@ -19,7 +19,7 @@ type FormTemplateEditPageProps = {
 export function FormTemplateEditPage({ templateId }: FormTemplateEditPageProps) {
   const templateQuery = useQuery({
     queryKey: ['form-management', 'template', templateId],
-    queryFn: () => formManagementMockApi.getTemplate(templateId),
+    queryFn: () => formManagementApi.getTemplate(templateId),
   })
 
   const template = templateQuery.data

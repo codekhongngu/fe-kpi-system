@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { reportManagementMockApi } from '../api/mock-report-management-api'
+import { reportManagementApi } from '../api/mock-report-management-api'
 import { reportStatusOptions, type ReportInstance, type ReportStatus } from '../api/types'
 
 const EMPTY_REPORTS: ReportInstance[] = []
@@ -54,15 +54,15 @@ function statusVariant(status: ReportStatus): 'default' | 'destructive' | 'secon
 export function ReportsListTab() {
   const refsQuery = useQuery({
     queryKey: ['report-management', 'refs'],
-    queryFn: () => reportManagementMockApi.listReferenceData(),
+    queryFn: () => reportManagementApi.listReferenceData(),
   })
   const reportsQuery = useQuery({
     queryKey: ['report-management', 'reports'],
-    queryFn: () => reportManagementMockApi.listReports(),
+    queryFn: () => reportManagementApi.listReports(),
   })
   const summaryQuery = useQuery({
     queryKey: ['report-management', 'summary'],
-    queryFn: () => reportManagementMockApi.getSummary(),
+    queryFn: () => reportManagementApi.getSummary(),
   })
 
   const reports = reportsQuery.data ?? EMPTY_REPORTS

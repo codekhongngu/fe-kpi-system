@@ -51,19 +51,19 @@ export function TasksDialogs() {
               }, 500)
               showSubmittedData(
                 currentRow,
-                'The following task has been deleted:'
+                'Công việc sau đã được xóa:'
               )
             }}
             className='max-w-md'
-            title={`Delete this task: ${currentRow.id} ?`}
+            title={`Xóa công việc: ${currentRow.id} ?`}
             desc={
               <>
-                You are about to delete a task with the ID{' '}
+                Bạn sắp xóa công việc có mã{' '}
                 <strong>{currentRow.id}</strong>. <br />
-                This action cannot be undone.
+                Thao tác này không thể hoàn tác.
               </>
             }
-            confirmText='Delete'
+            confirmText='Xóa'
           />
         </>
       )}

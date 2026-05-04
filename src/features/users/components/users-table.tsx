@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   type SortingState,
   type VisibilityState,
@@ -22,18 +22,28 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
-import { roles } from '../data/data'
+import { type Role } from '../api/users-api'
 import { type User } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
-import { usersColumns as columns } from './users-columns'
+import { createUsersColumns } from './users-columns'
 
 type DataTableProps = {
   data: User[]
   search: Record<string, unknown>
   navigate: NavigateFn
+  pageCount: number
+  roles: Role[]
+  rolesById: Record<string, string>
 }
 
-export function UsersTable({ data, search, navigate }: DataTableProps) {
+export function UsersTable({
+  data,
+  search,
+  navigate,
+  pageCount,
+  roles,
+  rolesById,
+}: DataTableProps) {
   // Local UI-only states
   const [rowSelection, setRowSelection] = useState({})
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -63,6 +73,10 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
     ],
   })
 
+  const columns = useMemo(() => {
+    return createUsersColumns({ rolesById })
+  }, [rolesById])
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
@@ -74,6 +88,9 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
       columnFilters,
       columnVisibility,
     },
+    manualPagination: true,
+    pageCount,
+    manualFiltering: true,
     enableRowSelection: true,
     onPaginationChange,
     onColumnFiltersChange,
@@ -101,23 +118,21 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
     >
       <DataTableToolbar
         table={table}
-        searchPlaceholder='Filter users...'
+        searchPlaceholder='Lọc người dùng...'
         searchKey='username'
         filters={[
           {
             columnId: 'status',
-            title: 'Status',
+            title: 'Trạng thái',
             options: [
-              { label: 'Active', value: 'active' },
-              { label: 'Inactive', value: 'inactive' },
-              { label: 'Invited', value: 'invited' },
-              { label: 'Suspended', value: 'suspended' },
+              { label: 'Hoạt động', value: 'active' },
+              { label: 'Không hoạt động', value: 'inactive' },
             ],
           },
           {
             columnId: 'role',
-            title: 'Role',
-            options: roles.map((role) => ({ ...role })),
+            title: 'Vai trò',
+            options: roles.map((role) => ({ label: role.name, value: role.id })),
           },
         ]}
       />
@@ -180,7 +195,7 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  Không có kết quả.
                 </TableCell>
               </TableRow>
             )}

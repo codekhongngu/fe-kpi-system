@@ -8,6 +8,8 @@ import {
   type ReportSummary,
   type ReportValueRow,
 } from './types'
+import { AxiosError } from 'axios'
+import { apiClient } from '@/lib/api-client'
 
 const NETWORK_DELAY_MS = 220
 const NOW_DATE = '2026-04-21'
@@ -619,4 +621,428 @@ export const reportManagementMockApi = {
         format,
       }
     }),
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function flattenOrgTree(nodes: unknown): Array<{ id: string; code: string; name: string }> {
+  if (!Array.isArray(nodes)) {
+    return []
+  }
+
+  const result: Array<{ id: string; code: string; name: string }> = []
+
+  const visit = (node: unknown) => {
+    if (!isRecord(node)) {
+      return
+    }
+    const id = typeof node.id === 'string' ? node.id : ''
+    const code = typeof node.code === 'string' ? node.code : ''
+    const name = typeof node.name === 'string' ? node.name : ''
+    if (id) {
+      result.push({ id, code, name })
+    }
+    const children = node.children
+    if (Array.isArray(children)) {
+      children.forEach(visit)
+    }
+  }
+
+  nodes.forEach(visit)
+  return result
+}
+
+function toReportStatus(value: unknown): ReportStatus {
+  if (value === 'NOT_STARTED') return 'NOT_STARTED'
+  if (value === 'DRAFT') return 'DRAFT'
+  if (value === 'PENDING') return 'PENDING'
+  if (value === 'APPROVED') return 'APPROVED'
+  if (value === 'REJECTED') return 'REJECTED'
+  if (value === 'OVERDUE') return 'OVERDUE'
+  return 'NOT_STARTED'
+}
+
+export const reportManagementApi = {
+  listReferenceData: async () => {
+    type FormItem = { id: string; code?: string; name?: string }
+    type PeriodItem = { id: string; code?: string; name?: string }
+
+    const [formsRes, periodsRes, orgsRes] = await Promise.all([
+      apiClient.get<{ items: FormItem[] } | FormItem[]>('/forms', {
+        params: { page: 1, limit: 500 },
+      }),
+      apiClient.get<{ items: PeriodItem[] } | PeriodItem[]>('/report-periods', {
+        params: { page: 1, limit: 500 },
+      }),
+      apiClient.get('/orgs', { params: { tree: true } }),
+    ])
+
+    const formsPayload = formsRes.data
+    const periodsPayload = periodsRes.data
+    const orgsPayload = orgsRes.data
+
+    const formsItems = Array.isArray(formsPayload) ? formsPayload : formsPayload.items ?? []
+    const periodsItems = Array.isArray(periodsPayload)
+      ? periodsPayload
+      : periodsPayload.items ?? []
+    const units = flattenOrgTree(orgsPayload)
+
+    return {
+      forms: formsItems.map((item) => ({
+        id: item.id,
+        code: item.code ?? '',
+        name: item.name ?? '',
+      })),
+      periods: periodsItems.map((item) => ({
+        id: item.id,
+        code: item.code ?? '',
+        name: item.name ?? '',
+      })),
+      units,
+    }
+  },
+
+  listAssignments: async () => {
+    type BeAssignment = {
+      id: string
+      formId?: string
+      periodId?: string
+      orgId?: string
+      deadlineTo?: string
+      createdAt?: string
+      cancelReason?: string | null
+      isCancelled?: boolean
+      autoAssignNextPeriod?: boolean
+      form?: { id: string; name?: string }
+      period?: { id: string; name?: string }
+      org?: { id: string; name?: string }
+      formName?: string
+      periodName?: string
+      orgName?: string
+    }
+
+    const response = await apiClient.get<{ items: BeAssignment[] } | BeAssignment[]>(
+      '/assignments',
+      { params: { page: 1, limit: 500 } },
+    )
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+
+    return items.map<ReportAssignment>((item) => ({
+      id: item.id,
+      formTemplateId: item.formId ?? item.form?.id ?? '',
+      formTemplateName: item.formName ?? item.form?.name ?? '',
+      reportPeriodId: item.periodId ?? item.period?.id ?? '',
+      reportPeriodName: item.periodName ?? item.period?.name ?? '',
+      unitId: item.orgId ?? item.org?.id ?? '',
+      unitName: item.orgName ?? item.org?.name ?? '',
+      dueDate: item.deadlineTo ?? '',
+      autoAssignNextPeriod: Boolean(item.autoAssignNextPeriod),
+      isCancelled: Boolean(item.isCancelled),
+      cancelReason: item.cancelReason ?? null,
+      createdAt: item.createdAt ?? '',
+    }))
+  },
+
+  createAssignments: async (input: AssignmentInput) => {
+    await apiClient.post('/assignments', {
+      formId: input.formTemplateId,
+      periodId: input.reportPeriodId,
+      orgIds: input.unitIds,
+      deadlineFrom: input.dueDate,
+      deadlineTo: input.dueDate,
+    })
+
+    const assignments = await reportManagementApi.listAssignments()
+    return assignments.filter(
+      (item) =>
+        item.formTemplateId === input.formTemplateId &&
+        item.reportPeriodId === input.reportPeriodId &&
+        input.unitIds.includes(item.unitId),
+    )
+  },
+
+  cancelAssignment: async (assignmentId: string, reason: string) => {
+    try {
+      await apiClient.post(`/assignments/${assignmentId}/cancel`, { reason })
+      return true
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        throw new Error('Backend chưa hỗ trợ hủy giao báo cáo.')
+      }
+      throw error
+    }
+  },
+
+  listReports: async (filters?: {
+    status?: ReportStatus | 'all'
+    keyword?: string
+    formTemplateId?: string | 'all'
+    reportPeriodId?: string | 'all'
+    unitId?: string | 'all'
+  }) => {
+    type BeReportListItem = {
+      id: string
+      assignmentId?: string
+      formId?: string
+      formName?: string
+      periodId?: string
+      periodName?: string
+      orgId?: string
+      orgName?: string
+      dueDate?: string
+      deadlineTo?: string
+      status?: string
+      completionPercent?: number
+      lastSavedAt?: string | null
+      submittedAt?: string | null
+      approvedAt?: string | null
+    }
+
+    const params: Record<string, unknown> = { page: 1, limit: 500 }
+    if (filters?.keyword) {
+      params.q = filters.keyword
+    }
+    if (filters?.status && filters.status !== 'all') {
+      params.status = filters.status
+    }
+    if (filters?.formTemplateId && filters.formTemplateId !== 'all') {
+      params.formId = filters.formTemplateId
+    }
+    if (filters?.reportPeriodId && filters.reportPeriodId !== 'all') {
+      params.periodId = filters.reportPeriodId
+    }
+    if (filters?.unitId && filters.unitId !== 'all') {
+      params.orgId = filters.unitId
+    }
+
+    const response = await apiClient.get<{ items: BeReportListItem[] } | BeReportListItem[]>(
+      '/query/reports',
+      { params },
+    )
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+
+    return items.map<ReportInstance>((item) => ({
+      id: item.id,
+      assignmentId: item.assignmentId ?? '',
+      formTemplateId: item.formId ?? '',
+      formTemplateName: item.formName ?? '',
+      reportPeriodId: item.periodId ?? '',
+      reportPeriodName: item.periodName ?? '',
+      unitId: item.orgId ?? '',
+      unitName: item.orgName ?? '',
+      dueDate: item.dueDate ?? item.deadlineTo ?? '',
+      status: toReportStatus(item.status),
+      completionPercent: item.completionPercent ?? 0,
+      isDeleted: false,
+      isAggregated: false,
+      lastSavedAt: item.lastSavedAt ?? null,
+      submittedAt: item.submittedAt ?? null,
+      approvedAt: item.approvedAt ?? null,
+      values: [],
+      audits: [],
+    }))
+  },
+
+  getSummary: async (): Promise<ReportSummary> => {
+    const reports = await reportManagementApi.listReports()
+    const byStatus: ReportSummary['byStatus'] = {
+      NOT_STARTED: 0,
+      DRAFT: 0,
+      PENDING: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      OVERDUE: 0,
+    }
+
+    const today = new Date()
+    const nearDueThreshold = 3 * 24 * 60 * 60 * 1000
+    let nearDueCount = 0
+    let overdueCount = 0
+
+    reports.forEach((report) => {
+      let status = report.status
+      if (
+        status !== 'APPROVED' &&
+        status !== 'PENDING' &&
+        status !== 'REJECTED' &&
+        report.dueDate
+      ) {
+        const due = new Date(report.dueDate)
+        if (!Number.isNaN(due.getTime()) && due.getTime() < today.getTime()) {
+          status = 'OVERDUE'
+        }
+      }
+
+      byStatus[status] += 1
+
+      if (status === 'OVERDUE') {
+        overdueCount += 1
+        return
+      }
+
+      if ((status === 'NOT_STARTED' || status === 'DRAFT') && report.dueDate) {
+        const due = new Date(report.dueDate)
+        const diff = due.getTime() - today.getTime()
+        if (!Number.isNaN(diff) && diff <= nearDueThreshold) {
+          nearDueCount += 1
+        }
+      }
+    })
+
+    return { total: reports.length, byStatus, nearDueCount, overdueCount }
+  },
+
+  listPendingApprovals: async () => {
+    type BePendingItem = {
+      id: string
+      formId?: string
+      formName?: string
+      periodId?: string
+      periodName?: string
+      orgId?: string
+      orgName?: string
+      deadlineTo?: string
+      completionPercent?: number
+    }
+
+    const response = await apiClient.get<{ items: BePendingItem[] } | BePendingItem[]>(
+      '/approvals/pending',
+      { params: { page: 1, limit: 500 } },
+    )
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+
+    return items.map<ReportInstance>((item) => ({
+      id: item.id,
+      assignmentId: '',
+      formTemplateId: item.formId ?? '',
+      formTemplateName: item.formName ?? '',
+      reportPeriodId: item.periodId ?? '',
+      reportPeriodName: item.periodName ?? '',
+      unitId: item.orgId ?? '',
+      unitName: item.orgName ?? '',
+      dueDate: item.deadlineTo ?? '',
+      status: 'PENDING',
+      completionPercent: item.completionPercent ?? 0,
+      isDeleted: false,
+      isAggregated: false,
+      lastSavedAt: null,
+      submittedAt: null,
+      approvedAt: null,
+      values: [],
+      audits: [],
+    }))
+  },
+
+  aggregateReports: async (formTemplateId: string, reportPeriodId: string) => {
+    const response = await apiClient.post<unknown>('/analytics/pivot', {
+      formId: formTemplateId,
+      periodIds: [reportPeriodId],
+      orgIds: [],
+    })
+
+    const payload = response.data
+    if (isRecord(payload)) {
+      const formTemplateName =
+        typeof payload.formTemplateName === 'string' ? payload.formTemplateName : ''
+      const reportPeriodName =
+        typeof payload.reportPeriodName === 'string' ? payload.reportPeriodName : ''
+      const collectedUnits =
+        typeof payload.collectedUnits === 'number' ? payload.collectedUnits : 0
+      const approvedUnits = typeof payload.approvedUnits === 'number' ? payload.approvedUnits : 0
+      const pendingUnits = typeof payload.pendingUnits === 'number' ? payload.pendingUnits : 0
+      const rejectedUnits = typeof payload.rejectedUnits === 'number' ? payload.rejectedUnits : 0
+      const averageCompletion =
+        typeof payload.averageCompletion === 'number' ? payload.averageCompletion : 0
+
+      if (
+        formTemplateName ||
+        reportPeriodName ||
+        collectedUnits ||
+        approvedUnits ||
+        pendingUnits ||
+        rejectedUnits ||
+        averageCompletion
+      ) {
+        return {
+          formTemplateName,
+          reportPeriodName,
+          collectedUnits,
+          approvedUnits,
+          pendingUnits,
+          rejectedUnits,
+          averageCompletion,
+        } satisfies AggregateResult
+      }
+    }
+
+    const refs = await reportManagementApi.listReferenceData()
+    const formName = refs.forms.find((item) => item.id === formTemplateId)?.name ?? ''
+    const periodName = refs.periods.find((item) => item.id === reportPeriodId)?.name ?? ''
+
+    return {
+      formTemplateName: formName,
+      reportPeriodName: periodName,
+      collectedUnits: 0,
+      approvedUnits: 0,
+      pendingUnits: 0,
+      rejectedUnits: 0,
+      averageCompletion: 0,
+    } satisfies AggregateResult
+  },
+
+  updateReportValue: async (reportId: string, rowId: string, value: number | null) => {
+    await apiClient.patch(`/submissions/${reportId}/cells`, {
+      changes: [{ indicatorId: rowId, valueNumeric: value }],
+    })
+    return true
+  },
+
+  autosaveReport: async (reportId: string) => {
+    await apiClient.patch(`/submissions/${reportId}/save`)
+    return true
+  },
+
+  importExcelData: async (reportId: string) => {
+    await apiClient.post(`/submissions/${reportId}/import`)
+    return true
+  },
+
+  copyPreviousPeriod: async (reportId: string) => {
+    await apiClient.post(`/submissions/${reportId}/copy-previous`)
+    return true
+  },
+
+  submitReport: async (reportId: string, note: string) => {
+    await apiClient.post(`/submissions/${reportId}/submit`, { note })
+    return true
+  },
+
+  approveReport: async (reportId: string, note: string) => {
+    await apiClient.post(`/approvals/${reportId}/approve`, { note })
+    return true
+  },
+
+  rejectReport: async (reportId: string, note: string) => {
+    await apiClient.post(`/approvals/${reportId}/reject`, { note })
+    return true
+  },
+
+  softDeleteReport: async (reportId: string, reason: string) => {
+    await apiClient.post(`/submissions/${reportId}/soft-delete`, { reason })
+    return true
+  },
+
+  exportReports: async (format: 'excel' | 'pdf') => {
+    await apiClient.get('/analytics/export', { params: { format } })
+    const stamp = new Date().toISOString().slice(0, 10)
+    return {
+      fileName: `analytics-export-${stamp}.${format === 'excel' ? 'xlsx' : 'pdf'}`,
+      format,
+    }
+  },
 }

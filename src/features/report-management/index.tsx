@@ -1,4 +1,6 @@
+import { useLocation } from '@tanstack/react-router'
 import { ChartColumnBig, ClipboardList, FileCheck2, SendToBack } from 'lucide-react'
+import { useMemo } from 'react'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
@@ -12,6 +14,16 @@ import { ReportEditingTab } from './components/report-editing-tab'
 import { ReportsListTab } from './components/reports-list-tab'
 
 export function ReportManagement() {
+  const href = useLocation({ select: (location) => location.href })
+  const defaultTab = useMemo(() => {
+    const url = new URL(href, window.location.origin)
+    const tab = url.searchParams.get('tab')
+    if (tab === 'list' || tab === 'assignment' || tab === 'editing' || tab === 'analytics') {
+      return tab
+    }
+    return 'list'
+  }, [href])
+
   return (
     <>
       <Header fixed>
@@ -34,7 +46,7 @@ export function ReportManagement() {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue='list' className='space-y-4'>
+        <Tabs defaultValue={defaultTab} className='space-y-4'>
           <div className='w-full overflow-x-auto'>
             <TabsList>
               <TabsTrigger value='list'>

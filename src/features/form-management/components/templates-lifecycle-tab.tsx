@@ -37,7 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formManagementMockApi } from '../api/mock-form-management-api'
+import { formManagementApi } from '../api/mock-form-management-api'
 import {
   type FormTemplate,
   templateCycleOptions,
@@ -74,7 +74,7 @@ export function TemplatesLifecycleTab() {
   const queryClient = useQueryClient()
   const templatesQuery = useQuery({
     queryKey: ['form-management', 'templates'],
-    queryFn: () => formManagementMockApi.listTemplates(),
+    queryFn: () => formManagementApi.listTemplates(),
   })
 
   const templates = templatesQuery.data ?? EMPTY_TEMPLATES
@@ -102,7 +102,7 @@ export function TemplatesLifecycleTab() {
   }, [search, templates])
 
   const createMutation = useMutation({
-    mutationFn: formManagementMockApi.createTemplate,
+    mutationFn: formManagementApi.createTemplate,
     onSuccess: () => {
       toast.success('Đã tạo biểu mẫu mới.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
@@ -113,7 +113,7 @@ export function TemplatesLifecycleTab() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Omit<TemplateFormState, 'code'> }) =>
-      formManagementMockApi.updateTemplate(id, payload),
+      formManagementApi.updateTemplate(id, payload),
     onSuccess: () => {
       toast.success('Đã cập nhật metadata biểu mẫu.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
@@ -124,7 +124,7 @@ export function TemplatesLifecycleTab() {
 
   const deleteMutation = useMutation({
     mutationFn: ({ id, mode }: { id: string; mode: 'hard' | 'inactive' }) =>
-      formManagementMockApi.deleteTemplate(id, mode),
+      formManagementApi.deleteTemplate(id, mode),
     onSuccess: (_, variables) => {
       toast.success(
         variables.mode === 'hard'

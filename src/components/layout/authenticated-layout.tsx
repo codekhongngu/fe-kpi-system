@@ -1,9 +1,13 @@
 import { Outlet } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
+import { useAuthStore } from '@/stores/auth-store'
+import { authApi } from '@/features/auth/api/auth-api'
 // import { SkipToMain } from '@/components/skip-to-main'
 
 type AuthenticatedLayoutProps = {
@@ -11,6 +15,31 @@ type AuthenticatedLayoutProps = {
 }
 
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
+  const accessToken = useAuthStore((state) => state.auth.accessToken)
+  const user = useAuthStore((state) => state.auth.user)
+  const setUser = useAuthStore((state) => state.auth.setUser)
+
+  const meQuery = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: authApi.me,
+    enabled: !!accessToken && !user,
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (meQuery.data && !user) {
+      setUser(meQuery.data)
+    }
+  }, [meQuery.data, setUser, user])
+
+  if (!!accessToken && !user && meQuery.isLoading) {
+    return (
+      <div className='flex min-h-svh items-center justify-center p-6'>
+        <p className='text-sm text-muted-foreground'>Đang tải phiên đăng nhập...</p>
+      </div>
+    )
+  }
+
   return (
     <SearchProvider>
       <LayoutProvider>

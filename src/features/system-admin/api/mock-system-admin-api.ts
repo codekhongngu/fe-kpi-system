@@ -1,9 +1,10 @@
-﻿import {
+import {
   type CreatePeriodInput,
   type CreateRoleInput,
   type CreateUnitInput,
   type CreateUserInput,
   type OrganizationUnit,
+  type Permission,
   type ReportPeriod,
   type Role,
   type SystemUser,
@@ -12,6 +13,7 @@
   type UpdateUnitInput,
   type UpdateUserInput,
 } from './types'
+import { apiClient } from '@/lib/api-client'
 
 const DEFAULT_ROLE_NAMES = new Set([
   'System Admin',
@@ -81,9 +83,9 @@ const db: {
       id: 'u1',
       code: 'CQ-001',
       name: 'UBND Thành phố',
-      level: 'agency',
+      level: 1,
       parentId: null,
-      leaderName: 'Nguyễn Văn A',
+      description: null,
       status: 'active',
       memberCount: 8,
       activeAssignments: 1,
@@ -92,9 +94,9 @@ const db: {
       id: 'u2',
       code: 'PB-010',
       name: 'Phòng Nội vụ',
-      level: 'department',
+      level: 2,
       parentId: 'u1',
-      leaderName: 'Trần Thị B',
+      description: null,
       status: 'active',
       memberCount: 4,
       activeAssignments: 0,
@@ -103,9 +105,9 @@ const db: {
       id: 'u3',
       code: 'BP-021',
       name: 'Bộ phận KPI',
-      level: 'team',
+      level: 3,
       parentId: 'u2',
-      leaderName: 'Lê Văn C',
+      description: null,
       status: 'active',
       memberCount: 3,
       activeAssignments: 2,
@@ -114,9 +116,9 @@ const db: {
       id: 'u4',
       code: 'NH-001',
       name: 'Nhóm Tổng hợp',
-      level: 'group',
+      level: 4,
       parentId: 'u3',
-      leaderName: 'Phạm Thị D',
+      description: null,
       status: 'locked',
       memberCount: 0,
       activeAssignments: 0,
@@ -283,272 +285,624 @@ function nextId(prefix: string, items: Array<{ id: string }>) {
   return `${prefix}-${items.length + 1}-${Date.now()}`
 }
 
+const legacyMockRuntime = {
+  NETWORK_DELAY_MS,
+  db,
+  wait,
+  simulate,
+  normalize,
+  uniqueUserConstraint,
+  ensureUnitExists,
+  ensureRolesExist,
+  ensurePeriodDateRange,
+  hasPeriodOverlap,
+  nextId,
+}
+void legacyMockRuntime
+
 export const systemAdminMockApi = {
-  listUsers: () =>
-    simulate(() => db.users.filter((user) => !user.isDeleted).map((user) => ({ ...user }))),
+  listUsers: async () => {
+    type BeUser = {
+      id: string
+      code?: string
+      userCode?: string
+      fullName?: string
+      email?: string
+      username?: string
+      orgId?: string | null
+      unitId?: string | null
+      roleIds?: string[]
+      isActive?: boolean
+      status?: string
+      lastLoginAt?: string | null
+    }
 
-  createUser: (input: CreateUserInput) =>
-    simulate(() => {
-      uniqueUserConstraint(input)
-      const unit = ensureUnitExists(input.unitId)
-      ensureRolesExist(input.roleIds)
+    const response = await apiClient.get<{ items: BeUser[] } | BeUser[]>('/users', {
+      params: { page: 1, limit: 500 },
+    })
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
 
-      const newUser: SystemUser = {
-        id: nextId('usr', db.users),
-        ...input,
-        status: unit.status === 'locked' ? 'inactive' : input.status,
-        lastLoginAt: null,
-        incompleteReports: 0,
-        isDeleted: false,
-      }
-      db.users.unshift(newUser)
-      const selectedUnit = db.units.find((item) => item.id === newUser.unitId)
-      if (selectedUnit) {
-        selectedUnit.memberCount += 1
-      }
-      return { ...newUser }
-    }),
+    return items.map<SystemUser>((user) => ({
+      id: user.id,
+      userCode: user.code ?? user.userCode ?? '',
+      fullName: user.fullName ?? '',
+      email: user.email ?? '',
+      username: user.username ?? '',
+      unitId: (user.orgId ?? user.unitId ?? '') || '',
+      roleIds: user.roleIds ?? [],
+      status: user.isActive === false || user.status === 'inactive' ? 'inactive' : 'active',
+      lastLoginAt: user.lastLoginAt ?? null,
+      incompleteReports: 0,
+      isDeleted: false,
+    }))
+  },
 
-  updateUser: (userId: string, input: UpdateUserInput) =>
-    simulate(() => {
-      const user = db.users.find((item) => item.id === userId && !item.isDeleted)
-      if (!user) {
-        throw new Error('Không tìm thấy người dùng.')
-      }
-      uniqueUserConstraint({ ...input, userCode: user.userCode, id: user.id })
-      ensureUnitExists(input.unitId)
-      ensureRolesExist(input.roleIds)
+  createUser: async (input: CreateUserInput) => {
+    const response = await apiClient.post('/users', {
+      code: input.userCode,
+      fullName: input.fullName,
+      email: input.email,
+      username: input.username,
+      orgId: input.unitId || null,
+      roleIds: input.roleIds,
+      isActive: input.status === 'active',
+    })
 
-      if (user.unitId !== input.unitId) {
-        const oldUnit = db.units.find((unit) => unit.id === user.unitId)
-        if (oldUnit && oldUnit.memberCount > 0) {
-          oldUnit.memberCount -= 1
+    const created = response.data as { id?: string } | SystemUser | undefined
+    if (created && typeof created === 'object' && 'id' in created && typeof created.id === 'string') {
+      const users = await systemAdminMockApi.listUsers()
+      return users.find((user) => user.id === created.id) ?? (created as SystemUser)
+    }
+
+    const users = await systemAdminMockApi.listUsers()
+    return users[0]
+  },
+
+  updateUser: async (userId: string, input: UpdateUserInput) => {
+    await apiClient.patch(`/users/${userId}`, {
+      fullName: input.fullName,
+      email: input.email,
+      username: input.username,
+      orgId: input.unitId || null,
+      roleIds: input.roleIds,
+      isActive: input.status === 'active',
+    })
+
+    const users = await systemAdminMockApi.listUsers()
+    const updated = users.find((user) => user.id === userId)
+    if (!updated) {
+      throw new Error('Không tìm thấy người dùng.')
+    }
+    return updated
+  },
+
+  toggleUserStatus: async (userId: string) => {
+    const users = await systemAdminMockApi.listUsers()
+    const current = users.find((user) => user.id === userId)
+    if (!current) {
+      throw new Error('Không tìm thấy người dùng.')
+    }
+
+    if (current.status === 'active') {
+      await apiClient.patch(`/users/${userId}/deactivate`)
+    } else {
+      await apiClient.patch(`/users/${userId}/activate`)
+    }
+
+    const after = await systemAdminMockApi.listUsers()
+    const updated = after.find((user) => user.id === userId)
+    if (!updated) {
+      throw new Error('Không tìm thấy người dùng.')
+    }
+    return updated
+  },
+
+  resetUserPassword: async (userId: string) => {
+    const response = await apiClient.post<{ tempPassword?: string; email?: string }>(
+      `/users/${userId}/reset-password`,
+      {},
+    )
+    return {
+      tempPassword: response.data?.tempPassword ?? '',
+      email: response.data?.email ?? '',
+    }
+  },
+
+  deleteUser: async (userId: string) => {
+    await apiClient.delete(`/users/${userId}`)
+    return true
+  },
+
+  listPermissions: async () => {
+    type BePermission = {
+      id: string
+      code?: string
+      name?: string
+      description?: string | null
+    }
+
+    const response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
+      '/permissions',
+    )
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+
+    return items
+      .filter((permission) => Boolean(permission.id) && Boolean(permission.code))
+      .map<Permission>((permission) => ({
+        id: permission.id,
+        code: permission.code ?? '',
+        name: permission.name ?? permission.code ?? '',
+        description: permission.description ?? null,
+      }))
+  },
+
+  listRoles: async () => {
+    type BeRoleGroup = {
+      id: string
+      name?: string
+      description?: string | null
+      permissions?: string[]
+      permissionCodes?: string[]
+      permissionIds?: string[]
+      isDefault?: boolean
+      isSystem?: boolean
+    }
+
+    let response: { data: { items?: BeRoleGroup[] } | BeRoleGroup[] }
+    try {
+      response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
+        '/role-groups',
+        { params: { page: 1, limit: 500 } },
+      )
+    } catch (error) {
+      try {
+        response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
+          '/role-groups',
+        )
+      } catch (nestedError) {
+        try {
+          response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
+            '/roles',
+            { params: { page: 1, limit: 500 } },
+          )
+        } catch (finalError) {
+          response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>('/roles')
         }
-        const newUnit = db.units.find((unit) => unit.id === input.unitId)
-        if (newUnit) {
-          newUnit.memberCount += 1
-        }
       }
+    }
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
 
-      Object.assign(user, input)
-      return { ...user }
-    }),
+    return items.map<Role>((role) => ({
+      id: role.id,
+      name: role.name ?? '',
+      description: role.description ?? '',
+      dataScope: 'own_unit',
+      permissions:
+        role.permissions ??
+        role.permissionCodes ??
+        role.permissionIds ??
+        [],
+      isDefault: role.isDefault ?? role.isSystem ?? DEFAULT_ROLE_NAMES.has(role.name ?? ''),
+    }))
+  },
 
-  toggleUserStatus: (userId: string) =>
-    simulate(() => {
-      const user = db.users.find((item) => item.id === userId && !item.isDeleted)
-      if (!user) {
-        throw new Error('Không tìm thấy người dùng.')
-      }
-      user.status = user.status === 'active' ? 'inactive' : 'active'
-      return { ...user }
-    }),
-
-  resetUserPassword: (userId: string) =>
-    simulate(() => {
-      const user = db.users.find((item) => item.id === userId && !item.isDeleted)
-      if (!user) {
-        throw new Error('Không tìm thấy người dùng.')
-      }
-      return {
-        tempPassword: `Kpi@${Math.floor(100000 + Math.random() * 900000)}`,
-        email: user.email,
-      }
-    }),
-
-  deleteUser: (userId: string) =>
-    simulate(() => {
-      const user = db.users.find((item) => item.id === userId && !item.isDeleted)
-      if (!user) {
-        throw new Error('Không tìm thấy người dùng.')
-      }
-      if (user.incompleteReports > 0) {
-        throw new Error('Không thể xóa người dùng đang có báo cáo chưa hoàn thành.')
-      }
-      user.isDeleted = true
-      user.status = 'inactive'
-      const unit = db.units.find((item) => item.id === user.unitId)
-      if (unit && unit.memberCount > 0) {
-        unit.memberCount -= 1
-      }
-      return true
-    }),
-
-  listRoles: () => simulate(() => db.roles.map((role) => ({ ...role }))),
-
-  createRole: (input: CreateRoleInput) =>
-    simulate(() => {
-      const duplicated = db.roles.find(
-        (role) => normalize(role.name) === normalize(input.name)
-      )
-      if (duplicated) {
-        throw new Error('Tên nhóm quyền đã tồn tại.')
-      }
-      const role: Role = {
-        id: nextId('role', db.roles),
-        ...input,
-        isDefault: false,
-      }
-      db.roles.unshift(role)
-      return { ...role }
-    }),
-
-  updateRole: (roleId: string, input: UpdateRoleInput) =>
-    simulate(() => {
-      const role = db.roles.find((item) => item.id === roleId)
-      if (!role) {
-        throw new Error('Không tìm thấy nhóm quyền.')
-      }
-      const duplicated = db.roles.find(
-        (item) => item.id !== roleId && normalize(item.name) === normalize(input.name)
-      )
-      if (duplicated) {
-        throw new Error('Tên nhóm quyền đã tồn tại.')
-      }
-      Object.assign(role, input)
-      return { ...role }
-    }),
-
-  deleteRole: (roleId: string) =>
-    simulate(() => {
-      const role = db.roles.find((item) => item.id === roleId)
-      if (!role) {
-        throw new Error('Không tìm thấy nhóm quyền.')
-      }
-      if (role.isDefault || DEFAULT_ROLE_NAMES.has(role.name)) {
-        throw new Error('Không được xóa nhóm quyền mặc định hệ thống.')
-      }
-      const assigned = db.users.some((user) => !user.isDeleted && user.roleIds.includes(roleId))
-      if (assigned) {
-        throw new Error('Không thể xóa nhóm quyền đang có người dùng sử dụng.')
-      }
-      db.roles = db.roles.filter((item) => item.id !== roleId)
-      return true
-    }),
-
-  listUnits: () => simulate(() => db.units.map((unit) => ({ ...unit }))),
-
-  createUnit: (input: CreateUnitInput) =>
-    simulate(() => {
-      const duplicated = db.units.find(
-        (unit) => normalize(unit.code) === normalize(input.code)
-      )
-      if (duplicated) {
-        throw new Error('Mã đơn vị đã tồn tại.')
-      }
-      if (input.parentId) {
-        ensureUnitExists(input.parentId)
-      }
-      const unit: OrganizationUnit = {
-        id: nextId('unit', db.units),
-        ...input,
-        memberCount: 0,
-        activeAssignments: 0,
-      }
-      db.units.unshift(unit)
-      return { ...unit }
-    }),
-
-  updateUnit: (unitId: string, input: UpdateUnitInput) =>
-    simulate(() => {
-      const unit = db.units.find((item) => item.id === unitId)
-      if (!unit) {
-        throw new Error('Không tìm thấy đơn vị.')
-      }
-      const duplicated = db.units.find(
-        (item) => item.id !== unitId && normalize(item.code) === normalize(input.code)
-      )
-      if (duplicated) {
-        throw new Error('Mã đơn vị đã tồn tại.')
-      }
-      if (input.parentId && input.parentId === unit.id) {
-        throw new Error('Đơn vị cha không hợp lệ.')
-      }
-      if (input.parentId) {
-        ensureUnitExists(input.parentId)
-      }
-      Object.assign(unit, input)
-      return { ...unit }
-    }),
-
-  toggleUnitStatus: (unitId: string) =>
-    simulate(() => {
-      const unit = db.units.find((item) => item.id === unitId)
-      if (!unit) {
-        throw new Error('Không tìm thấy đơn vị.')
-      }
-      unit.status = unit.status === 'active' ? 'locked' : 'active'
-
-      if (unit.status === 'locked') {
-        db.users.forEach((user) => {
-          if (!user.isDeleted && user.unitId === unit.id) {
-            user.status = 'inactive'
-          }
+  createRole: async (input: CreateRoleInput) => {
+    const tryCreate = async (path: string) => {
+      try {
+        return await apiClient.post(path, {
+          name: input.name,
+          description: input.description,
+          permissionCodes: input.permissions,
+        })
+      } catch (error) {
+        return await apiClient.post(path, {
+          name: input.name,
+          description: input.description,
+          permissions: input.permissions,
         })
       }
-      return { ...unit }
-    }),
+    }
 
-  deleteUnit: (unitId: string) =>
-    simulate(() => {
-      const unit = db.units.find((item) => item.id === unitId)
-      if (!unit) {
-        throw new Error('Không tìm thấy đơn vị.')
-      }
-      const hasChild = db.units.some((item) => item.parentId === unit.id)
-      if (hasChild) {
-        throw new Error('Không thể xóa đơn vị đang có đơn vị con.')
-      }
-      if (unit.memberCount > 0 || unit.activeAssignments > 0) {
-        throw new Error(
-          'Không thể xóa đơn vị khi còn thành viên hoặc còn biểu mẫu/báo cáo đang thực hiện.'
-        )
-      }
-      db.units = db.units.filter((item) => item.id !== unitId)
-      return true
-    }),
+    let response: { data?: unknown }
+    try {
+      response = await tryCreate('/role-groups')
+    } catch (error) {
+      response = await tryCreate('/roles')
+    }
 
-  listPeriods: () => simulate(() => db.periods.map((period) => ({ ...period }))),
+    const created = response.data as { id?: string } | undefined
+    if (created?.id) {
+      const roles = await systemAdminMockApi.listRoles()
+      return roles.find((role) => role.id === created.id) ?? {
+        id: created.id,
+        name: input.name,
+        description: input.description,
+        dataScope: input.dataScope,
+        permissions: input.permissions,
+        isDefault: false,
+      }
+    }
 
-  createPeriod: (input: CreatePeriodInput) =>
-    simulate(() => {
-      ensurePeriodDateRange(input.startDate, input.endDate)
-      if (hasPeriodOverlap(input.type, input.startDate, input.endDate)) {
-        throw new Error('Kỳ báo cáo cùng loại đang bị trùng thời gian.')
-      }
-      const period: ReportPeriod = {
-        id: nextId('prd', db.periods),
-        ...input,
-        assignedFormsCount: 0,
-      }
-      db.periods.unshift(period)
-      return { ...period }
-    }),
+    const roles = await systemAdminMockApi.listRoles()
+    return roles[0]
+  },
 
-  updatePeriod: (periodId: string, input: UpdatePeriodInput) =>
-    simulate(() => {
-      const period = db.periods.find((item) => item.id === periodId)
-      if (!period) {
-        throw new Error('Không tìm thấy kỳ báo cáo.')
+  updateRole: async (roleId: string, input: UpdateRoleInput) => {
+    const tryUpdate = async (path: string) => {
+      try {
+        await apiClient.patch(path, {
+          name: input.name,
+          description: input.description,
+          permissionCodes: input.permissions,
+        })
+      } catch (error) {
+        await apiClient.patch(path, {
+          name: input.name,
+          description: input.description,
+          permissions: input.permissions,
+        })
       }
-      ensurePeriodDateRange(input.startDate, input.endDate)
-      if (hasPeriodOverlap(input.type, input.startDate, input.endDate, periodId)) {
-        throw new Error('Kỳ báo cáo cùng loại đang bị trùng thời gian.')
-      }
-      Object.assign(period, input)
-      return { ...period }
-    }),
+    }
 
-  deletePeriod: (periodId: string) =>
-    simulate(() => {
-      const period = db.periods.find((item) => item.id === periodId)
-      if (!period) {
-        throw new Error('Không tìm thấy kỳ báo cáo.')
-      }
-      if (period.assignedFormsCount > 0) {
-        throw new Error('Không được xóa kỳ báo cáo khi đã có biểu mẫu được giao cho kỳ đó.')
-      }
-      db.periods = db.periods.filter((item) => item.id !== periodId)
-      return true
-    }),
+    try {
+      await tryUpdate(`/role-groups/${roleId}`)
+    } catch (error) {
+      await tryUpdate(`/roles/${roleId}`)
+    }
+
+    const roles = await systemAdminMockApi.listRoles()
+    const updated = roles.find((role) => role.id === roleId)
+    if (!updated) {
+      throw new Error('Không tìm thấy nhóm quyền.')
+    }
+    return updated
+  },
+
+  deleteRole: async (roleId: string) => {
+    try {
+      await apiClient.delete(`/role-groups/${roleId}`)
+    } catch (error) {
+      await apiClient.delete(`/roles/${roleId}`)
+    }
+    return true
+  },
+
+  listUnits: async () => {
+    type BeOrgNode = {
+      id: string
+      code?: string
+      name?: string
+      parentId?: string | null
+      isActive?: boolean
+      status?: string
+      level?: number
+      description?: string | null
+    }
+
+    const response = await apiClient.get<{ items: BeOrgNode[] } | BeOrgNode[]>('/orgs', {
+      params: { q: '', isActive: true },
+    })
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+
+    return items.map<OrganizationUnit>((org) => ({
+      id: org.id,
+      code: org.code ?? '',
+      name: org.name ?? '',
+      level: org.level ?? 2,
+      parentId: org.parentId ?? null,
+      description: org.description ?? null,
+      status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      memberCount: 0,
+      activeAssignments: 0,
+    }))
+  },
+
+  createUnit: async (input: CreateUnitInput) => {
+    const response = await apiClient.post('/orgs', {
+      code: input.code,
+      name: input.name,
+      parentId: input.parentId,
+      level: input.level,
+      description: input.description,
+      isActive: true,
+    })
+
+    const created = response.data as { id?: string } | undefined
+    if (created?.id) {
+      const units = await systemAdminMockApi.listUnits()
+      return (
+        units.find((unit) => unit.id === created.id) ?? {
+          id: created.id,
+          code: input.code,
+          name: input.name,
+          parentId: input.parentId,
+          level: input.level,
+          description: input.description ?? null,
+          status: 'active',
+          memberCount: 0,
+          activeAssignments: 0,
+        }
+      )
+    }
+
+    const units = await systemAdminMockApi.listUnits()
+    return units[0]
+  },
+
+  updateUnit: async (unitId: string, input: UpdateUnitInput) => {
+    await apiClient.patch(`/orgs/${unitId}`, {
+      code: input.code,
+      name: input.name,
+      parentId: input.parentId,
+      level: input.level,
+      description: input.description,
+    })
+
+    const units = await systemAdminMockApi.listUnits()
+    const updated = units.find((unit) => unit.id === unitId)
+    if (!updated) {
+      throw new Error('Không tìm thấy đơn vị.')
+    }
+    return updated
+  },
+
+  toggleUnitStatus: async (unitId: string) => {
+    const units = await systemAdminMockApi.listUnits()
+    const current = units.find((unit) => unit.id === unitId)
+    if (!current) {
+      throw new Error('Không tìm thấy đơn vị.')
+    }
+
+    if (current.status === 'active') {
+      await apiClient.post(`/orgs/${unitId}/lock`)
+    } else {
+      await apiClient.post(`/orgs/${unitId}/unlock`)
+    }
+
+    const after = await systemAdminMockApi.listUnits()
+    const updated = after.find((unit) => unit.id === unitId)
+    if (!updated) {
+      throw new Error('Không tìm thấy đơn vị.')
+    }
+    return updated
+  },
+
+  deleteUnit: async (unitId: string) => {
+    await apiClient.delete(`/orgs/${unitId}`)
+    return true
+  },
+
+  listPeriods: async () => {
+    type BeReportPeriod = {
+      id: string
+      code?: string
+      name?: string
+      periodType?: string
+      type?: string
+      dateFrom?: string
+      dateTo?: string
+      startDate?: string
+      endDate?: string
+      isActive?: boolean
+      status?: 'open' | 'closed' | string
+    }
+
+    const response = await apiClient.get<{ items: BeReportPeriod[] } | BeReportPeriod[]>(
+      '/report-periods',
+      { params: { page: 1, limit: 500 } },
+    )
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+
+    return items.map<ReportPeriod>((period) => ({
+      id: period.id,
+      code: period.code ?? '',
+      name: period.name ?? '',
+      periodType: (period.periodType ?? period.type ?? 'THANG') as ReportPeriod['periodType'],
+      dateFrom: period.dateFrom ?? period.startDate ?? '',
+      dateTo: period.dateTo ?? period.endDate ?? '',
+      isActive:
+        typeof period.isActive === 'boolean'
+          ? period.isActive
+          : period.status === 'closed'
+            ? false
+            : true,
+      assignedFormsCount: 0,
+    }))
+  },
+
+  createPeriod: async (input: CreatePeriodInput) => {
+    const response = await apiClient.post('/report-periods', {
+      code: input.code,
+      name: input.name,
+      periodType: input.periodType,
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
+      isActive: input.isActive,
+    })
+
+    const created = response.data as { id?: string } | undefined
+    if (created?.id) {
+      const periods = await systemAdminMockApi.listPeriods()
+      return (
+        periods.find((period) => period.id === created.id) ?? {
+          id: created.id,
+          ...input,
+          assignedFormsCount: 0,
+        }
+      )
+    }
+
+    const periods = await systemAdminMockApi.listPeriods()
+    return periods[0]
+  },
+
+  updatePeriod: async (periodId: string, input: UpdatePeriodInput) => {
+    await apiClient.patch(`/report-periods/${periodId}`, {
+      name: input.name,
+      periodType: input.periodType,
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
+      isActive: input.isActive,
+    })
+
+    const periods = await systemAdminMockApi.listPeriods()
+    const updated = periods.find((period) => period.id === periodId)
+    if (!updated) {
+      throw new Error('Không tìm thấy kỳ báo cáo.')
+    }
+    return updated
+  },
+
+  setPeriodActive: async (periodId: string, isActive: boolean) => {
+    await apiClient.patch(`/report-periods/${periodId}`, { isActive })
+    return true
+  },
+
+  deletePeriod: async (periodId: string) => {
+    await apiClient.delete(`/report-periods/${periodId}`)
+    return true
+  },
+}
+
+export const organizationsApi = {
+  list: async (params?: { q?: string; isActive?: boolean }) => {
+    type BeOrgNode = {
+      id: string
+      code?: string
+      name?: string
+      parentId?: string | null
+      isActive?: boolean
+      status?: string
+      level?: number
+      description?: string | null
+      children?: BeOrgNode[]
+    }
+
+    const tree = true
+    const q = params?.q ?? ''
+    const isActive = params?.isActive
+
+    const requestParams: Record<string, unknown> = { tree, q }
+    if (typeof isActive === 'boolean') {
+      requestParams.isActive = isActive
+    }
+
+    const response = await apiClient.get<{ items: BeOrgNode[] } | BeOrgNode[]>('/orgs', {
+      params: requestParams,
+    })
+    const payload = response.data
+    const nodes = Array.isArray(payload) ? payload : payload.items ?? []
+
+    const flatten = (node: BeOrgNode): BeOrgNode[] => {
+      const items: BeOrgNode[] = [node]
+      const children = node.children ?? []
+      children.forEach((child) => items.push(...flatten(child)))
+      return items
+    }
+
+    const flat = tree ? nodes.flatMap((node) => flatten(node)) : nodes
+
+    return flat.map<OrganizationUnit>((org) => ({
+      id: org.id,
+      code: org.code ?? '',
+      name: org.name ?? '',
+      level: org.level ?? 2,
+      parentId: org.parentId ?? null,
+      description: org.description ?? null,
+      status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      memberCount: 0,
+      activeAssignments: 0,
+    }))
+  },
+
+  get: async (id: string) => {
+    type BeOrg = {
+      id: string
+      code?: string
+      name?: string
+      parentId?: string | null
+      isActive?: boolean
+      status?: string
+      level?: number
+      description?: string | null
+    }
+
+    const response = await apiClient.get<BeOrg>(`/orgs/${id}`)
+    const org = response.data
+    return {
+      id: org.id,
+      code: org.code ?? '',
+      name: org.name ?? '',
+      level: org.level ?? 2,
+      parentId: org.parentId ?? null,
+      description: org.description ?? null,
+      status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      memberCount: 0,
+      activeAssignments: 0,
+    } satisfies OrganizationUnit
+  },
+
+  create: async (input: CreateUnitInput) => {
+    const description =
+      typeof input.description === 'string' && input.description.trim().length > 0
+        ? input.description.trim()
+        : null
+
+    const response = await apiClient.post('/orgs', {
+      code: input.code,
+      name: input.name,
+      parentId: input.parentId,
+      level: input.level,
+      description,
+    })
+
+    const created = response.data as { id?: string } | undefined
+    if (created?.id) {
+      return organizationsApi.get(created.id)
+    }
+    const items = await organizationsApi.list({ q: '', isActive: true })
+    return items[0]
+  },
+
+  update: async (id: string, input: UpdateUnitInput) => {
+    const description =
+      typeof input.description === 'string' && input.description.trim().length > 0
+        ? input.description.trim()
+        : null
+
+    await apiClient.patch(`/orgs/${id}`, {
+      code: input.code,
+      name: input.name,
+      parentId: input.parentId,
+      level: input.level,
+      description,
+    })
+    return organizationsApi.get(id)
+  },
+
+  lock: async (id: string) => {
+    await apiClient.post(`/orgs/${id}/lock`)
+  },
+
+  unlock: async (id: string) => {
+    await apiClient.post(`/orgs/${id}/unlock`)
+  },
+
+  delete: async (id: string) => {
+    await apiClient.delete(`/orgs/${id}`)
+    return true
+  },
+}
+
+export const periodsApi = {
+  list: systemAdminMockApi.listPeriods,
+  create: systemAdminMockApi.createPeriod,
+  update: systemAdminMockApi.updatePeriod,
+  setActive: systemAdminMockApi.setPeriodActive,
+  delete: systemAdminMockApi.deletePeriod,
 }

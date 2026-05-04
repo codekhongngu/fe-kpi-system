@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { type Table } from '@tanstack/react-table'
 import { AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
-import { sleep } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { usersApi } from '../api/users-api'
+import { type User } from '../data/schema'
 
 type UserMultiDeleteDialogProps<TData> = {
   open: boolean
@@ -24,27 +26,30 @@ export function UsersMultiDeleteDialog<TData>({
   table,
 }: UserMultiDeleteDialogProps<TData>) {
   const [value, setValue] = useState('')
+  const queryClient = useQueryClient()
 
   const selectedRows = table.getFilteredSelectedRowModel().rows
 
   const handleDelete = () => {
     if (value.trim() !== CONFIRM_WORD) {
-      toast.error(`Please type "${CONFIRM_WORD}" to confirm.`)
+      toast.error(`Vui lòng nhập "${CONFIRM_WORD}" để xác nhận.`)
       return
     }
 
     onOpenChange(false)
 
-    toast.promise(sleep(2000), {
-      loading: 'Deleting users...',
-      success: () => {
+    const selectedUsers = selectedRows.map((row) => row.original as User)
+    const deletePromise = Promise.all(selectedUsers.map((user) => usersApi.remove(user.id)))
+
+    toast.promise(deletePromise, {
+      loading: 'Đang xóa người dùng...',
+      success: async () => {
+        await queryClient.invalidateQueries({ queryKey: ['users'] })
         setValue('')
         table.resetRowSelection()
-        return `Deleted ${selectedRows.length} ${
-          selectedRows.length > 1 ? 'users' : 'user'
-        }`
+        return `Đã xóa ${selectedUsers.length} người dùng`
       },
-      error: 'Error',
+      error: 'Có lỗi xảy ra',
     })
   }
 
@@ -60,8 +65,7 @@ export function UsersMultiDeleteDialog<TData>({
             className='me-1 inline-block stroke-destructive'
             size={18}
           />{' '}
-          Delete {selectedRows.length}{' '}
-          {selectedRows.length > 1 ? 'users' : 'user'}
+          Xóa {selectedRows.length} người dùng
         </span>
       }
       desc={
@@ -74,29 +78,29 @@ export function UsersMultiDeleteDialog<TData>({
           className='space-y-4'
         >
           <p className='mb-2'>
-            Are you sure you want to delete the selected users? <br />
-            This action cannot be undone.
+            Bạn có chắc chắn muốn xóa các người dùng đã chọn? <br />
+            Thao tác này không thể hoàn tác.
           </p>
 
           <Label className='my-4 flex flex-col items-start gap-1.5'>
-            <span className=''>Confirm by typing "{CONFIRM_WORD}":</span>
+            <span className=''>Xác nhận bằng cách nhập "{CONFIRM_WORD}":</span>
             <Input
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={`Type "${CONFIRM_WORD}" to confirm.`}
+              placeholder={`Nhập "${CONFIRM_WORD}" để xác nhận.`}
               autoFocus
             />
           </Label>
 
           <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
+            <AlertTitle>Cảnh báo!</AlertTitle>
             <AlertDescription>
-              Please be careful, this operation can not be rolled back.
+              Vui lòng cân nhắc, thao tác này không thể hoàn tác.
             </AlertDescription>
           </Alert>
         </form>
       }
-      confirmText='Delete'
+      confirmText='Xóa'
       destructive
     />
   )

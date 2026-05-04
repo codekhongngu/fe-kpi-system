@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
@@ -42,12 +42,14 @@ import {
   dataScopes,
   rolePermissionCatalog,
   type DataScope,
+  type Permission,
   type Role,
   type SystemUser,
 } from '../api/types'
 
 const EMPTY_ROLES: Role[] = []
 const EMPTY_USERS: SystemUser[] = []
+const EMPTY_PERMISSIONS: Permission[] = []
 
 type RoleFormState = {
   name: string
@@ -69,6 +71,10 @@ export function RolesTab() {
     queryKey: ['system-admin', 'roles'],
     queryFn: () => systemAdminMockApi.listRoles(),
   })
+  const permissionsQuery = useQuery({
+    queryKey: ['system-admin', 'permissions'],
+    queryFn: () => systemAdminMockApi.listPermissions(),
+  })
   const usersQuery = useQuery({
     queryKey: ['system-admin', 'users'],
     queryFn: () => systemAdminMockApi.listUsers(),
@@ -82,6 +88,19 @@ export function RolesTab() {
 
   const roles = rolesQuery.data ?? EMPTY_ROLES
   const users = usersQuery.data ?? EMPTY_USERS
+  const permissions = permissionsQuery.data ?? EMPTY_PERMISSIONS
+
+  const permissionOptions = useMemo(() => {
+    if (permissions.length > 0) {
+      return permissions
+    }
+    return rolePermissionCatalog.map<Permission>((code) => ({
+      id: code,
+      code,
+      name: code,
+      description: null,
+    }))
+  }, [permissions])
 
   const memberByRole = useMemo(() => {
     const map = new Map<string, number>()
@@ -318,12 +337,13 @@ export function RolesTab() {
           <div className='space-y-2'>
             <Label>Danh sách quyền</Label>
             <div className='grid max-h-48 grid-cols-2 gap-2 overflow-auto rounded-md border p-3'>
-              {rolePermissionCatalog.map((permission) => {
-                const checked = form.permissions.includes(permission)
+              {permissionOptions.map((permission) => {
+                const checked = form.permissions.includes(permission.code)
                 return (
                   <label
-                    key={permission}
+                    key={permission.id}
                     className='flex cursor-pointer items-center gap-2 text-sm'
+                    title={permission.description ?? permission.code}
                   >
                     <input
                       type='checkbox'
@@ -332,17 +352,19 @@ export function RolesTab() {
                         if (event.target.checked) {
                           setForm((prev) => ({
                             ...prev,
-                            permissions: [...prev.permissions, permission],
+                            permissions: [...prev.permissions, permission.code],
                           }))
                           return
                         }
                         setForm((prev) => ({
                           ...prev,
-                          permissions: prev.permissions.filter((item) => item !== permission),
+                          permissions: prev.permissions.filter((item) => item !== permission.code),
                         }))
                       }}
                     />
-                    {permission}
+                    <span className='truncate'>
+                      {permission.name || permission.code}
+                    </span>
                   </label>
                 )
               })}

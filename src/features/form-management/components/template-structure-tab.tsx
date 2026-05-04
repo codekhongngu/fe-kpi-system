@@ -63,7 +63,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { formManagementMockApi } from '../api/mock-form-management-api'
+import { formManagementApi } from '../api/mock-form-management-api'
 import {
   fieldDataTypeOptions,
   indicatorTypeOptions,
@@ -397,7 +397,7 @@ export function TemplateStructureTab({
 
   const templatesQuery = useQuery({
     queryKey: ['form-management', 'templates'],
-    queryFn: () => formManagementMockApi.listTemplates(),
+    queryFn: () => formManagementApi.listTemplates(),
   })
   const templates = templatesQuery.data ?? EMPTY_TEMPLATES
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplateId ?? '')
@@ -515,7 +515,7 @@ function TemplateStructureContent({
 
   const createFieldMutation = useMutation({
     mutationFn: ({ templateId, payload }: { templateId: string; payload: FieldFormState }) =>
-      formManagementMockApi.createField(templateId, payload),
+      formManagementApi.createField(templateId, payload),
     onSuccess: () => {
       toast.success('Đã thêm thuộc tính mới.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
@@ -533,7 +533,7 @@ function TemplateStructureContent({
       templateId: string
       fieldId: string
       payload: FieldFormState
-    }) => formManagementMockApi.updateField(templateId, fieldId, payload),
+    }) => formManagementApi.updateField(templateId, fieldId, payload),
     onSuccess: () => {
       toast.success('Đã cập nhật thuộc tính.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
@@ -544,7 +544,7 @@ function TemplateStructureContent({
 
   const deleteFieldMutation = useMutation({
     mutationFn: ({ templateId, fieldId }: { templateId: string; fieldId: string }) =>
-      formManagementMockApi.deleteField(templateId, fieldId),
+      formManagementApi.deleteField(templateId, fieldId),
     onSuccess: () => {
       toast.success('Đã xóa thuộc tính.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
@@ -553,9 +553,9 @@ function TemplateStructureContent({
   })
 
   const importFieldsMutation = useMutation({
-    mutationFn: (templateId: string) => formManagementMockApi.importFieldsFromExcel(templateId),
+    mutationFn: (templateId: string) => formManagementApi.importFieldsFromExcel(templateId),
     onSuccess: () => {
-      toast.success('Đã import thuộc tính từ Excel (mock).')
+      toast.success('Đã import thuộc tính từ Excel.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
     },
     onError: (error) => toast.error(error.message),
@@ -563,7 +563,7 @@ function TemplateStructureContent({
 
   const createIndicatorMutation = useMutation({
     mutationFn: ({ templateId, payload }: { templateId: string; payload: IndicatorFormState }) =>
-      formManagementMockApi.createIndicator(templateId, {
+      formManagementApi.createIndicator(templateId, {
         ...payload,
         formula: payload.formula || null,
       }),
@@ -585,7 +585,7 @@ function TemplateStructureContent({
       indicatorId: string
       payload: IndicatorFormState
     }) =>
-      formManagementMockApi.updateIndicator(templateId, indicatorId, {
+      formManagementApi.updateIndicator(templateId, indicatorId, {
         ...payload,
         formula: payload.formula || null,
       }),
@@ -604,7 +604,7 @@ function TemplateStructureContent({
     }: {
       templateId: string
       indicatorId: string
-    }) => formManagementMockApi.deleteIndicator(templateId, indicatorId),
+    }) => formManagementApi.deleteIndicator(templateId, indicatorId),
     onSuccess: () => {
       toast.success('Đã xóa chỉ tiêu.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
@@ -614,9 +614,9 @@ function TemplateStructureContent({
 
   const importIndicatorsMutation = useMutation({
     mutationFn: (templateId: string) =>
-      formManagementMockApi.importIndicatorsFromExcel(templateId),
+      formManagementApi.importIndicatorsFromExcel(templateId),
     onSuccess: () => {
-      toast.success('Đã import chỉ tiêu từ Excel (mock).')
+      toast.success('Đã import chỉ tiêu từ Excel.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
     },
     onError: (error) => toast.error(error.message),
@@ -626,36 +626,30 @@ function TemplateStructureContent({
     mutationFn: async (templateId: string) => {
       dispatch(setBuilderStatus('saving'))
 
-      await Promise.all(
-        indicators.map((item) =>
-          formManagementMockApi.updateIndicator(templateId, item.id, {
-            code: item.code,
-            name: item.name,
-            unit: item.unit,
-            type: item.type,
-            group: item.group,
-            formula: item.formula,
-            parentId: item.parentId ?? null,
-            order: item.order ?? 1,
-            level: item.level ?? 0,
-          })
-        )
-      )
+      const indicatorItems = indicators
+        .slice()
+        .sort((a, b) => {
+          const pa = a.parentId ?? ''
+          const pb = b.parentId ?? ''
+          if (pa !== pb) return pa.localeCompare(pb)
+          return (a.order ?? 0) - (b.order ?? 0)
+        })
+        .map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
 
-      await Promise.all(
-        attributes.map((item) =>
-          formManagementMockApi.updateField(templateId, item.id, {
-            key: item.key,
-            label: item.label,
-            dataType: item.dataType,
-            required: item.required,
-            visible: item.visible,
-            parentId: item.parentId ?? null,
-            order: item.order,
-            level: item.level ?? 0,
-          })
-        )
-      )
+      const attributeItems = attributes
+        .slice()
+        .sort((a, b) => {
+          const pa = a.parentId ?? ''
+          const pb = b.parentId ?? ''
+          if (pa !== pb) return pa.localeCompare(pb)
+          return (a.order ?? 0) - (b.order ?? 0)
+        })
+        .map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
+
+      await Promise.all([
+        formManagementApi.reorderIndicators(templateId, indicatorItems),
+        formManagementApi.reorderFields(templateId, attributeItems),
+      ])
     },
     onSuccess: () => {
       dispatch(setBuilderStatus('idle'))

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -15,21 +17,25 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { useAuthStore } from '@/stores/auth-store'
+import { authApi } from '@/features/auth/api/auth-api'
 
 const formSchema = z
   .object({
+    username: z.string().min(1, 'Vui lòng nhập tên đăng nhập'),
+    fullName: z.string().optional(),
+    phone: z.string().optional(),
     email: z.email({
-      error: (iss) =>
-        iss.input === '' ? 'Please enter your email' : undefined,
+      error: (iss) => (iss.input === '' ? 'Vui lòng nhập email' : undefined),
     }),
     password: z
       .string()
-      .min(1, 'Please enter your password')
-      .min(7, 'Password must be at least 7 characters long'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
+      .min(1, 'Vui lòng nhập mật khẩu')
+      .min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+    confirmPassword: z.string().min(1, 'Vui lòng xác nhận mật khẩu'),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match.",
+    message: 'Mật khẩu xác nhận không khớp.',
     path: ['confirmPassword'],
   })
 
@@ -38,10 +44,15 @@ export function SignUpForm({
   ...props
 }: React.HTMLAttributes<HTMLFormElement>) {
   const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate()
+  const { auth } = useAuthStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      username: '',
+      fullName: '',
+      phone: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -50,12 +61,39 @@ export function SignUpForm({
 
   function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
-    // eslint-disable-next-line no-console
-    console.log(data)
 
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 3000)
+    const promise = authApi.register({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      fullName: data.fullName || undefined,
+      phone: data.phone || undefined,
+    })
+
+    promise.finally(() => setIsLoading(false))
+
+    toast.promise(promise, {
+      loading: 'Đang tạo tài khoản...',
+      success: async (result) => {
+        auth.setAccessToken(result.accessToken)
+        if (result.refreshToken) {
+          auth.setRefreshToken(result.refreshToken)
+        }
+
+        try {
+          const me = await authApi.me()
+          auth.setUser(me)
+        } catch {
+          auth.setUser(result.user)
+        }
+
+        navigate({ to: '/', replace: true })
+        return 'Tạo tài khoản thành công.'
+      },
+      error: (error) => {
+        return error instanceof Error ? error.message : 'Không thể tạo tài khoản.'
+      },
+    })
   }
 
   return (
@@ -67,12 +105,51 @@ export function SignUpForm({
       >
         <FormField
           control={form.control}
+          name='username'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tên đăng nhập</FormLabel>
+              <FormControl>
+                <Input placeholder='Tên đăng nhập' {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name='fullName'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Họ và tên</FormLabel>
+              <FormControl>
+                <Input placeholder='Nguyễn Văn A' {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name='phone'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Số điện thoại</FormLabel>
+              <FormControl>
+                <Input placeholder='0xxxxxxxxx' {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
           name='email'
           render={({ field }) => (
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} />
+                <Input placeholder='Email' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -83,7 +160,7 @@ export function SignUpForm({
           name='password'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Mật khẩu</FormLabel>
               <FormControl>
                 <PasswordInput placeholder='********' {...field} />
               </FormControl>
@@ -96,7 +173,7 @@ export function SignUpForm({
           name='confirmPassword'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>Xác nhận mật khẩu</FormLabel>
               <FormControl>
                 <PasswordInput placeholder='********' {...field} />
               </FormControl>
@@ -105,7 +182,7 @@ export function SignUpForm({
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
-          Create Account
+          Tạo tài khoản
         </Button>
 
         <div className='relative my-2'>
@@ -114,7 +191,7 @@ export function SignUpForm({
           </div>
           <div className='relative flex justify-center text-xs uppercase'>
             <span className='bg-background px-2 text-muted-foreground'>
-              Or continue with
+              Hoặc tiếp tục với
             </span>
           </div>
         </div>
