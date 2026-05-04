@@ -29,7 +29,7 @@ export function TasksDialogs() {
               setOpen('update')
               setTimeout(() => {
                 setCurrentRow(null)
-              }, 500)
+              }, 100)
             }}
             currentRow={currentRow}
           />
@@ -42,13 +42,13 @@ export function TasksDialogs() {
               setOpen('delete')
               setTimeout(() => {
                 setCurrentRow(null)
-              }, 500)
+              }, 100)
             }}
             handleConfirm={() => {
               setOpen(null)
               setTimeout(() => {
                 setCurrentRow(null)
-              }, 500)
+              }, 100)
               showSubmittedData(
                 currentRow,
                 'Công việc sau đã được xóa:'

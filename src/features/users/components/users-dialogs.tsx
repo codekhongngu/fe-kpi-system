@@ -28,7 +28,7 @@ export function UsersDialogs() {
               setOpen('edit')
               setTimeout(() => {
                 setCurrentRow(null)
-              }, 500)
+              }, 100)
             }}
             currentRow={currentRow}
           />
@@ -40,7 +40,7 @@ export function UsersDialogs() {
               setOpen('delete')
               setTimeout(() => {
                 setCurrentRow(null)
-              }, 500)
+              }, 200)
             }}
             currentRow={currentRow}
           />

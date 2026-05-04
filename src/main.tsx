@@ -57,7 +57,7 @@ const queryClient = new QueryClient({
           const redirect = `${router.history.location.href}`
           router.navigate({ to: '/sign-in', search: { redirect } })
         }
-        if (error.response?.status === 500) {
+        if (error.response?.status === 100) {
           toast.error('Lỗi máy chủ.')
           // Only navigate to error page in production to avoid disrupting HMR in development
           if (import.meta.env.PROD) {
