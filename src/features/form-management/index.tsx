@@ -4,8 +4,11 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { useFieldCategoriesCatalogQuery } from './api/catalog-queries'
 
 export function FormManagement() {
+  useFieldCategoriesCatalogQuery()
+
   return (
     <>
       <Header fixed>

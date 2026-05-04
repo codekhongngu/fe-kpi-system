@@ -318,7 +318,7 @@ export const systemAdminMockApi = {
     }
 
     const response = await apiClient.get<{ items: BeUser[] } | BeUser[]>('/users', {
-      params: { page: 1, limit: 500 },
+      params: { page: 1, limit: 200 },
     })
     const payload = response.data
     const items = Array.isArray(payload) ? payload : payload.items ?? []
@@ -454,7 +454,7 @@ export const systemAdminMockApi = {
     try {
       response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
         '/role-groups',
-        { params: { page: 1, limit: 500 } },
+        { params: { page: 1, limit: 200 } },
       )
     } catch (error) {
       try {
@@ -465,7 +465,7 @@ export const systemAdminMockApi = {
         try {
           response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>(
             '/roles',
-            { params: { page: 1, limit: 500 } },
+            { params: { page: 1, limit: 200 } },
           )
         } catch (finalError) {
           response = await apiClient.get<{ items: BeRoleGroup[] } | BeRoleGroup[]>('/roles')
@@ -693,7 +693,7 @@ export const systemAdminMockApi = {
 
     const response = await apiClient.get<{ items: BeReportPeriod[] } | BeReportPeriod[]>(
       '/report-periods',
-      { params: { page: 1, limit: 500 } },
+      { params: { page: 1, limit: 200 } },
     )
     const payload = response.data
     const items = Array.isArray(payload) ? payload : payload.items ?? []

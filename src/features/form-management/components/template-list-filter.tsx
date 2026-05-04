@@ -1,4 +1,4 @@
-import { Input } from '@/components/ui/input'
+﻿import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -6,29 +6,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { templateCycleOptions, templateStatusOptions } from '../api/types'
+import type { CatalogOption } from '../api/types'
+
+type PeriodOption = {
+  value: string
+  label: string
+}
 
 type TemplateListFilterProps = {
   search: string
-  selectedDomain: string
-  selectedCycle: string
+  selectedPeriod: string
+  selectedCategory: string
   selectedStatus: string
-  domains: string[]
+  periodOptions: PeriodOption[]
+  categories: CatalogOption[]
   onSearchChange: (value: string) => void
-  onDomainChange: (value: string) => void
-  onCycleChange: (value: string) => void
+  onPeriodChange: (value: string) => void
+  onCategoryChange: (value: string) => void
   onStatusChange: (value: string) => void
 }
 
 export function TemplateListFilter({
   search,
-  selectedDomain,
-  selectedCycle,
+  selectedPeriod,
+  selectedCategory,
   selectedStatus,
-  domains,
+  periodOptions,
+  categories,
   onSearchChange,
-  onDomainChange,
-  onCycleChange,
+  onPeriodChange,
+  onCategoryChange,
   onStatusChange,
 }: TemplateListFilterProps) {
   return (
@@ -39,29 +46,28 @@ export function TemplateListFilter({
         onChange={(event) => onSearchChange(event.target.value)}
       />
 
-      <Select value={selectedDomain} onValueChange={onDomainChange}>
+      <Select value={selectedPeriod} onValueChange={onPeriodChange}>
         <SelectTrigger className='w-full'>
-          <SelectValue placeholder='Lĩnh vực' />
+        <SelectValue placeholder='Kỳ báo cáo' />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value='all'>Tất cả lĩnh vực</SelectItem>
-          {domains.map((domain) => (
-            <SelectItem key={domain} value={domain}>
-              {domain}
+          {periodOptions.map((period) => (
+            <SelectItem key={period.value} value={period.value}>
+              {period.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      <Select value={selectedCycle} onValueChange={onCycleChange}>
+      <Select value={selectedCategory} onValueChange={onCategoryChange}>
         <SelectTrigger className='w-full'>
-          <SelectValue placeholder='Chu kỳ' />
+          <SelectValue placeholder='Lĩnh vực' />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value='all'>Tất cả chu kỳ</SelectItem>
-          {templateCycleOptions.map((cycle) => (
-            <SelectItem key={cycle.value} value={cycle.value}>
-              {cycle.label}
+          <SelectItem value='all'>Tất cả lĩnh vực</SelectItem>
+          {categories.map((category) => (
+            <SelectItem key={category.id} value={category.id}>
+              {category.name || category.code}
             </SelectItem>
           ))}
         </SelectContent>
@@ -73,11 +79,8 @@ export function TemplateListFilter({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value='all'>Tất cả trạng thái</SelectItem>
-          {templateStatusOptions.map((status) => (
-            <SelectItem key={status.value} value={status.value}>
-              {status.label}
-            </SelectItem>
-          ))}
+          <SelectItem value='true'>Đang hoạt động</SelectItem>
+          <SelectItem value='false'>Ngừng hoạt động</SelectItem>
         </SelectContent>
       </Select>
     </div>

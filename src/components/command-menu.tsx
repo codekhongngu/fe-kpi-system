@@ -41,7 +41,7 @@ function isUuidLike(value: string) {
 async function fetchRolesById(): Promise<Record<string, string>> {
   try {
     const response = await apiClient.get<unknown>('/roles', {
-      params: { page: 1, limit: 500 },
+      params: { page: 1, limit: 200 },
     })
     const payload = response.data as any
     const list = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
@@ -59,7 +59,7 @@ async function fetchRolesById(): Promise<Record<string, string>> {
     )
   } catch {
     const response = await apiClient.get<unknown>('/role-groups', {
-      params: { page: 1, limit: 500 },
+      params: { page: 1, limit: 200 },
     })
     const payload = response.data as any
     const list = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []

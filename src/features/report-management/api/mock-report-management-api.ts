@@ -671,10 +671,10 @@ export const reportManagementApi = {
 
     const [formsRes, periodsRes, orgsRes] = await Promise.all([
       apiClient.get<{ items: FormItem[] } | FormItem[]>('/forms', {
-        params: { page: 1, limit: 500 },
+        params: { page: 1, limit: 200 },
       }),
       apiClient.get<{ items: PeriodItem[] } | PeriodItem[]>('/report-periods', {
-        params: { page: 1, limit: 500 },
+        params: { page: 1, limit: 200 },
       }),
       apiClient.get('/orgs', { params: { tree: true } }),
     ])
@@ -725,7 +725,7 @@ export const reportManagementApi = {
 
     const response = await apiClient.get<{ items: BeAssignment[] } | BeAssignment[]>(
       '/assignments',
-      { params: { page: 1, limit: 500 } },
+      { params: { page: 1, limit: 200 } },
     )
     const payload = response.data
     const items = Array.isArray(payload) ? payload : payload.items ?? []
@@ -801,7 +801,7 @@ export const reportManagementApi = {
       approvedAt?: string | null
     }
 
-    const params: Record<string, unknown> = { page: 1, limit: 500 }
+    const params: Record<string, unknown> = { page: 1, limit: 200 }
     if (filters?.keyword) {
       params.q = filters.keyword
     }
@@ -911,7 +911,7 @@ export const reportManagementApi = {
 
     const response = await apiClient.get<{ items: BePendingItem[] } | BePendingItem[]>(
       '/approvals/pending',
-      { params: { page: 1, limit: 500 } },
+      { params: { page: 1, limit: 200 } },
     )
     const payload = response.data
     const items = Array.isArray(payload) ? payload : payload.items ?? []

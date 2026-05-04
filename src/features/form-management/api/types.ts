@@ -1,7 +1,23 @@
 export type TemplateCycle = 'week' | 'month' | 'quarter' | 'year'
 export type TemplateStatus = 'active' | 'inactive'
+export type CatalogStatusFilter = 'all' | 'true' | 'false'
 export type FieldDataType = 'text' | 'number' | 'percentage' | 'currency' | 'boolean' | 'date'
 export type IndicatorType = 'input' | 'calculated'
+
+export type CatalogOption = {
+  id: string
+  code: string
+  name: string
+}
+
+export type FormTemplateListParams = {
+  search?: string
+  page?: number
+  limit?: number
+  status?: CatalogStatusFilter
+  period?: string
+  category?: string
+}
 
 export type TemplateField = {
   id: string

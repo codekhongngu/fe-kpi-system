@@ -1,7 +1,10 @@
 import {
+  type CatalogOption,
+  type CatalogStatusFilter,
   type CreateFieldInput,
   type CreateIndicatorInput,
   type CreateTemplateInput,
+  type FormTemplateListParams,
   type FormTemplate,
   type TemplateCycle,
   type TemplateField,
@@ -602,22 +605,65 @@ export const formManagementMockApi = {
 }
 
 export const formManagementApi = {
-  listTemplates: async () => {
-    const response = await apiClient.get<FormTemplate[]>('/forms', {
-      params: { page: 1, limit: 500 },
+  listTemplates: async (params?: FormTemplateListParams) => {
+    type ListPayload = {
+      items?: FormTemplate[]
+      data?: FormTemplate[]
+      test?: FormTemplate[]
+    }
+    const response = await apiClient.get<FormTemplate[] | ListPayload>('/forms', {
+      params: {
+        search: params?.search ?? '',
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 20,
+        status: params?.status ?? 'all',
+        period: params?.period ?? '',
+        category: params?.category ?? '',
+      },
     })
-    return response.data
+    const payload = response.data
+    if (Array.isArray(payload)) return payload
+    return payload.items ?? payload.data ?? payload.test ?? []
   },
 
-  listDomains: async () => {
-    const templates = await formManagementApi.listTemplates()
-    const domainSet = new Set<string>()
-    templates.forEach((item) => {
-      if (item.domain) {
-        domainSet.add(item.domain)
-      }
-    })
-    return Array.from(domainSet).sort((a, b) => a.localeCompare(b))
+  listReportPeriodsCatalog: async (
+    status: CatalogStatusFilter = 'all',
+    isGetAll = true,
+  ) => {
+    type BeCatalogItem = { id: string; code?: string; name?: string }
+    const response = await apiClient.get<{ items?: BeCatalogItem[] } | BeCatalogItem[]>(
+      '/report-periods',
+      {
+        params: { status, isGetAll },
+      },
+    )
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    return items.map<CatalogOption>((item) => ({
+      id: item.id,
+      code: item.code ?? '',
+      name: item.name ?? '',
+    }))
+  },
+
+  listFieldCategoriesCatalog: async (
+    status: CatalogStatusFilter = 'all',
+    isGetAll = true,
+  ) => {
+    type BeCatalogItem = { id: string; code?: string; name?: string }
+    const response = await apiClient.get<{ items?: BeCatalogItem[] } | BeCatalogItem[]>(
+      '/field-categories',
+      {
+        params: { status, isGetAll },
+      },
+    )
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    return items.map<CatalogOption>((item) => ({
+      id: item.id,
+      code: item.code ?? '',
+      name: item.name ?? '',
+    }))
   },
 
   getTemplate: async (templateId: string) => {

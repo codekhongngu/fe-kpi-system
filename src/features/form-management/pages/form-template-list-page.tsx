@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { PlusCircle } from 'lucide-react'
@@ -19,46 +19,58 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  useFieldCategoriesCatalogQuery,
+} from '../api/catalog-queries'
 import { formManagementApi } from '../api/mock-form-management-api'
 import { templateCycleOptions, type FormTemplate } from '../api/types'
 import { TemplateListFilter } from '../components/template-list-filter'
 import { TemplateListTable } from '../components/template-list-table'
 
 const EMPTY_TEMPLATES: FormTemplate[] = []
+const REPORT_PERIOD_OPTIONS = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'TUAN', label: 'Tuần' },
+  { value: 'THANG', label: 'Tháng' },
+  { value: 'QUY', label: 'Quý' },
+  { value: 'NAM', label: 'Năm' },
+]
 
 export function FormTemplateListPage() {
-  const templatesQuery = useQuery({
-    queryKey: ['form-management', 'templates'],
-    queryFn: () => formManagementApi.listTemplates(),
-  })
-  const domainsQuery = useQuery({
-    queryKey: ['form-management', 'domains'],
-    queryFn: () => formManagementApi.listDomains(),
-  })
-
-  const templates = templatesQuery.data ?? EMPTY_TEMPLATES
-  const domains = domainsQuery.data ?? []
-
   const [search, setSearch] = useState('')
-  const [selectedDomain, setSelectedDomain] = useState('all')
-  const [selectedCycle, setSelectedCycle] = useState('all')
+  const [selectedPeriod, setSelectedPeriod] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [previewTemplate, setPreviewTemplate] = useState<FormTemplate | null>(null)
 
-  const filteredTemplates = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    return templates.filter((template) => {
-      const matchesKeyword =
-        !keyword ||
-        [template.code, template.name, template.domain].some((value) =>
-          value.toLowerCase().includes(keyword)
-        )
-      const matchesDomain = selectedDomain === 'all' || template.domain === selectedDomain
-      const matchesCycle = selectedCycle === 'all' || template.cycle === selectedCycle
-      const matchesStatus = selectedStatus === 'all' || template.status === selectedStatus
-      return matchesKeyword && matchesDomain && matchesCycle && matchesStatus
-    })
-  }, [search, selectedDomain, selectedCycle, selectedStatus, templates])
+  const templatesQuery = useQuery({
+    queryKey: [
+      'form-management',
+      'templates',
+      {
+        search,
+        page: 1,
+        limit: 20,
+        status: selectedStatus,
+        period: selectedPeriod,
+        category: selectedCategory,
+      },
+    ],
+    queryFn: () =>
+      formManagementApi.listTemplates({
+        search,
+        page: 1,
+        limit: 20,
+        status: selectedStatus as 'all' | 'true' | 'false',
+        period: selectedPeriod === 'all' ? '' : selectedPeriod,
+        category: selectedCategory === 'all' ? '' : selectedCategory,
+      }),
+  })
+
+  const categoriesQuery = useFieldCategoriesCatalogQuery()
+
+  const templates = templatesQuery.data ?? EMPTY_TEMPLATES
+  const categories = categoriesQuery.data ?? []
 
   const cycleLabel = (cycle: string) =>
     templateCycleOptions.find((item) => item.value === cycle)?.label ?? cycle
@@ -80,18 +92,19 @@ export function FormTemplateListPage() {
 
         <TemplateListFilter
           search={search}
-          selectedDomain={selectedDomain}
-          selectedCycle={selectedCycle}
+          selectedPeriod={selectedPeriod}
+          selectedCategory={selectedCategory}
           selectedStatus={selectedStatus}
-          domains={domains}
+          periodOptions={REPORT_PERIOD_OPTIONS}
+          categories={categories}
           onSearchChange={setSearch}
-          onDomainChange={setSelectedDomain}
-          onCycleChange={setSelectedCycle}
+          onPeriodChange={setSelectedPeriod}
+          onCategoryChange={setSelectedCategory}
           onStatusChange={setSelectedStatus}
         />
 
         <TemplateListTable
-          templates={filteredTemplates}
+          templates={templates}
           cycleLabel={cycleLabel}
           onPreview={setPreviewTemplate}
         />
