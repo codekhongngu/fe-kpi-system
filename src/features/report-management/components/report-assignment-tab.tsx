@@ -161,7 +161,7 @@ export function ReportAssignmentTab() {
   const renderOrgTree = (nodes: OrganizationTreeNode[], depth = 0) => {
     return nodes.map((node) => {
       const checked = form.unitIds.includes(node.id)
-      const label = `${node.code ?? ''}${node.code ? ' - ' : ''}${node.name ?? ''}`.trim()
+      const label = `${node.name ?? ''}`.trim()
       const canAssign = Boolean(node.canAssignReports ?? node.can_assign_reports ?? true)
       const children = Array.isArray(node.children) ? node.children : []
       return (

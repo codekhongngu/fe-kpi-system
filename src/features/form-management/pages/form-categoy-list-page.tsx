@@ -119,7 +119,7 @@ export function FormCategoryListPage() {
         throw new Error('Không tìm thấy lĩnh vực.')
       }
       return formManagementApi.updateFieldCategory(editingCategory.id, {
-        code: form.code.trim(),
+        code: editingCategory.code,
         name: form.name.trim(),
         description: form.description.trim().length > 0 ? form.description.trim() : null,
         sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
@@ -252,14 +252,23 @@ export function FormCategoryListPage() {
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label>Mã lĩnh vực</Label>
-              <Input
-                value={form.code}
-                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-                placeholder='vd: qldl'
-              />
-            </div>
+            {editingCategory ? (
+              <div className='space-y-2'>
+                <Label>Mã lĩnh vực</Label>
+                <div className='flex h-9 items-center rounded-md border bg-muted/30 px-3 text-sm'>
+                  {editingCategory.code}
+                </div>
+              </div>
+            ) : (
+              <div className='space-y-2'>
+                <Label>Mã lĩnh vực</Label>
+                <Input
+                  value={form.code}
+                  onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+                  placeholder='vd: qldl'
+                />
+              </div>
+            )}
             <div className='space-y-2'>
               <Label>Thứ tự hiển thị</Label>
               <Input
@@ -305,16 +314,20 @@ export function FormCategoryListPage() {
             </Button>
             <Button
               onClick={() => {
-                const code = form.code.trim().toLowerCase()
                 const name = form.name.trim()
-                if (!code || !name) {
-                  toast.error('Mã lĩnh vực và tên lĩnh vực là bắt buộc.')
-                  return
-                }
-                setForm((prev) => ({ ...prev, code }))
                 if (editingCategory) {
+                  if (!name) {
+                    toast.error('Tên lĩnh vực là bắt buộc.')
+                    return
+                  }
                   updateMutation.mutate()
                 } else {
+                  const code = form.code.trim().toLowerCase()
+                  if (!code || !name) {
+                    toast.error('Mã lĩnh vực và tên lĩnh vực là bắt buộc.')
+                    return
+                  }
+                  setForm((prev) => ({ ...prev, code }))
                   createMutation.mutate()
                 }
               }}
