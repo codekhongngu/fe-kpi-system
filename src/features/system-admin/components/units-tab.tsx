@@ -107,6 +107,7 @@ type UnitFormState = {
   level: OrganizationUnit['level']
   parentId: string | null
   description: string
+  canAssignReports: boolean
 }
 
 const defaultForm: UnitFormState = {
@@ -115,6 +116,7 @@ const defaultForm: UnitFormState = {
   level: 1,
   parentId: null,
   description: '',
+  canAssignReports: true,
 }
 
 function getUnitLevelLabel(level: OrganizationUnit['level']) {
@@ -426,19 +428,21 @@ export function UnitsTab() {
       level: unit.level,
       parentId: unit.parentId,
       description: unit.description ?? '',
+      canAssignReports: unit.canAssignReports ?? true,
     })
     setOpenForm(true)
   }, [])
 
   const submitForm = useCallback(() => {
-    if (!form.code.trim() || !form.name.trim()) {
+    const code = editingUnit ? editingUnit.code : form.code.trim()
+    if (!code || !form.name.trim()) {
       toast.error('Vui lòng nhập đủ mã đơn vị và tên đơn vị.')
       return
     }
 
     const payload: UnitFormState = {
       ...form,
-      code: form.code.trim(),
+      code,
       name: form.name.trim(),
       description: form.description.trim(),
     }
@@ -603,8 +607,8 @@ export function UnitsTab() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className='grid grid-cols-1 items-start gap-4 lg:grid-cols-[360px_1fr]'>
-          <Card className='overflow-hidden'>
+        <div className='grid grid-cols-1 items-start gap-4 lg:grid-cols-10'>
+          <Card className='overflow-hidden lg:col-span-3'>
             <CardHeader className='flex-row items-center justify-between gap-3 bg-muted/30'>
               <div className='min-w-0'>
                 <CardTitle className='text-base'>Cây tổ chức</CardTitle>
@@ -664,7 +668,7 @@ export function UnitsTab() {
             </CardContent>
           </Card>
 
-          <div className='min-w-0 space-y-4'>
+          <div className='min-w-0 space-y-4 lg:col-span-7'>
             <Card className='overflow-hidden'>
               <CardHeader className='flex flex-col gap-3 bg-muted/30'>
                 <div className='min-w-0 space-y-2'>
@@ -838,15 +842,24 @@ export function UnitsTab() {
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label>Mã đơn vị</Label>
-              <Input
-                value={form.code}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, code: event.target.value }))
-                }
-              />
-            </div>
+            {editingUnit ? (
+              <div className='space-y-2'>
+                <Label>Mã đơn vị</Label>
+                <div className='flex h-9 items-center rounded-md border bg-muted/30 px-3 text-sm'>
+                  {editingUnit.code}
+                </div>
+              </div>
+            ) : (
+              <div className='space-y-2'>
+                <Label>Mã đơn vị</Label>
+                <Input
+                  value={form.code}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, code: event.target.value }))
+                  }
+                />
+              </div>
+            )}
             <div className='space-y-2'>
               <Label>Tên đơn vị</Label>
               <Input
@@ -913,6 +926,20 @@ export function UnitsTab() {
                   setForm((prev) => ({ ...prev, description: event.target.value }))
                 }
               />
+            </div>
+            <div className='rounded-lg border bg-muted/30 p-4 sm:col-span-2'>
+              <div className='flex items-center justify-between gap-3'>
+                <Label className='text-sm'>Cho phép giao báo cáo</Label>
+                <Switch
+                  checked={form.canAssignReports}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({ ...prev, canAssignReports: checked }))
+                  }
+                />
+              </div>
+              <p className='mt-2 text-xs text-muted-foreground'>
+                Đánh dấu đơn vị có được phép nhận/giao báo cáo hay không.
+              </p>
             </div>
           </div>
 

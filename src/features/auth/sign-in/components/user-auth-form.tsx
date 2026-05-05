@@ -64,12 +64,7 @@ export function UserAuthForm({
           auth.setRefreshToken(result.refreshToken)
         }
 
-        try {
-          const me = await authApi.me()
-          auth.setUser(me)
-        } catch {
-          auth.setUser(result.user)
-        }
+        auth.setUser(result.user)
 
         const targetPath = redirectTo || '/'
         navigate({ to: targetPath, replace: true })
@@ -109,7 +104,7 @@ export function UserAuthForm({
             <FormItem>
               <FormLabel>Email hoặc username</FormLabel>
               <FormControl>
-                <Input placeholder='Email hoặc username' {...field} />
+                <Input placeholder='Email hoặc username' autoComplete='username' {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -122,7 +117,7 @@ export function UserAuthForm({
             <FormItem className='relative'>
               <FormLabel>Mật khẩu</FormLabel>
               <FormControl>
-                <PasswordInput placeholder='********' {...field} />
+                <PasswordInput placeholder='********' autoComplete='current-password' {...field} />
               </FormControl>
               <FormMessage />
               <Link

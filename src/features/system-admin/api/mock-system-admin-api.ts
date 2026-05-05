@@ -162,6 +162,7 @@ const db: {
       parentId: null,
       description: null,
       status: 'active',
+      canAssignReports: true,
       memberCount: 8,
       activeAssignments: 1,
     },
@@ -173,6 +174,7 @@ const db: {
       parentId: 'u1',
       description: null,
       status: 'active',
+      canAssignReports: true,
       memberCount: 4,
       activeAssignments: 0,
     },
@@ -184,6 +186,7 @@ const db: {
       parentId: 'u2',
       description: null,
       status: 'active',
+      canAssignReports: true,
       memberCount: 3,
       activeAssignments: 2,
     },
@@ -195,6 +198,7 @@ const db: {
       parentId: 'u3',
       description: null,
       status: 'locked',
+      canAssignReports: false,
       memberCount: 0,
       activeAssignments: 0,
     },
@@ -863,6 +867,8 @@ export const systemAdminMockApi = {
       isActive?: boolean
       status?: string
       level?: number
+      canAssignReports?: boolean
+      can_assign_reports?: boolean
       description?: string | null
     }
 
@@ -880,6 +886,7 @@ export const systemAdminMockApi = {
       parentId: org.parentId ?? null,
       description: org.description ?? null,
       status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      canAssignReports: Boolean(org.canAssignReports ?? org.can_assign_reports ?? true),
       memberCount: 0,
       activeAssignments: 0,
     }))
@@ -892,6 +899,7 @@ export const systemAdminMockApi = {
       parentId: input.parentId,
       level: input.level,
       description: input.description,
+      canAssignReports: input.canAssignReports,
       isActive: true,
     })
 
@@ -907,6 +915,7 @@ export const systemAdminMockApi = {
           level: input.level,
           description: input.description ?? null,
           status: 'active',
+          canAssignReports: input.canAssignReports ?? true,
           memberCount: 0,
           activeAssignments: 0,
         }
@@ -924,6 +933,7 @@ export const systemAdminMockApi = {
       parentId: input.parentId,
       level: input.level,
       description: input.description,
+      canAssignReports: input.canAssignReports,
     })
 
     const units = await systemAdminMockApi.listUnits()
@@ -1074,6 +1084,8 @@ export const organizationsApi = {
       isActive?: boolean
       status?: string
       level?: number
+      canAssignReports?: boolean
+      can_assign_reports?: boolean
       description?: string | null
       children?: BeOrgNode[]
     }
@@ -1110,6 +1122,7 @@ export const organizationsApi = {
       parentId: org.parentId ?? null,
       description: org.description ?? null,
       status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      canAssignReports: Boolean(org.canAssignReports ?? org.can_assign_reports ?? true),
       memberCount: 0,
       activeAssignments: 0,
     }))
@@ -1124,6 +1137,8 @@ export const organizationsApi = {
       isActive?: boolean
       status?: string
       level?: number
+      canAssignReports?: boolean
+      can_assign_reports?: boolean
       description?: string | null
     }
 
@@ -1137,6 +1152,7 @@ export const organizationsApi = {
       parentId: org.parentId ?? null,
       description: org.description ?? null,
       status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      canAssignReports: Boolean(org.canAssignReports ?? org.can_assign_reports ?? true),
       memberCount: 0,
       activeAssignments: 0,
     } satisfies OrganizationUnit
@@ -1154,6 +1170,7 @@ export const organizationsApi = {
       parentId: input.parentId,
       level: input.level,
       description,
+      canAssignReports: input.canAssignReports,
     })
 
     const created = response.data as { id?: string } | undefined
@@ -1176,6 +1193,7 @@ export const organizationsApi = {
       parentId: input.parentId,
       level: input.level,
       description,
+      canAssignReports: input.canAssignReports,
     })
     return organizationsApi.get(id)
   },

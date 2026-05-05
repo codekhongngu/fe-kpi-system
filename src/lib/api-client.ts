@@ -26,6 +26,29 @@ function unwrapEnvelope<T>(response: AxiosResponse<T | ApiEnvelope<T>>): AxiosRe
   return response as AxiosResponse<T>
 }
 
+function normalizeAxiosErrorMessage(error: AxiosError) {
+  const data = error.response?.data
+  if (!isRecord(data)) return
+
+  const rawMessage = data.message
+  let message = ''
+
+  if (typeof rawMessage === 'string') {
+    message = rawMessage
+  } else if (Array.isArray(rawMessage)) {
+    const parts = rawMessage.filter(
+      (item): item is string => typeof item === 'string' && item.trim().length > 0,
+    )
+    message = parts.join('\n')
+  }
+
+  if (!message.trim()) return
+
+  const requestId = typeof data.requestId === 'string' ? data.requestId : ''
+  const suffix = requestId ? ` (requestId: ${requestId})` : ''
+  ;(error as unknown as { message: string }).message = `${message}${suffix}`
+}
+
 const baseURL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:5000/api/v1'
 
 const refreshClient = axios.create({ baseURL })
@@ -78,6 +101,8 @@ export function createApiClient(): AxiosInstance {
         return Promise.reject(error)
       }
 
+      normalizeAxiosErrorMessage(error)
+
       const status = error.response?.status
       const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined
 
@@ -85,8 +110,25 @@ export function createApiClient(): AxiosInstance {
         return Promise.reject(error)
       }
 
+      const requestUrl = originalRequest.url ?? ''
+      if (
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/refresh-token') ||
+        requestUrl.includes('/auth/logout')
+      ) {
+        return Promise.reject(error)
+      }
+
       const { auth } = useAuthStore.getState()
       if (!auth.refreshToken) {
+        useAuthStore.getState().auth.reset()
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname
+          if (!currentPath.startsWith('/sign-in')) {
+            const redirectTo = encodeURIComponent(window.location.href)
+            window.location.assign(`/sign-in?redirect=${redirectTo}`)
+          }
+        }
         return Promise.reject(error)
       }
 
@@ -105,6 +147,13 @@ export function createApiClient(): AxiosInstance {
         return client(originalRequest)
       } catch {
         useAuthStore.getState().auth.reset()
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname
+          if (!currentPath.startsWith('/sign-in')) {
+            const redirectTo = encodeURIComponent(window.location.href)
+            window.location.assign(`/sign-in?redirect=${redirectTo}`)
+          }
+        }
         return Promise.reject(error)
       }
     },

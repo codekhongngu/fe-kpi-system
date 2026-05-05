@@ -43,6 +43,7 @@ export type OrganizationUnit = {
   parentId: string | null
   description: string | null
   status: UnitStatus
+  canAssignReports: boolean
   memberCount: number
   activeAssignments: number
 }
@@ -75,6 +76,7 @@ export type CreateUnitInput = {
   parentId: string | null
   level: number
   description: string
+  canAssignReports: boolean
 }
 
 export type UpdateUnitInput = CreateUnitInput
