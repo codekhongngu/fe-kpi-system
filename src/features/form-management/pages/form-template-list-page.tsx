@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusCircle, Trash2, UserPen } from 'lucide-react'
+import { PlusCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Badge } from '@/components/ui/badge'
+import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -16,333 +14,350 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/mock-form-management-api'
-import { type FieldCategory } from '../api/types'
+import type { FormTemplate, PeriodType } from '../api/types'
+import { TemplateListFilter } from '../components/template-list-filter'
+import { TemplateListTable } from '../components/template-list-table'
 
-const EMPTY_CATEGORIES: FieldCategory[] = []
-
-type FieldCategoryFormState = {
+type FormModalState = {
   code: string
   name: string
+  fieldCategoryId: string
+  periodType: PeriodType
   description: string
-  sortOrder: string
   isActive: boolean
 }
 
-const defaultForm: FieldCategoryFormState = {
+const defaultFormModalState: FormModalState = {
   code: '',
   name: '',
+  fieldCategoryId: '',
+  periodType: 'THANG',
   description: '',
-  sortOrder: '0',
   isActive: true,
 }
 
+const REPORT_PERIOD_OPTIONS = [
+  { value: 'all', label: 'Tất cả kỳ báo cáo' },
+  { value: 'TUAN', label: 'Tuần' },
+  { value: 'THANG', label: 'Tháng' },
+  { value: 'QUY', label: 'Quý' },
+  { value: 'NAM', label: 'Năm' },
+]
+
 export function FormTemplateListPage() {
   const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [selectedPeriod, setSelectedPeriod] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState('all')
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(20)
+  const [previewTemplate, setPreviewTemplate] = useState<FormTemplate | null>(null)
+  const [editingTemplate, setEditingTemplate] = useState<FormTemplate | null>(null)
+  const [openFormModal, setOpenFormModal] = useState(false)
+  const [formState, setFormState] = useState<FormModalState>(defaultFormModalState)
 
-  const categoriesQuery = useQuery({
-    queryKey: ['form-management', 'field-categories'],
-    queryFn: () => formManagementApi.listFieldCategories(),
+  const templatesQuery = useQuery({
+    queryKey: ['form-management', 'templates', { search, selectedPeriod, selectedCategory, selectedStatus, page, limit }],
+    queryFn: () =>
+      formManagementApi.listTemplates({
+        search,
+        page,
+        limit,
+        status: selectedStatus as 'all' | 'true' | 'false',
+        period: selectedPeriod === 'all' ? '' : selectedPeriod,
+        category: selectedCategory === 'all' ? '' : selectedCategory,
+      }),
   })
 
-  const categories = categoriesQuery.data ?? EMPTY_CATEGORIES
-
-  const [search, setSearch] = useState('')
-  const [openForm, setOpenForm] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<FieldCategory | null>(null)
-  const [form, setForm] = useState<FieldCategoryFormState>(defaultForm)
-  const [deletingCategory, setDeletingCategory] = useState<FieldCategory | null>(null)
-
-  const filteredCategories = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    if (!keyword) return categories
-    return categories.filter((item) => {
-      const parts = [item.code, item.name, item.description ?? '']
-      return parts.some((value) => value.toLowerCase().includes(keyword))
-    })
-  }, [categories, search])
-
-  const closeForm = () => {
-    setOpenForm(false)
-    setEditingCategory(null)
-    setForm(defaultForm)
-  }
-
-  const openCreateDialog = () => {
-    setEditingCategory(null)
-    setForm(defaultForm)
-    setOpenForm(true)
-  }
-
-  const openEditDialog = (category: FieldCategory) => {
-    setEditingCategory(category)
-    setForm({
-      code: category.code,
-      name: category.name,
-      description: category.description ?? '',
-      sortOrder: String(category.sortOrder ?? 0),
-      isActive: category.isActive,
-    })
-    setOpenForm(true)
-  }
+  const categoriesQuery = useFieldCategoriesCatalogQuery()
+  const templates = templatesQuery.data?.items ?? []
+  const meta = templatesQuery.data?.meta
+  const total = meta?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / limit))
+  const categories = categoriesQuery.data ?? []
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      formManagementApi.createFieldCategory({
-        code: form.code.trim(),
-        name: form.name.trim(),
-        description: form.description.trim().length > 0 ? form.description.trim() : null,
-        sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
-        isActive: form.isActive,
-      }),
-    onSuccess: () => {
-      toast.success('Đã tạo lĩnh vực biểu mẫu.')
-      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
-      closeForm()
+    mutationFn: formManagementApi.createTemplate,
+    onSuccess: async () => {
+      toast.success('Đã tạo biểu mẫu thành công.')
+      await queryClient.invalidateQueries({ queryKey: ['form-management'] })
+      handleCloseModal()
     },
     onError: (error: Error) => toast.error(error.message),
   })
 
-  const updateMutation = useMutation({
-    mutationFn: () => {
-      if (!editingCategory) {
-        throw new Error('Không tìm thấy lĩnh vực.')
-      }
-      return formManagementApi.updateFieldCategory(editingCategory.id, {
-        code: form.code.trim(),
-        name: form.name.trim(),
-        description: form.description.trim().length > 0 ? form.description.trim() : null,
-        sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
-        isActive: form.isActive,
+  const patchMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { name: string; fieldCategoryId: string; periodType: PeriodType; description: string; isActive: boolean } }) =>
+      formManagementApi.updateTemplate(id, payload),
+    onSuccess: async () => {
+      toast.success('Đã cập nhật thông tin biểu mẫu.')
+      await queryClient.invalidateQueries({ queryKey: ['form-management'] })
+      handleCloseModal()
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const categoryOptions = useMemo(() => categories, [categories])
+
+  const openCreateModal = () => {
+    setEditingTemplate(null)
+    setFormState({ ...defaultFormModalState, fieldCategoryId: categoryOptions[0]?.id ?? '' })
+    setOpenFormModal(true)
+  }
+
+  const openEditModal = (template: FormTemplate) => {
+    setEditingTemplate(template)
+    setFormState({
+      code: template.code,
+      name: template.name,
+      fieldCategoryId: template.fieldCategoryId,
+      periodType: template.periodType ?? 'THANG',
+      description: template.description,
+      isActive: template.isActive,
+    })
+    setOpenFormModal(true)
+  }
+
+  const handleCloseModal = () => {
+    setOpenFormModal(false)
+    setEditingTemplate(null)
+    setFormState(defaultFormModalState)
+  }
+
+  const submitFormModal = () => {
+    if (!formState.name.trim() || !formState.fieldCategoryId) {
+      toast.error('Tên biểu mẫu và nhóm biểu mẫu là bắt buộc.')
+      return
+    }
+
+    if (editingTemplate) {
+      patchMutation.mutate({
+        id: editingTemplate.id,
+        payload: {
+          name: formState.name.trim(),
+          fieldCategoryId: formState.fieldCategoryId,
+          periodType: formState.periodType,
+          description: formState.description.trim(),
+          isActive: formState.isActive,
+        },
       })
-    },
-    onSuccess: () => {
-      toast.success('Đã cập nhật lĩnh vực biểu mẫu.')
-      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
-      closeForm()
-    },
-    onError: (error: Error) => toast.error(error.message),
-  })
+      return
+    }
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => formManagementApi.deleteFieldCategory(id),
-    onSuccess: () => {
-      toast.success('Đã xóa lĩnh vực biểu mẫu.')
-      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
-      setDeletingCategory(null)
-    },
-    onError: (error: Error) => toast.error(error.message),
-  })
+    if (!formState.code.trim()) {
+      toast.error('Mã biểu mẫu là bắt buộc khi tạo mới.')
+      return
+    }
+
+    createMutation.mutate({
+      code: formState.code.trim(),
+      name: formState.name.trim(),
+      fieldCategoryId: formState.fieldCategoryId,
+      periodType: formState.periodType,
+      description: formState.description.trim(),
+      isActive: formState.isActive,
+    })
+  }
 
   return (
-    <Card>
-      <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
-        <div>
-          <CardTitle>Lĩnh vực biểu mẫu</CardTitle>
-          <CardDescription>Quản lý danh mục lĩnh vực biểu mẫu để phân nhóm biểu mẫu.</CardDescription>
-        </div>
-
-        <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
-          <Input
-            className='sm:w-80'
-            placeholder='Tìm theo mã, tên hoặc mô tả...'
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <Button onClick={openCreateDialog}>
+    <>
+      <div className='flex w-full flex-col gap-4'>
+        <PageBreadcrumb title='Danh sách biểu mẫu' subtitle='Quản lý thông tin chung bằng modal và mở trang cấu hình riêng cho form-builder.'>
+          <Button onClick={openCreateModal}>
             <PlusCircle />
-            Thêm lĩnh vực
+            Thêm mới
           </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className='overflow-hidden rounded-md border'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã</TableHead>
-                <TableHead>Tên lĩnh vực</TableHead>
-                <TableHead className='w-[120px]'>Thứ tự</TableHead>
-                <TableHead className='w-[140px]'>Trạng thái</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead className='w-[120px] text-right'>Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categoriesQuery.isLoading && (
-                <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center text-sm text-muted-foreground'>
-                    Đang tải danh sách lĩnh vực...
-                  </TableCell>
-                </TableRow>
-              )}
-              {categoriesQuery.isError && (
-                <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center text-sm text-destructive'>
-                    Không tải được danh sách lĩnh vực.
-                  </TableCell>
-                </TableRow>
-              )}
-              {!categoriesQuery.isLoading && !categoriesQuery.isError && filteredCategories.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center'>
-                    Chưa có lĩnh vực biểu mẫu.
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredCategories.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className='font-medium'>{item.code}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.sortOrder}</TableCell>
-                  <TableCell>
-                    <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                      {item.isActive ? 'Hoạt động' : 'Ngừng'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className='max-w-[420px] truncate'>{item.description ?? '-'}</TableCell>
-                  <TableCell className='text-right'>
-                    <div className='flex justify-end gap-1'>
-                      <Button
-                        size='icon'
-                        variant='outline'
-                        onClick={() => openEditDialog(item)}
-                        title='Sửa lĩnh vực'
-                      >
-                        <UserPen />
-                      </Button>
-                      <Button
-                        size='icon'
-                        variant='destructive'
-                        onClick={() => setDeletingCategory(item)}
-                        title='Xóa lĩnh vực'
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+        </PageBreadcrumb>
 
-      <Dialog
-        open={openForm}
-        onOpenChange={(open) => {
-          setOpenForm(open)
-          if (!open) closeForm()
-        }}
-      >
+        <TemplateListFilter
+          search={search}
+          selectedPeriod={selectedPeriod}
+          selectedCategory={selectedCategory}
+          selectedStatus={selectedStatus}
+          periodOptions={REPORT_PERIOD_OPTIONS}
+          categories={categories}
+          onSearchChange={(value) => {
+            setSearch(value)
+            setPage(1)
+          }}
+          onPeriodChange={(value) => {
+            setSelectedPeriod(value)
+            setPage(1)
+          }}
+          onCategoryChange={(value) => {
+            setSelectedCategory(value)
+            setPage(1)
+          }}
+          onStatusChange={(value) => {
+            setSelectedStatus(value)
+            setPage(1)
+          }}
+        />
+
+        <TemplateListTable templates={templates} onPreview={setPreviewTemplate} onEditGeneral={openEditModal} />
+        <div className='flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card px-4 py-3 text-sm'>
+          <div className='text-muted-foreground'>Total: {total}</div>
+          <div className='flex items-center gap-2'>
+            <Label className='text-sm'>Limit</Label>
+            <Select value={String(limit)} onValueChange={(value) => { setLimit(Number(value)); setPage(1) }}>
+              <SelectTrigger className='w-[90px]'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='10'>10</SelectItem>
+                <SelectItem value='20'>20</SelectItem>
+                <SelectItem value='50'>50</SelectItem>
+                <SelectItem value='100'>100</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant='outline' size='sm' onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>
+              Prev
+            </Button>
+            <Input className='h-9 w-16 text-center' value={String(page)} onChange={(event) => {
+              const next = Number(event.target.value || 1)
+              if (!Number.isNaN(next)) setPage(Math.min(Math.max(1, next), totalPages))
+            }} />
+            <span className='text-muted-foreground'>/ {totalPages}</span>
+            <Button variant='outline' size='sm' onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))} disabled={page >= totalPages}>
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={Boolean(previewTemplate)} onOpenChange={(open) => !open && setPreviewTemplate(null)}>
+        <DialogContent className='sm:max-w-2xl'>
+          <DialogHeader className='text-start'>
+            <DialogTitle>
+              {previewTemplate?.code} - {previewTemplate?.name}
+            </DialogTitle>
+            <DialogDescription>Thông tin chung của biểu mẫu.</DialogDescription>
+          </DialogHeader>
+          {previewTemplate && (
+            <div className='grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-2'>
+              <div>
+                <span className='text-muted-foreground'>Nhóm biểu mẫu: </span>
+                {previewTemplate.fieldCategoryName ?? previewTemplate.fieldCategoryId}
+              </div>
+              <div>
+                <span className='text-muted-foreground'>Trạng thái: </span>
+                {previewTemplate.isActive ? 'Hoạt động' : 'Ngừng hoạt động'}
+              </div>
+              <div className='sm:col-span-2'>
+                <span className='text-muted-foreground'>Mô tả: </span>
+                {previewTemplate.description || '-'}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openFormModal} onOpenChange={setOpenFormModal}>
         <DialogContent className='sm:max-w-xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingCategory ? 'Cập nhật lĩnh vực' : 'Thêm lĩnh vực'}</DialogTitle>
-            <DialogDescription>Quản lý danh mục lĩnh vực biểu mẫu.</DialogDescription>
+            <DialogTitle>{editingTemplate ? 'Cập nhật biểu mẫu' : 'Tạo biểu mẫu mới'}</DialogTitle>
+            <DialogDescription>
+              {editingTemplate
+                ? 'Patch Form chỉ cập nhật tên, nhóm biểu mẫu, mô tả, trạng thái. Mã biểu mẫu được giữ cố định.'
+                : 'Create Form yêu cầu mã, tên, nhóm biểu mẫu, mô tả và trạng thái.'}
+            </DialogDescription>
           </DialogHeader>
 
-          <div className='grid gap-4 sm:grid-cols-2'>
+          <div className='grid gap-4'>
             <div className='space-y-2'>
-              <Label>Mã lĩnh vực</Label>
+              <Label>Mã biểu mẫu</Label>
               <Input
-                value={form.code}
-                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-                placeholder='vd: qldl'
+                value={formState.code}
+                disabled={Boolean(editingTemplate)}
+                onChange={(event) => setFormState((prev) => ({ ...prev, code: event.target.value }))}
               />
             </div>
             <div className='space-y-2'>
-              <Label>Thứ tự hiển thị</Label>
+              <Label>Tên biểu mẫu</Label>
               <Input
-                inputMode='numeric'
-                value={form.sortOrder}
-                onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
-                placeholder='0'
+                value={formState.name}
+                onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
               />
             </div>
-            <div className='space-y-2 sm:col-span-2'>
-              <Label>Tên lĩnh vực</Label>
-              <Input
-                value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder='vd: Quản lý dữ liệu'
-              />
+            <div className='space-y-2'>
+              <Label>Nhóm biểu mẫu</Label>
+              <Select
+                value={formState.fieldCategoryId}
+                onValueChange={(value) => setFormState((prev) => ({ ...prev, fieldCategoryId: value }))}
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue placeholder='Chọn nhóm biểu mẫu' />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name || category.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className='space-y-2 sm:col-span-2'>
+            <div className='space-y-2'>
+              <Label>Kỳ báo cáo</Label>
+              <Select
+                value={formState.periodType}
+                onValueChange={(value: PeriodType) => setFormState((prev) => ({ ...prev, periodType: value }))}
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='TUAN'>Tuần</SelectItem>
+                  <SelectItem value='THANG'>Tháng</SelectItem>
+                  <SelectItem value='QUY'>Quý</SelectItem>
+                  <SelectItem value='NAM'>Năm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
+              <Label>Trạng thái</Label>
+              <Select
+                value={formState.isActive ? 'true' : 'false'}
+                onValueChange={(value) => setFormState((prev) => ({ ...prev, isActive: value === 'true' }))}
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='true'>Hoạt động</SelectItem>
+                  <SelectItem value='false'>Ngừng hoạt động</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-2'>
               <Label>Mô tả</Label>
               <Textarea
-                value={form.description}
-                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                placeholder='Mô tả ngắn...'
-              />
-            </div>
-            <div className='flex items-center justify-between gap-2 rounded-md border p-3 sm:col-span-2'>
-              <div className='space-y-0.5'>
-                <div className='text-sm font-medium'>Trạng thái</div>
-                <div className='text-xs text-muted-foreground'>
-                  {form.isActive ? 'Hoạt động' : 'Ngừng sử dụng'}
-                </div>
-              </div>
-              <Switch
-                checked={form.isActive}
-                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
+                rows={3}
+                value={formState.description}
+                onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant='outline' onClick={closeForm}>
-              Hủy
-            </Button>
-            <Button
-              onClick={() => {
-                const code = form.code.trim().toLowerCase()
-                const name = form.name.trim()
-                if (!code || !name) {
-                  toast.error('Mã lĩnh vực và tên lĩnh vực là bắt buộc.')
-                  return
-                }
-                setForm((prev) => ({ ...prev, code }))
-                if (editingCategory) {
-                  updateMutation.mutate()
-                } else {
-                  createMutation.mutate()
-                }
-              }}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              Lưu
+            <Button variant='outline' onClick={handleCloseModal}>Hủy</Button>
+            <Button onClick={submitFormModal} disabled={createMutation.isPending || patchMutation.isPending}>
+              {editingTemplate ? 'Lưu thay đổi' : 'Tạo biểu mẫu'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={Boolean(deletingCategory)}
-        onOpenChange={(open) => {
-          if (!open) setDeletingCategory(null)
-        }}
-        title='Xóa lĩnh vực biểu mẫu'
-        desc='Bạn chắc chắn muốn xóa lĩnh vực này?'
-        confirmText='Xóa'
-        cancelBtnText='Hủy'
-        destructive
-        isLoading={deleteMutation.isPending}
-        disabled={deleteMutation.isPending}
-        handleConfirm={() => {
-          if (!deletingCategory) return
-          deleteMutation.mutate(deletingCategory.id)
-        }}
-      />
-    </Card>
+    </>
   )
 }

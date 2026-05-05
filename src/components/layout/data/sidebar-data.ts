@@ -137,7 +137,7 @@ function buildNavGroups(role: AppRole): NavGroup[] {
           },
           {
             title: 'Lĩnh vực biểu mẫu',
-            url: '/form-management',
+            url: '/form-category-management',
             icon: FileSpreadsheet,
           },
           {

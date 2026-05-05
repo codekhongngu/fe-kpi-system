@@ -13,6 +13,7 @@ import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSignOutRouteImport } from './routes/_authenticated/sign-out'
+import { Route as AuthenticatedFormCategoryManagementRouteImport } from './routes/_authenticated/form-category-management'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -68,6 +69,12 @@ const AuthenticatedSignOutRoute = AuthenticatedSignOutRouteImport.update({
   path: '/sign-out',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFormCategoryManagementRoute =
+  AuthenticatedFormCategoryManagementRouteImport.update({
+    id: '/form-category-management',
+    path: '/form-category-management',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const errors503Route = errors503RouteImport.update({
   id: '/(errors)/503',
   path: '/503',
@@ -274,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/form-category-management': typeof AuthenticatedFormCategoryManagementRoute
   '/sign-out': typeof AuthenticatedSignOutRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/form-management/create': typeof AuthenticatedFormManagementCreateRoute
@@ -309,6 +317,7 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/form-category-management': typeof AuthenticatedFormCategoryManagementRoute
   '/sign-out': typeof AuthenticatedSignOutRoute
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -351,6 +360,7 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_authenticated/form-category-management': typeof AuthenticatedFormCategoryManagementRoute
   '/_authenticated/sign-out': typeof AuthenticatedSignOutRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -392,6 +402,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/form-category-management'
     | '/sign-out'
     | '/errors/$error'
     | '/form-management/create'
@@ -427,6 +438,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/form-category-management'
     | '/sign-out'
     | '/'
     | '/errors/$error'
@@ -468,6 +480,7 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/form-category-management'
     | '/_authenticated/sign-out'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
@@ -536,6 +549,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-out'
       fullPath: '/sign-out'
       preLoaderRoute: typeof AuthenticatedSignOutRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/form-category-management': {
+      id: '/_authenticated/form-category-management'
+      path: '/form-category-management'
+      fullPath: '/form-category-management'
+      preLoaderRoute: typeof AuthenticatedFormCategoryManagementRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/(errors)/503': {
@@ -836,6 +856,7 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedFormManagementRouteRoute: typeof AuthenticatedFormManagementRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedFormCategoryManagementRoute: typeof AuthenticatedFormCategoryManagementRoute
   AuthenticatedSignOutRoute: typeof AuthenticatedSignOutRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
@@ -852,6 +873,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFormManagementRouteRoute:
     AuthenticatedFormManagementRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedFormCategoryManagementRoute:
+    AuthenticatedFormCategoryManagementRoute,
   AuthenticatedSignOutRoute: AuthenticatedSignOutRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,

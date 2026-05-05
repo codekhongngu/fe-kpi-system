@@ -8,17 +8,12 @@ import {
 } from '@/components/ui/select'
 import type { CatalogOption } from '../api/types'
 
-type PeriodOption = {
-  value: string
-  label: string
-}
-
 type TemplateListFilterProps = {
   search: string
   selectedPeriod: string
   selectedCategory: string
   selectedStatus: string
-  periodOptions: PeriodOption[]
+  periodOptions: Array<{ value: string; label: string }>
   categories: CatalogOption[]
   onSearchChange: (value: string) => void
   onPeriodChange: (value: string) => void
@@ -48,7 +43,7 @@ export function TemplateListFilter({
 
       <Select value={selectedPeriod} onValueChange={onPeriodChange}>
         <SelectTrigger className='w-full'>
-        <SelectValue placeholder='Kỳ báo cáo' />
+          <SelectValue placeholder='Kỳ báo cáo' />
         </SelectTrigger>
         <SelectContent>
           {periodOptions.map((period) => (
@@ -61,10 +56,10 @@ export function TemplateListFilter({
 
       <Select value={selectedCategory} onValueChange={onCategoryChange}>
         <SelectTrigger className='w-full'>
-          <SelectValue placeholder='Lĩnh vực' />
+          <SelectValue placeholder='Nhóm biểu mẫu' />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value='all'>Tất cả lĩnh vực</SelectItem>
+          <SelectItem value='all'>Tất cả nhóm biểu mẫu</SelectItem>
           {categories.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name || category.code}

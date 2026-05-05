@@ -42,7 +42,7 @@ export function TemplatePreviewTab({
     queryFn: () => formManagementApi.listTemplates(),
   })
 
-  const templates = templatesQuery.data ?? EMPTY_TEMPLATES
+  const templates = templatesQuery.data?.items ?? EMPTY_TEMPLATES
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplateId ?? '')
 
   const currentTemplateId = selectedTemplateId || initialTemplateId || templates[0]?.id || ''

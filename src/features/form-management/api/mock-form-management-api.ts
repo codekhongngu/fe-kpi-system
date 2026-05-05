@@ -5,10 +5,11 @@ import {
   type CreateFieldCategoryInput,
   type CreateIndicatorInput,
   type CreateTemplateInput,
-  type FormTemplateListParams,
   type FieldCategory,
   type FormTemplate,
-  type TemplateCycle,
+  type FormTemplateListResult,
+  type FormTemplateListParams,
+  type PeriodType,
   type TemplateField,
   type TemplateIndicator,
   type UpdateFieldInput,
@@ -18,601 +19,96 @@ import {
 } from './types'
 import { apiClient } from '@/lib/api-client'
 
-const NETWORK_DELAY_MS = 220
-
-const getHttpStatus = (error: unknown): number | undefined =>
-  (error as { response?: { status?: number } } | undefined)?.response?.status
-
-const shouldFallbackToUnderscorePath = (error: unknown) => {
-  const status = getHttpStatus(error)
+function shouldFallbackToUnderscorePath(error: unknown) {
+  const status = (error as { response?: { status?: number } })?.response?.status
   return status === 404 || status === 405
 }
 
-const db: { templates: FormTemplate[] } = {
-  templates: [
-    {
-      id: 'tpl-01',
-      code: 'KPI-OPER-001',
-      name: 'Biểu mẫu hiệu suất vận hành',
-      description: 'Theo dõi KPI vận hành theo tháng cho các phòng chức năng.',
-      domain: 'Vận hành mạng',
-      cycle: 'month',
-      status: 'active',
-      assignedUnits: 16,
-      completionRate: 82,
-      hasReportData: true,
-      referenceFiles: ['mau-vh-thang.xlsx', 'huong-dan-vh.pdf'],
-      updatedAt: '2026-04-20T08:00:00.000Z',
-      fields: [
-        {
-          id: 'fld-01',
-          key: 'reporting_unit',
-          label: 'Đơn vị báo cáo',
-          dataType: 'text',
-          required: true,
-          visible: true,
-          order: 1,
-          isSystemDefault: true,
-        },
-        {
-          id: 'fld-02',
-          key: 'reporting_period',
-          label: 'Kỳ báo cáo',
-          dataType: 'date',
-          required: true,
-          visible: true,
-          order: 2,
-          isSystemDefault: true,
-        },
-      ],
-      indicators: [
-        {
-          id: 'ind-01',
-          code: 'VH001',
-          name: 'Tỷ lệ uptime hạ tầng',
-          unit: '%',
-          type: 'input',
-          group: 'Chất lượng mạng',
-          formula: null,
-          hasReportData: true,
-        },
-        {
-          id: 'ind-02',
-          code: 'VH002',
-          name: 'Số sự cố nghiêm trọng',
-          unit: 'Vụ',
-          type: 'input',
-          group: 'Sự cố',
-          formula: null,
-          hasReportData: true,
-        },
-      ],
-    },
-    {
-      id: 'tpl-02',
-      code: 'KPI-SALE-002',
-      name: 'Biểu mẫu doanh thu bán hàng',
-      description: 'Thu thập doanh thu, tăng trưởng và cơ cấu sản phẩm.',
-      domain: 'Kinh doanh',
-      cycle: 'quarter',
-      status: 'active',
-      assignedUnits: 11,
-      completionRate: 64,
-      hasReportData: false,
-      referenceFiles: ['template-sale-q.xlsx'],
-      updatedAt: '2026-04-18T03:20:00.000Z',
-      fields: [
-        {
-          id: 'fld-03',
-          key: 'reporting_unit',
-          label: 'Đơn vị báo cáo',
-          dataType: 'text',
-          required: true,
-          visible: true,
-          order: 1,
-          isSystemDefault: true,
-        },
-      ],
-      indicators: [
-        {
-          id: 'ind-03',
-          code: 'KD001',
-          name: 'Doanh thu thuần',
-          unit: 'Tỷ VNĐ',
-          type: 'input',
-          group: 'Doanh thu',
-          formula: null,
-          hasReportData: false,
-        },
-      ],
-    },
-    {
-      id: 'tpl-03',
-      code: 'KPI-HR-003',
-      name: 'Biểu mẫu nhân sự theo năm',
-      description: 'Theo dõi biến động nhân sự, đào tạo và năng suất.',
-      domain: 'Nhân sự',
-      cycle: 'year',
-      status: 'inactive',
-      assignedUnits: 6,
-      completionRate: 100,
-      hasReportData: true,
-      referenceFiles: ['hr-yearly-template.pdf'],
-      updatedAt: '2026-03-30T06:10:00.000Z',
-      fields: [
-        {
-          id: 'fld-04',
-          key: 'reporting_year',
-          label: 'Năm báo cáo',
-          dataType: 'number',
-          required: true,
-          visible: true,
-          order: 1,
-          isSystemDefault: true,
-        },
-      ],
-      indicators: [
-        {
-          id: 'ind-04',
-          code: 'NS001',
-          name: 'Tỷ lệ nghỉ việc',
-          unit: '%',
-          type: 'input',
-          group: 'Biến động nhân sự',
-          formula: null,
-          hasReportData: true,
-        },
-      ],
-    },
-  ],
+type BeCatalogItem = { id: string; code?: string; name?: string }
+type BeForm = {
+  id: string
+  code: string
+  name: string
+  description?: string
+  fieldCategoryId?: string
+  fieldCategory?: { id: string; name?: string } | string
+  fieldCategoryName?: string
+  periodType?: PeriodType
+  isActive?: boolean
+  updatedAt?: string
+}
+type BeAttribute = {
+  id: string
+  parentId?: string | null
+  name?: string
+  key?: string
+  dataType?: string
+  isRequired?: boolean
+  isVisible?: boolean
+  sortOrder?: number
+  order?: number
+  level?: number
+}
+type BeIndicator = {
+  id: string
+  parentId?: string | null
+  displayIndex?: string
+  code?: string
+  name?: string
+  unit?: string
+  dataType?: string
+  isRequired?: boolean
+  isCalculated?: boolean
+  sortOrder?: number
+  order?: number
+  level?: number
+  formula?: string | null
+  isActive?: boolean
 }
 
-const wait = (ms = NETWORK_DELAY_MS) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms))
+const mapAttribute = (item: BeAttribute): TemplateField => ({
+  id: item.id,
+  key: item.key ?? item.name ?? '',
+  label: item.name ?? item.key ?? '',
+  dataType: item.dataType ?? 'text',
+  required: item.isRequired ?? false,
+  visible: item.isVisible ?? true,
+  order: item.sortOrder ?? item.order ?? 0,
+  parentId: item.parentId ?? null,
+  level: item.level ?? 0,
+  isSystemDefault: false,
+})
 
-async function simulate<T>(action: () => T): Promise<T> {
-  await wait()
-  return action()
-}
+const mapIndicator = (item: BeIndicator): TemplateIndicator => ({
+  id: item.id,
+  code: item.code ?? item.displayIndex ?? '',
+  name: item.name ?? '',
+  unit: item.unit ?? '',
+  type: item.isCalculated ? 'calculated' : 'input',
+  group: '',
+  formula: item.formula ?? null,
+  parentId: item.parentId ?? null,
+  order: item.sortOrder ?? item.order ?? 0,
+  level: item.level ?? 0,
+  hasReportData: false,
+})
 
-function normalize(value: string) {
-  return value.trim().toLowerCase()
-}
-
-function nextId(prefix: string, items: Array<{ id: string }>) {
-  return `${prefix}-${items.length + 1}-${Date.now()}`
-}
-
-function cloneTemplate(template: FormTemplate): FormTemplate {
-  return {
-    ...template,
-    referenceFiles: [...template.referenceFiles],
-    fields: template.fields.map((field) => ({ ...field })),
-    indicators: template.indicators.map((indicator) => ({ ...indicator })),
-  }
-}
-
-function ensureTemplateExists(templateId: string) {
-  const template = db.templates.find((item) => item.id === templateId)
-  if (!template) {
-    throw new Error('Không tìm thấy biểu mẫu.')
-  }
-  return template
-}
-
-function ensureTemplateNameUnique(name: string, domain: string, skipId?: string) {
-  const duplicated = db.templates.find(
-    (item) =>
-      item.id !== skipId &&
-      normalize(item.domain) === normalize(domain) &&
-      normalize(item.name) === normalize(name)
+async function listAttributes(formId: string) {
+  const response = await apiClient.get<BeAttribute[] | { items?: BeAttribute[] }>(
+    `/forms/${formId}/attributes`
   )
-  if (duplicated) {
-    throw new Error('Tên biểu mẫu đã tồn tại trong cùng lĩnh vực.')
-  }
+  const payload = response.data
+  const items = Array.isArray(payload) ? payload : (payload.items ?? [])
+  return items.map(mapAttribute)
 }
 
-function ensureTemplateCodeUnique(code: string, skipId?: string) {
-  const duplicated = db.templates.find(
-    (item) => item.id !== skipId && normalize(item.code) === normalize(code)
+async function listIndicators(formId: string) {
+  const response = await apiClient.get<BeIndicator[] | { items?: BeIndicator[] }>(
+    `/forms/${formId}/indicators`
   )
-  if (duplicated) {
-    throw new Error('Mã biểu mẫu đã tồn tại.')
-  }
-}
-
-function ensureTemplateNameLength(name: string) {
-  if (name.trim().length > 255) {
-    throw new Error('Tên biểu mẫu tối đa 255 ký tự.')
-  }
-}
-
-function ensureUniqueIndicatorCode(template: FormTemplate, code: string, skipId?: string) {
-  const duplicated = template.indicators.find(
-    (item) => item.id !== skipId && normalize(item.code) === normalize(code)
-  )
-  if (duplicated) {
-    throw new Error('Mã chỉ tiêu đã tồn tại trong biểu mẫu.')
-  }
-}
-
-function normalizeReferenceFiles(files: string[]) {
-  return files.map((item) => item.trim()).filter(Boolean)
-}
-
-function defaultFieldsTemplate(templateId: string): TemplateField[] {
-  return [
-    {
-      id: nextId(`fld-${templateId}`, []),
-      key: 'reporting_unit',
-      label: 'Đơn vị báo cáo',
-      dataType: 'text',
-      required: true,
-      visible: true,
-      order: 1,
-      parentId: null,
-      level: 0,
-      isSystemDefault: true,
-    },
-    {
-      id: nextId(`fld-${templateId}`, []),
-      key: 'reporting_period',
-      label: 'Kỳ báo cáo',
-      dataType: 'date',
-      required: true,
-      visible: true,
-      order: 2,
-      parentId: null,
-      level: 0,
-      isSystemDefault: true,
-    },
-  ]
-}
-
-function createImportedIndicator(template: FormTemplate, index: number): TemplateIndicator {
-  const code = `IMP${String(template.indicators.length + index + 1).padStart(3, '0')}`
-  return {
-    id: nextId('ind', template.indicators),
-    code,
-    name: `Chỉ tiêu import ${template.indicators.length + index + 1}`,
-    unit: '%',
-    type: 'input',
-    group: 'Import Excel',
-    formula: null,
-    parentId: null,
-    order: template.indicators.length + index + 1,
-    level: 0,
-    hasReportData: false,
-  }
-}
-
-function createImportedField(template: FormTemplate, index: number): TemplateField {
-  return {
-    id: nextId('fld', template.fields),
-    key: `import_field_${template.fields.length + index + 1}`,
-    label: `Thuộc tính import ${template.fields.length + index + 1}`,
-    dataType: 'text',
-    required: false,
-    visible: true,
-    order: template.fields.length + index + 1,
-    parentId: null,
-    level: 0,
-    isSystemDefault: false,
-  }
-}
-
-export const formManagementMockApi = {
-  listTemplates: () => simulate(() => db.templates.map((item) => cloneTemplate(item))),
-
-  listDomains: () =>
-    simulate(() => {
-      const domainSet = new Set<string>()
-      db.templates.forEach((item) => {
-        domainSet.add(item.domain)
-      })
-      return Array.from(domainSet).sort((a, b) => a.localeCompare(b))
-    }),
-
-  getTemplate: (templateId: string) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      return cloneTemplate(template)
-    }),
-
-  createTemplate: (input: CreateTemplateInput) =>
-    simulate(() => {
-      const payload = {
-        ...input,
-        code: input.code.trim(),
-        name: input.name.trim(),
-        description: input.description.trim(),
-        domain: input.domain.trim(),
-      }
-
-      if (!payload.code || !payload.name || !payload.domain) {
-        throw new Error('Mã, tên và lĩnh vực biểu mẫu là bắt buộc.')
-      }
-
-      ensureTemplateNameLength(payload.name)
-      ensureTemplateCodeUnique(payload.code)
-      ensureTemplateNameUnique(payload.name, payload.domain)
-
-      let fields = defaultFieldsTemplate(payload.code)
-      let indicators: TemplateIndicator[] = []
-      if (payload.cloneFromTemplateId) {
-        const source = ensureTemplateExists(payload.cloneFromTemplateId)
-        fields = source.fields.map((item) => ({
-          ...item,
-          id: nextId('fld', fields),
-        }))
-        indicators = source.indicators.map((item) => ({
-          ...item,
-          id: nextId('ind', indicators),
-          hasReportData: false,
-        }))
-      }
-
-      const created: FormTemplate = {
-        id: nextId('tpl', db.templates),
-        code: payload.code,
-        name: payload.name,
-        description: payload.description,
-        domain: payload.domain,
-        cycle: payload.cycle,
-        status: payload.status,
-        assignedUnits: 0,
-        completionRate: 0,
-        hasReportData: false,
-        referenceFiles: normalizeReferenceFiles(payload.referenceFiles ?? []),
-        updatedAt: new Date().toISOString(),
-        fields,
-        indicators,
-      }
-
-      db.templates.unshift(created)
-      return cloneTemplate(created)
-    }),
-
-  updateTemplate: (templateId: string, input: UpdateTemplateInput) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const payload = {
-        ...input,
-        name: input.name.trim(),
-        description: input.description.trim(),
-        domain: input.domain.trim(),
-      }
-
-      if (!payload.name || !payload.domain) {
-        throw new Error('Tên và lĩnh vực biểu mẫu là bắt buộc.')
-      }
-
-      ensureTemplateNameLength(payload.name)
-      ensureTemplateNameUnique(payload.name, payload.domain, templateId)
-
-      template.name = payload.name
-      template.description = payload.description
-      template.domain = payload.domain
-      template.cycle = payload.cycle
-      template.status = payload.status
-      template.referenceFiles = normalizeReferenceFiles(payload.referenceFiles ?? [])
-      template.updatedAt = new Date().toISOString()
-
-      return cloneTemplate(template)
-    }),
-
-  deleteTemplate: (templateId: string, mode: 'hard' | 'inactive') =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      if (mode === 'hard') {
-        if (template.hasReportData) {
-          throw new Error(
-            'Biểu mẫu đã có dữ liệu báo cáo phát sinh, chỉ cho phép chuyển inactive.'
-          )
-        }
-        db.templates = db.templates.filter((item) => item.id !== templateId)
-        return true
-      }
-      template.status = 'inactive'
-      template.updatedAt = new Date().toISOString()
-      return true
-    }),
-
-  addReferenceFile: (templateId: string, fileName: string) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const value = fileName.trim()
-      if (!value) {
-        throw new Error('Tên file không hợp lệ.')
-      }
-      if (!template.referenceFiles.some((item) => normalize(item) === normalize(value))) {
-        template.referenceFiles.push(value)
-      }
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  removeReferenceFile: (templateId: string, fileName: string) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      template.referenceFiles = template.referenceFiles.filter(
-        (item) => normalize(item) !== normalize(fileName)
-      )
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  createField: (templateId: string, input: CreateFieldInput) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      if (!input.key.trim() || !input.label.trim()) {
-        throw new Error('Key và tên thuộc tính là bắt buộc.')
-      }
-      const duplicated = template.fields.find(
-        (item) => normalize(item.key) === normalize(input.key)
-      )
-      if (duplicated) {
-        throw new Error('Key thuộc tính đã tồn tại trong biểu mẫu.')
-      }
-      const field: TemplateField = {
-        id: nextId('fld', template.fields),
-        ...input,
-        key: input.key.trim(),
-        label: input.label.trim(),
-        parentId: input.parentId ?? null,
-        level: input.level ?? 0,
-        isSystemDefault: false,
-      }
-      template.fields.push(field)
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  updateField: (templateId: string, fieldId: string, input: UpdateFieldInput) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const field = template.fields.find((item) => item.id === fieldId)
-      if (!field) {
-        throw new Error('Không tìm thấy thuộc tính.')
-      }
-      if (!input.key.trim() || !input.label.trim()) {
-        throw new Error('Key và tên thuộc tính là bắt buộc.')
-      }
-      const duplicated = template.fields.find(
-        (item) => item.id !== fieldId && normalize(item.key) === normalize(input.key)
-      )
-      if (duplicated) {
-        throw new Error('Key thuộc tính đã tồn tại trong biểu mẫu.')
-      }
-      Object.assign(field, {
-        ...input,
-        key: input.key.trim(),
-        label: input.label.trim(),
-      })
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  deleteField: (templateId: string, fieldId: string) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const field = template.fields.find((item) => item.id === fieldId)
-      if (!field) {
-        throw new Error('Không tìm thấy thuộc tính.')
-      }
-      if (field.isSystemDefault) {
-        throw new Error('Thuộc tính mặc định hệ thống không cho phép xóa.')
-      }
-      template.fields = template.fields.filter((item) => item.id !== fieldId)
-      template.updatedAt = new Date().toISOString()
-      return true
-    }),
-
-  importFieldsFromExcel: (templateId: string) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const imported = [createImportedField(template, 0), createImportedField(template, 1)]
-      template.fields.push(...imported)
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  createIndicator: (templateId: string, input: CreateIndicatorInput) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      if (!input.code.trim() || !input.name.trim()) {
-        throw new Error('Mã và tên chỉ tiêu là bắt buộc.')
-      }
-      ensureUniqueIndicatorCode(template, input.code)
-      if (input.type === 'calculated' && !input.formula?.trim()) {
-        throw new Error('Chỉ tiêu tự động tính phải có công thức.')
-      }
-      const indicator: TemplateIndicator = {
-        id: nextId('ind', template.indicators),
-        ...input,
-        code: input.code.trim(),
-        name: input.name.trim(),
-        group: input.group.trim(),
-        unit: input.unit.trim(),
-        formula: input.formula?.trim() ? input.formula.trim() : null,
-        parentId: input.parentId ?? null,
-        order: input.order ?? template.indicators.length + 1,
-        level: input.level ?? 0,
-        hasReportData: false,
-      }
-      template.indicators.push(indicator)
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  updateIndicator: (templateId: string, indicatorId: string, input: UpdateIndicatorInput) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const indicator = template.indicators.find((item) => item.id === indicatorId)
-      if (!indicator) {
-        throw new Error('Không tìm thấy chỉ tiêu.')
-      }
-      if (!input.code.trim() || !input.name.trim()) {
-        throw new Error('Mã và tên chỉ tiêu là bắt buộc.')
-      }
-      ensureUniqueIndicatorCode(template, input.code, indicatorId)
-      if (input.type === 'calculated' && !input.formula?.trim()) {
-        throw new Error('Chỉ tiêu tự động tính phải có công thức.')
-      }
-      Object.assign(indicator, {
-        ...input,
-        code: input.code.trim(),
-        name: input.name.trim(),
-        group: input.group.trim(),
-        unit: input.unit.trim(),
-        formula: input.formula?.trim() ? input.formula.trim() : null,
-      })
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  deleteIndicator: (templateId: string, indicatorId: string) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const indicator = template.indicators.find((item) => item.id === indicatorId)
-      if (!indicator) {
-        throw new Error('Không tìm thấy chỉ tiêu.')
-      }
-      if (indicator.hasReportData) {
-        throw new Error('Không thể xóa chỉ tiêu đã có dữ liệu báo cáo.')
-      }
-      template.indicators = template.indicators.filter((item) => item.id !== indicatorId)
-      template.updatedAt = new Date().toISOString()
-      return true
-    }),
-
-  importIndicatorsFromExcel: (templateId: string) =>
-    simulate(() => {
-      const template = ensureTemplateExists(templateId)
-      const imported = [
-        createImportedIndicator(template, 0),
-        createImportedIndicator(template, 1),
-      ]
-      imported.forEach((item) => ensureUniqueIndicatorCode(template, item.code))
-      template.indicators.push(...imported)
-      template.updatedAt = new Date().toISOString()
-      return cloneTemplate(template)
-    }),
-
-  getTemplateCompletionByCycle: (cycle: TemplateCycle) =>
-    simulate(() => {
-      const templates = db.templates.filter((item) => item.cycle === cycle)
-      if (templates.length === 0) {
-        return { cycle, averageCompletion: 0, activeTemplates: 0 }
-      }
-      const total = templates.reduce((sum, item) => sum + item.completionRate, 0)
-      const activeCount = templates.filter((item) => item.status === 'active').length
-      return {
-        cycle,
-        averageCompletion: Math.round(total / templates.length),
-        activeTemplates: activeCount,
-      }
-    }),
+  const payload = response.data
+  const items = Array.isArray(payload) ? payload : (payload.items ?? [])
+  return items.map(mapIndicator)
 }
 
 export const formManagementApi = {
@@ -746,62 +242,55 @@ export const formManagementApi = {
     throw new Error(message)
   },
 
-  listTemplates: async (params?: FormTemplateListParams) => {
-    type ListPayload = {
-      items?: FormTemplate[]
-      data?: FormTemplate[]
-      test?: FormTemplate[]
-    }
-
-    const response = await apiClient.get<FormTemplate[] | ListPayload>('/forms', {
+  listTemplates: async (params?: FormTemplateListParams): Promise<FormTemplateListResult> => {
+    const response = await apiClient.get<BeForm[] | { items?: BeForm[]; meta?: { page?: number; limit?: number; total?: number } }>('/forms', {
       params: {
         search: params?.search ?? '',
         page: params?.page ?? 1,
         limit: params?.limit ?? 20,
-        status: params?.status ?? 'all',
+        status: params?.status && params.status !== 'all' ? params.status : '',
         period: params?.period ?? '',
         category: params?.category ?? '',
       },
     })
-
     const payload = response.data
-    if (Array.isArray(payload)) return payload
-    return payload.items ?? payload.data ?? payload.test ?? []
-  },
-
-  listReportPeriodsCatalog: async (
-    status: CatalogStatusFilter = 'all',
-    isGetAll = true,
-  ) => {
-    type BeCatalogItem = { id: string; code?: string; name?: string }
-    const response = await apiClient.get<{ items?: BeCatalogItem[] } | BeCatalogItem[]>(
-      '/report-periods',
-      {
-        params: { status, isGetAll },
-      },
-    )
-    const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
-    return items.map<CatalogOption>((item) => ({
+    const list = Array.isArray(payload) ? payload : (payload.items ?? [])
+    const items = list.map<FormTemplate>((item) => ({
       id: item.id,
-      code: item.code ?? '',
-      name: item.name ?? '',
+      code: item.code,
+      name: item.name,
+      description: item.description ?? '',
+      fieldCategoryId:
+        item.fieldCategoryId ??
+        (typeof item.fieldCategory === 'string' ? '' : item.fieldCategory?.id) ??
+        '',
+      fieldCategoryName:
+        item.fieldCategoryName ??
+        (typeof item.fieldCategory === 'string' ? item.fieldCategory : item.fieldCategory?.name),
+      periodType: item.periodType,
+      isActive: item.isActive ?? true,
+      updatedAt: item.updatedAt,
+      fields: [],
+      indicators: [],
     }))
+
+    return {
+      items,
+      meta: {
+        page: Array.isArray(payload) ? params?.page ?? 1 : payload.meta?.page ?? (params?.page ?? 1),
+        limit: Array.isArray(payload) ? params?.limit ?? 20 : payload.meta?.limit ?? (params?.limit ?? 20),
+        total: Array.isArray(payload) ? items.length : payload.meta?.total ?? items.length,
+      },
+    }
   },
 
-  listFieldCategoriesCatalog: async (
-    status: CatalogStatusFilter = 'all',
-    isGetAll = true,
-  ) => {
-    type BeCatalogItem = { id: string; code?: string; name?: string }
+  listFieldCategoriesCatalog: async (status: CatalogStatusFilter = 'all', isGetAll = true) => {
+    const params = status === 'all' ? { isGetAll } : { status, isGetAll }
     const response = await apiClient.get<{ items?: BeCatalogItem[] } | BeCatalogItem[]>(
       '/field-categories',
-      {
-        params: { status, isGetAll },
-      },
+      { params },
     )
-    const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    const items = Array.isArray(response.data) ? response.data : (response.data.items ?? [])
     return items.map<CatalogOption>((item) => ({
       id: item.id,
       code: item.code ?? '',
@@ -810,65 +299,81 @@ export const formManagementApi = {
   },
 
   getTemplate: async (templateId: string) => {
-    const response = await apiClient.get<FormTemplate>(`/forms/${templateId}`)
-    return response.data
+    const [formResponse, fields, indicators] = await Promise.all([
+      apiClient.get<BeForm>(`/forms/${templateId}`),
+      listAttributes(templateId),
+      listIndicators(templateId),
+    ])
+    const form = formResponse.data
+    return {
+      id: form.id,
+      code: form.code,
+      name: form.name,
+      description: form.description ?? '',
+      fieldCategoryId: form.fieldCategoryId ?? (typeof form.fieldCategory === 'string' ? '' : form.fieldCategory?.id) ?? '',
+      fieldCategoryName:
+        form.fieldCategoryName ??
+        (typeof form.fieldCategory === 'string' ? form.fieldCategory : form.fieldCategory?.name),
+      periodType: form.periodType,
+      isActive: form.isActive ?? true,
+      updatedAt: form.updatedAt,
+      fields,
+      indicators,
+    } satisfies FormTemplate
   },
 
   createTemplate: async (input: CreateTemplateInput) => {
-    const response = await apiClient.post<FormTemplate>('/forms', input)
-    return response.data
+    const response = await apiClient.post<BeForm | { id: string }>('/forms', input)
+    const formId = (response.data as { id?: string }).id
+    if (formId) {
+      return await formManagementApi.getTemplate(formId)
+    }
+    const form = response.data as BeForm
+    return {
+      id: form.id,
+      code: form.code,
+      name: form.name,
+      description: form.description ?? '',
+      fieldCategoryId: form.fieldCategoryId ?? input.fieldCategoryId,
+      periodType: form.periodType ?? input.periodType,
+      isActive: form.isActive ?? input.isActive,
+      fields: [],
+      indicators: [],
+    } satisfies FormTemplate
   },
 
   updateTemplate: async (templateId: string, input: UpdateTemplateInput) => {
-    const response = await apiClient.patch<FormTemplate>(`/forms/${templateId}`, input)
-    return response.data
+    await apiClient.patch<BeForm | { ok: boolean }>(`/forms/${templateId}`, input)
+    return await formManagementApi.getTemplate(templateId)
   },
 
-  deleteTemplate: async (templateId: string, mode: 'hard' | 'inactive') => {
-    if (mode === 'hard') {
-      await apiClient.delete(`/forms/${templateId}`)
-      return true
-    }
-
-    await apiClient.patch(`/forms/${templateId}`, { status: 'inactive' })
+  deleteTemplate: async (templateId: string) => {
+    await apiClient.delete(`/forms/${templateId}`)
     return true
   },
 
-  addReferenceFile: async (templateId: string, fileName: string) => {
-    const template = await formManagementApi.getTemplate(templateId)
-    const value = fileName.trim()
-    const referenceFiles = template.referenceFiles ?? []
-    const next = referenceFiles.some((item) => item.trim().toLowerCase() === value.toLowerCase())
-      ? referenceFiles
-      : [...referenceFiles, value]
-    const response = await apiClient.patch<FormTemplate>(`/forms/${templateId}`, {
-      referenceFiles: next,
-    })
-    return response.data
-  },
-
-  removeReferenceFile: async (templateId: string, fileName: string) => {
-    const template = await formManagementApi.getTemplate(templateId)
-    const referenceFiles = (template.referenceFiles ?? []).filter(
-      (item) => item.trim().toLowerCase() !== fileName.trim().toLowerCase(),
-    )
-    const response = await apiClient.patch<FormTemplate>(`/forms/${templateId}`, {
-      referenceFiles,
-    })
-    return response.data
-  },
-
   createField: async (templateId: string, input: CreateFieldInput) => {
-    const response = await apiClient.post<TemplateField>(`/forms/${templateId}/attributes`, input)
-    return response.data
+    const payload = {
+      parentId: input.parentId ?? null,
+      name: input.label,
+      dataType: input.dataType,
+      isRequired: input.required,
+      isVisible: input.visible,
+    }
+    const response = await apiClient.post<BeAttribute>(`/forms/${templateId}/attributes`, payload)
+    return mapAttribute(response.data)
   },
 
   updateField: async (templateId: string, fieldId: string, input: UpdateFieldInput) => {
-    const response = await apiClient.patch<TemplateField>(
-      `/forms/${templateId}/attributes/${fieldId}`,
-      input,
-    )
-    return response.data
+    const payload = {
+      parentId: input.parentId ?? null,
+      name: input.label,
+      dataType: input.dataType,
+      isRequired: input.required,
+      isVisible: input.visible,
+    }
+    const response = await apiClient.patch<BeAttribute>(`/forms/${templateId}/attributes/${fieldId}`, payload)
+    return mapAttribute(response.data)
   },
 
   deleteField: async (templateId: string, fieldId: string) => {
@@ -877,28 +382,36 @@ export const formManagementApi = {
   },
 
   importFieldsFromExcel: async (templateId: string) => {
-    const response = await apiClient.post<FormTemplate>(`/forms/${templateId}/attributes/import`)
-    return response.data
+    await apiClient.post(`/forms/${templateId}/attributes/import`)
+    return true
   },
 
   createIndicator: async (templateId: string, input: CreateIndicatorInput) => {
-    const response = await apiClient.post<TemplateIndicator>(
-      `/forms/${templateId}/indicators`,
-      input,
-    )
-    return response.data
+    const payload = {
+      parentId: input.parentId ?? null,
+      displayIndex: input.code,
+      code: input.code,
+      name: input.name,
+      unit: input.unit,
+      dataType: 'number',
+      isRequired: true,
+      isCalculated: input.type === 'calculated',
+      sortOrder: input.order ?? 0,
+      isActive: true,
+    }
+    const response = await apiClient.post<BeIndicator>(`/forms/${templateId}/indicators`, payload)
+    return mapIndicator(response.data)
   },
 
-  updateIndicator: async (
-    templateId: string,
-    indicatorId: string,
-    input: UpdateIndicatorInput,
-  ) => {
-    const response = await apiClient.patch<TemplateIndicator>(
-      `/forms/${templateId}/indicators/${indicatorId}`,
-      input,
-    )
-    return response.data
+  updateIndicator: async (templateId: string, indicatorId: string, input: UpdateIndicatorInput) => {
+    const payload = {
+      parentId: input.parentId ?? null,
+      displayIndex: input.code,
+      name: input.name,
+      unit: input.unit,
+    }
+    const response = await apiClient.patch<BeIndicator>(`/forms/${templateId}/indicators/${indicatorId}`, payload)
+    return mapIndicator(response.data)
   },
 
   deleteIndicator: async (templateId: string, indicatorId: string) => {
@@ -907,38 +420,17 @@ export const formManagementApi = {
   },
 
   importIndicatorsFromExcel: async (templateId: string) => {
-    const response = await apiClient.post<FormTemplate>(`/forms/${templateId}/indicators/import`)
-    return response.data
+    await apiClient.post(`/forms/${templateId}/indicators/import`)
+    return true
   },
 
-  reorderFields: async (
-    templateId: string,
-    items: Array<{ id: string; parentId?: string | null }>,
-  ) => {
+  reorderFields: async (templateId: string, items: Array<{ id: string; parentId?: string | null }>) => {
     await apiClient.post(`/forms/${templateId}/attributes/reorder`, { items })
     return true
   },
 
-  reorderIndicators: async (
-    templateId: string,
-    items: Array<{ id: string; parentId?: string | null }>,
-  ) => {
+  reorderIndicators: async (templateId: string, items: Array<{ id: string; parentId?: string | null }>) => {
     await apiClient.post(`/forms/${templateId}/indicators/reorder`, { items })
     return true
-  },
-
-  getTemplateCompletionByCycle: async (cycle: TemplateCycle) => {
-    const templates = await formManagementApi.listTemplates()
-    const byCycle = templates.filter((item) => item.cycle === cycle)
-    if (byCycle.length === 0) {
-      return { cycle, averageCompletion: 0, activeTemplates: 0 }
-    }
-    const total = byCycle.reduce((sum, item) => sum + (item.completionRate ?? 0), 0)
-    const activeCount = byCycle.filter((item) => item.status === 'active').length
-    return {
-      cycle,
-      averageCompletion: Math.round(total / byCycle.length),
-      activeTemplates: activeCount,
-    }
   },
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import {
   DndContext,
   PointerSensor,
@@ -224,7 +224,7 @@ function IndicatorSortableNode({
 
             <div style={{ paddingInlineStart: `${depth * 14}px` }}>
               <p className='text-xs text-muted-foreground'>
-                {node.code} · STT {node.order}
+                {node.code} Â· STT {node.order}
               </p>
               <p className='text-sm font-medium'>{node.name}</p>
               <p className='text-xs text-muted-foreground'>{node.unit}</p>
@@ -251,7 +251,7 @@ function IndicatorSortableNode({
           isChildDropOver ? 'border-primary bg-primary/5' : ''
         }`}
       >
-        Thả vào đây để chuyển làm node con của {node.code}
+        Tháº£ vÃ o Ä‘Ã¢y Ä‘á»ƒ chuyá»ƒn lÃ m node con cá»§a {node.code}
       </div>
 
       {hasChildren && isExpanded && (
@@ -332,12 +332,12 @@ function AttributeSortableNode({
 
             <div style={{ paddingInlineStart: `${depth * 14}px` }}>
               <p className='text-xs text-muted-foreground'>
-                {node.key} · STT {node.order}
+                {node.key} Â· STT {node.order}
               </p>
               <p className='text-sm font-medium'>{node.label}</p>
               <div className='mt-1 flex items-center gap-2'>
                 <Badge variant='outline'>{node.dataType}</Badge>
-                {node.required && <Badge>Bắt buộc</Badge>}
+                {node.required && <Badge>Báº¯t buá»™c</Badge>}
               </div>
             </div>
           </div>
@@ -362,7 +362,7 @@ function AttributeSortableNode({
           isChildDropOver ? 'border-primary bg-primary/5' : ''
         }`}
       >
-        Thả vào đây để chuyển làm node con của {node.key}
+        Tháº£ vÃ o Ä‘Ã¢y Ä‘á»ƒ chuyá»ƒn lÃ m node con cá»§a {node.key}
       </div>
 
       {hasChildren && isExpanded && (
@@ -399,7 +399,7 @@ export function TemplateStructureTab({
     queryKey: ['form-management', 'templates'],
     queryFn: () => formManagementApi.listTemplates(),
   })
-  const templates = templatesQuery.data ?? EMPTY_TEMPLATES
+  const templates = templatesQuery.data?.items ?? EMPTY_TEMPLATES
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplateId ?? '')
   const currentTemplateId = selectedTemplateId || initialTemplateId || templates[0]?.id || ''
   const selectedTemplate = useMemo(
@@ -486,7 +486,7 @@ function TemplateStructureContent({
     const cols: ColumnDef<PreviewRow>[] = [
       {
         id: 'indicator',
-        header: 'Chỉ tiêu',
+        header: 'Chá»‰ tiÃªu',
         cell: ({ row }) => (
           <div style={{ paddingInlineStart: `${row.original.depth * 14}px` }}>
             <div className='text-xs text-muted-foreground'>{row.original.code}</div>
@@ -517,7 +517,7 @@ function TemplateStructureContent({
     mutationFn: ({ templateId, payload }: { templateId: string; payload: FieldFormState }) =>
       formManagementApi.createField(templateId, payload),
     onSuccess: () => {
-      toast.success('Đã thêm thuộc tính mới.')
+      toast.success('ÄÃ£ thÃªm thuá»™c tÃ­nh má»›i.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
       closeFieldDialog()
     },
@@ -535,7 +535,7 @@ function TemplateStructureContent({
       payload: FieldFormState
     }) => formManagementApi.updateField(templateId, fieldId, payload),
     onSuccess: () => {
-      toast.success('Đã cập nhật thuộc tính.')
+      toast.success('ÄÃ£ cáº­p nháº­t thuá»™c tÃ­nh.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
       closeFieldDialog()
     },
@@ -546,7 +546,7 @@ function TemplateStructureContent({
     mutationFn: ({ templateId, fieldId }: { templateId: string; fieldId: string }) =>
       formManagementApi.deleteField(templateId, fieldId),
     onSuccess: () => {
-      toast.success('Đã xóa thuộc tính.')
+      toast.success('ÄÃ£ xÃ³a thuá»™c tÃ­nh.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
     },
     onError: (error) => toast.error(error.message),
@@ -555,7 +555,7 @@ function TemplateStructureContent({
   const importFieldsMutation = useMutation({
     mutationFn: (templateId: string) => formManagementApi.importFieldsFromExcel(templateId),
     onSuccess: () => {
-      toast.success('Đã import thuộc tính từ Excel.')
+      toast.success('ÄÃ£ import thuá»™c tÃ­nh tá»« Excel.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
     },
     onError: (error) => toast.error(error.message),
@@ -568,7 +568,7 @@ function TemplateStructureContent({
         formula: payload.formula || null,
       }),
     onSuccess: () => {
-      toast.success('Đã thêm chỉ tiêu mới.')
+      toast.success('ÄÃ£ thÃªm chá»‰ tiÃªu má»›i.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
       closeIndicatorDialog()
     },
@@ -590,7 +590,7 @@ function TemplateStructureContent({
         formula: payload.formula || null,
       }),
     onSuccess: () => {
-      toast.success('Đã cập nhật chỉ tiêu.')
+      toast.success('ÄÃ£ cáº­p nháº­t chá»‰ tiÃªu.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
       closeIndicatorDialog()
     },
@@ -606,7 +606,7 @@ function TemplateStructureContent({
       indicatorId: string
     }) => formManagementApi.deleteIndicator(templateId, indicatorId),
     onSuccess: () => {
-      toast.success('Đã xóa chỉ tiêu.')
+      toast.success('ÄÃ£ xÃ³a chá»‰ tiÃªu.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
     },
     onError: (error) => toast.error(error.message),
@@ -616,7 +616,7 @@ function TemplateStructureContent({
     mutationFn: (templateId: string) =>
       formManagementApi.importIndicatorsFromExcel(templateId),
     onSuccess: () => {
-      toast.success('Đã import chỉ tiêu từ Excel.')
+      toast.success('ÄÃ£ import chá»‰ tiÃªu tá»« Excel.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
     },
     onError: (error) => toast.error(error.message),
@@ -654,7 +654,7 @@ function TemplateStructureContent({
     onSuccess: () => {
       dispatch(setBuilderStatus('idle'))
       dispatch(markBuilderClean())
-      toast.success('Đã lưu cấu hình Form Builder.')
+      toast.success('ÄÃ£ lÆ°u cáº¥u hÃ¬nh Form Builder.')
       queryClient.invalidateQueries({ queryKey: ['form-management'] })
     },
     onError: (error) => {
@@ -692,7 +692,7 @@ function TemplateStructureContent({
     setFieldForm({
       key: field.key,
       label: field.label,
-      dataType: field.dataType,
+      dataType: field.dataType as FieldDataType,
       required: field.required,
       visible: field.visible,
       order: field.order,
@@ -728,11 +728,11 @@ function TemplateStructureContent({
 
   const submitFieldForm = () => {
     if (!currentTemplateId) {
-      toast.error('Vui lòng chọn biểu mẫu.')
+      toast.error('Vui lÃ²ng chá»n biá»ƒu máº«u.')
       return
     }
     if (!fieldForm.key.trim() || !fieldForm.label.trim()) {
-      toast.error('Key và tên thuộc tính là bắt buộc.')
+      toast.error('Key vÃ  tÃªn thuá»™c tÃ­nh lÃ  báº¯t buá»™c.')
       return
     }
 
@@ -750,15 +750,15 @@ function TemplateStructureContent({
 
   const submitIndicatorForm = () => {
     if (!currentTemplateId) {
-      toast.error('Vui lòng chọn biểu mẫu.')
+      toast.error('Vui lÃ²ng chá»n biá»ƒu máº«u.')
       return
     }
     if (!indicatorForm.code.trim() || !indicatorForm.name.trim()) {
-      toast.error('Mã và tên chỉ tiêu là bắt buộc.')
+      toast.error('MÃ£ vÃ  tÃªn chá»‰ tiÃªu lÃ  báº¯t buá»™c.')
       return
     }
     if (indicatorForm.type === 'calculated' && !indicatorForm.formula.trim()) {
-      toast.error('Chỉ tiêu tự động tính bắt buộc có công thức.')
+      toast.error('Chá»‰ tiÃªu tá»± Ä‘á»™ng tÃ­nh báº¯t buá»™c cÃ³ cÃ´ng thá»©c.')
       return
     }
 
@@ -863,9 +863,9 @@ function TemplateStructureContent({
         <CardHeader className='gap-4'>
           <div className='flex flex-wrap items-start justify-between gap-3'>
             <div>
-              <CardTitle>Cấu hình bảng biểu mẫu</CardTitle>
+              <CardTitle>Cáº¥u hÃ¬nh báº£ng biá»ƒu máº«u</CardTitle>
               <CardDescription>
-                Store RTK riêng cho Form Builder + dnd-kit drag/drop theo rule reorder/reparent.
+                Store RTK riÃªng cho Form Builder + dnd-kit drag/drop theo rule reorder/reparent.
               </CardDescription>
             </div>
             <Button
@@ -883,7 +883,7 @@ function TemplateStructureContent({
             disabled={lockTemplateSelection}
           >
             <SelectTrigger className='w-full sm:w-[460px]'>
-              <SelectValue placeholder='Chọn biểu mẫu để cấu hình cấu trúc' />
+              <SelectValue placeholder='Chá»n biá»ƒu máº«u Ä‘á»ƒ cáº¥u hÃ¬nh cáº¥u trÃºc' />
             </SelectTrigger>
             <SelectContent>
               {templates.map((template) => (
@@ -898,7 +898,7 @@ function TemplateStructureContent({
         <CardContent className='space-y-6'>
           {!selectedTemplate && (
             <div className='rounded-md border border-dashed p-6 text-sm text-muted-foreground'>
-              Chưa có biểu mẫu để cấu hình.
+              ChÆ°a cÃ³ biá»ƒu máº«u Ä‘á»ƒ cáº¥u hÃ¬nh.
             </div>
           )}
 
@@ -908,8 +908,7 @@ function TemplateStructureContent({
                 <span className='font-medium'>{selectedTemplate.name}</span>
                 <span className='text-muted-foreground'>
                   {' '}
-                  - {selectedTemplate.domain} - cập nhật lần cuối{' '}
-                  {new Date(selectedTemplate.updatedAt).toLocaleString('vi-VN')}
+                  - {selectedTemplate.fieldCategoryName ?? selectedTemplate.fieldCategoryId} - cập nhật lần cuối{' '}{selectedTemplate.updatedAt ? new Date(selectedTemplate.updatedAt).toLocaleString('vi-VN') : '-'}
                 </span>
               </div>
 
@@ -929,7 +928,7 @@ function TemplateStructureContent({
                         </Button>
                         <Button size='sm' onClick={() => openCreateIndicatorDialog()}>
                           <PlusCircle />
-                          Thêm
+                          ThÃªm
                         </Button>
                       </div>
                     </div>
@@ -943,7 +942,7 @@ function TemplateStructureContent({
                     >
                       <RootDropZone
                         id='indicator-root-drop'
-                        label='Thả vào đây để chuyển node về cấp gốc'
+                        label='Tháº£ vÃ o Ä‘Ã¢y Ä‘á»ƒ chuyá»ƒn node vá» cáº¥p gá»‘c'
                       />
                       <SortableContext
                         items={indicatorTree.map((item) => item.id)}
@@ -975,7 +974,7 @@ function TemplateStructureContent({
                 <Card className='h-fit'>
                   <CardHeader className='pb-3'>
                     <CardTitle className='text-base'>PreviewTable</CardTitle>
-                    <CardDescription>Bảng chỉ đọc, đồng bộ theo state của RTK store.</CardDescription>
+                    <CardDescription>Báº£ng chá»‰ Ä‘á»c, Ä‘á»“ng bá»™ theo state cá»§a RTK store.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className='overflow-auto rounded-md border'>
@@ -1027,7 +1026,7 @@ function TemplateStructureContent({
                         </Button>
                         <Button size='sm' onClick={() => openCreateFieldDialog()}>
                           <PlusCircle />
-                          Thêm
+                          ThÃªm
                         </Button>
                       </div>
                     </div>
@@ -1041,7 +1040,7 @@ function TemplateStructureContent({
                     >
                       <RootDropZone
                         id='attribute-root-drop'
-                        label='Thả vào đây để chuyển node về cấp gốc'
+                        label='Tháº£ vÃ o Ä‘Ã¢y Ä‘á»ƒ chuyá»ƒn node vá» cáº¥p gá»‘c'
                       />
                       <SortableContext
                         items={attributeTree.map((item) => item.id)}
@@ -1078,20 +1077,20 @@ function TemplateStructureContent({
       <Dialog open={fieldDialogOpen} onOpenChange={setFieldDialogOpen}>
         <DialogContent className='sm:max-w-xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingField ? 'Sửa thuộc tính' : 'Thêm thuộc tính'}</DialogTitle>
-            <DialogDescription>Cấu hình thuộc tính theo phân cấp cây.</DialogDescription>
+            <DialogTitle>{editingField ? 'Sá»­a thuá»™c tÃ­nh' : 'ThÃªm thuá»™c tÃ­nh'}</DialogTitle>
+            <DialogDescription>Cáº¥u hÃ¬nh thuá»™c tÃ­nh theo phÃ¢n cáº¥p cÃ¢y.</DialogDescription>
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label>Key thuộc tính</Label>
+              <Label>Key thuá»™c tÃ­nh</Label>
               <Input
                 value={fieldForm.key}
                 onChange={(event) => setFieldForm((prev) => ({ ...prev, key: event.target.value }))}
               />
             </div>
             <div className='space-y-2'>
-              <Label>Tên hiển thị</Label>
+              <Label>TÃªn hiá»ƒn thá»‹</Label>
               <Input
                 value={fieldForm.label}
                 onChange={(event) =>
@@ -1100,7 +1099,7 @@ function TemplateStructureContent({
               />
             </div>
             <div className='space-y-2'>
-              <Label>Kiểu dữ liệu</Label>
+              <Label>Kiá»ƒu dá»¯ liá»‡u</Label>
               <Select
                 value={fieldForm.dataType}
                 onValueChange={(value: FieldDataType) =>
@@ -1120,7 +1119,7 @@ function TemplateStructureContent({
               </Select>
             </div>
             <div className='space-y-2'>
-              <Label>Nút cha</Label>
+              <Label>NÃºt cha</Label>
               <Select
                 value={fieldForm.parentId ?? 'root'}
                 onValueChange={(value) =>
@@ -1131,7 +1130,7 @@ function TemplateStructureContent({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='root'>Gốc</SelectItem>
+                  <SelectItem value='root'>Gá»‘c</SelectItem>
                   {attributes
                     .filter((item) => item.id !== editingField?.id)
                     .map((item) => (
@@ -1143,7 +1142,7 @@ function TemplateStructureContent({
               </Select>
             </div>
             <div className='space-y-2'>
-              <Label>Thứ tự</Label>
+              <Label>Thá»© tá»±</Label>
               <Input
                 type='number'
                 min={1}
@@ -1164,7 +1163,7 @@ function TemplateStructureContent({
                   setFieldForm((prev) => ({ ...prev, required: event.target.checked }))
                 }
               />
-              Bắt buộc nhập liệu
+              Báº¯t buá»™c nháº­p liá»‡u
             </label>
             <label className='inline-flex items-center gap-2 text-sm'>
               <input
@@ -1174,19 +1173,19 @@ function TemplateStructureContent({
                   setFieldForm((prev) => ({ ...prev, visible: event.target.checked }))
                 }
               />
-              Hiển thị trên form
+              Hiá»ƒn thá»‹ trÃªn form
             </label>
           </div>
 
           <DialogFooter>
             <Button variant='outline' onClick={closeFieldDialog}>
-              Hủy
+              Há»§y
             </Button>
             <Button
               onClick={submitFieldForm}
               disabled={createFieldMutation.isPending || updateFieldMutation.isPending}
             >
-              {editingField ? 'Lưu thay đổi' : 'Thêm thuộc tính'}
+              {editingField ? 'LÆ°u thay Ä‘á»•i' : 'ThÃªm thuá»™c tÃ­nh'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1195,13 +1194,13 @@ function TemplateStructureContent({
       <Dialog open={indicatorDialogOpen} onOpenChange={setIndicatorDialogOpen}>
         <DialogContent className='sm:max-w-2xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingIndicator ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu'}</DialogTitle>
-            <DialogDescription>Quản lý cây chỉ tiêu theo mã, nhóm và công thức.</DialogDescription>
+            <DialogTitle>{editingIndicator ? 'Sá»­a chá»‰ tiÃªu' : 'ThÃªm chá»‰ tiÃªu'}</DialogTitle>
+            <DialogDescription>Quáº£n lÃ½ cÃ¢y chá»‰ tiÃªu theo mÃ£, nhÃ³m vÃ  cÃ´ng thá»©c.</DialogDescription>
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label>Mã chỉ tiêu</Label>
+              <Label>MÃ£ chá»‰ tiÃªu</Label>
               <Input
                 value={indicatorForm.code}
                 onChange={(event) =>
@@ -1210,7 +1209,7 @@ function TemplateStructureContent({
               />
             </div>
             <div className='space-y-2'>
-              <Label>Tên chỉ tiêu</Label>
+              <Label>TÃªn chá»‰ tiÃªu</Label>
               <Input
                 value={indicatorForm.name}
                 onChange={(event) =>
@@ -1219,7 +1218,7 @@ function TemplateStructureContent({
               />
             </div>
             <div className='space-y-2'>
-              <Label>Đơn vị tính</Label>
+              <Label>ÄÆ¡n vá»‹ tÃ­nh</Label>
               <Input
                 value={indicatorForm.unit}
                 onChange={(event) =>
@@ -1228,7 +1227,7 @@ function TemplateStructureContent({
               />
             </div>
             <div className='space-y-2'>
-              <Label>Nhóm chỉ tiêu</Label>
+              <Label>NhÃ³m chá»‰ tiÃªu</Label>
               <Input
                 value={indicatorForm.group}
                 onChange={(event) =>
@@ -1237,7 +1236,7 @@ function TemplateStructureContent({
               />
             </div>
             <div className='space-y-2'>
-              <Label>Nút cha</Label>
+              <Label>NÃºt cha</Label>
               <Select
                 value={indicatorForm.parentId ?? 'root'}
                 onValueChange={(value) =>
@@ -1251,7 +1250,7 @@ function TemplateStructureContent({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='root'>Gốc</SelectItem>
+                  <SelectItem value='root'>Gá»‘c</SelectItem>
                   {indicators
                     .filter((item) => item.id !== editingIndicator?.id)
                     .map((item) => (
@@ -1263,7 +1262,7 @@ function TemplateStructureContent({
               </Select>
             </div>
             <div className='space-y-2'>
-              <Label>Thứ tự</Label>
+              <Label>Thá»© tá»±</Label>
               <Input
                 type='number'
                 min={1}
@@ -1274,7 +1273,7 @@ function TemplateStructureContent({
               />
             </div>
             <div className='space-y-2 sm:col-span-2'>
-              <Label>Loại chỉ tiêu</Label>
+              <Label>Loáº¡i chá»‰ tiÃªu</Label>
               <Select
                 value={indicatorForm.type}
                 onValueChange={(value: IndicatorType) =>
@@ -1294,10 +1293,10 @@ function TemplateStructureContent({
               </Select>
             </div>
             <div className='space-y-2 sm:col-span-2'>
-              <Label>Công thức</Label>
+              <Label>CÃ´ng thá»©c</Label>
               <Textarea
                 rows={3}
-                placeholder='Ví dụ: (VH001 / VH002) * 100'
+                placeholder='VÃ­ dá»¥: (VH001 / VH002) * 100'
                 value={indicatorForm.formula}
                 onChange={(event) =>
                   setIndicatorForm((prev) => ({ ...prev, formula: event.target.value }))
@@ -1308,13 +1307,13 @@ function TemplateStructureContent({
 
           <DialogFooter>
             <Button variant='outline' onClick={closeIndicatorDialog}>
-              Hủy
+              Há»§y
             </Button>
             <Button
               onClick={submitIndicatorForm}
               disabled={createIndicatorMutation.isPending || updateIndicatorMutation.isPending}
             >
-              {editingIndicator ? 'Lưu thay đổi' : 'Thêm chỉ tiêu'}
+              {editingIndicator ? 'LÆ°u thay Ä‘á»•i' : 'ThÃªm chá»‰ tiÃªu'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1322,3 +1321,5 @@ function TemplateStructureContent({
     </>
   )
 }
+
+

@@ -1,8 +1,10 @@
+﻿export type CatalogStatusFilter = 'all' | 'true' | 'false'
+
 export type TemplateCycle = 'week' | 'month' | 'quarter' | 'year'
 export type TemplateStatus = 'active' | 'inactive'
-export type CatalogStatusFilter = 'all' | 'true' | 'false'
 export type FieldDataType = 'text' | 'number' | 'percentage' | 'currency' | 'boolean' | 'date'
 export type IndicatorType = 'input' | 'calculated'
+export type PeriodType = 'TUAN' | 'THANG' | 'QUY' | 'NAM'
 
 export type CatalogOption = {
   id: string
@@ -19,6 +21,17 @@ export type FormTemplateListParams = {
   category?: string
 }
 
+export type FormTemplateListMeta = {
+  page: number
+  limit: number
+  total: number
+}
+
+export type FormTemplateListResult = {
+  items: FormTemplate[]
+  meta: FormTemplateListMeta
+}
+
 export type FieldCategory = {
   id: string
   code: string
@@ -32,7 +45,7 @@ export type TemplateField = {
   id: string
   key: string
   label: string
-  dataType: FieldDataType
+  dataType: FieldDataType | string
   required: boolean
   visible: boolean
   order: number
@@ -60,34 +73,41 @@ export type FormTemplate = {
   code: string
   name: string
   description: string
-  domain: string
-  cycle: TemplateCycle
-  status: TemplateStatus
-  assignedUnits: number
-  completionRate: number
-  hasReportData: boolean
-  referenceFiles: string[]
-  updatedAt: string
+  fieldCategoryId: string
+  fieldCategoryName?: string
+  periodType?: PeriodType
+  isActive: boolean
+  updatedAt?: string
   fields: TemplateField[]
   indicators: TemplateIndicator[]
+  domain?: string
+  cycle?: TemplateCycle
+  status?: TemplateStatus
+  assignedUnits?: number
+  completionRate?: number
+  hasReportData?: boolean
+  referenceFiles?: string[]
 }
 
 export type CreateTemplateInput = {
   code: string
   name: string
+  fieldCategoryId: string
+  periodType: PeriodType
   description: string
-  domain: string
-  cycle: TemplateCycle
-  status: TemplateStatus
-  cloneFromTemplateId?: string
-  referenceFiles?: string[]
+  isActive: boolean
 }
 
-export type UpdateTemplateInput = Omit<CreateTemplateInput, 'code' | 'cloneFromTemplateId'>
+export type UpdateTemplateInput = {
+  name: string
+  fieldCategoryId: string
+  periodType: PeriodType
+  description: string
+  isActive: boolean
+}
 
 export type CreateFieldInput = Omit<TemplateField, 'id' | 'isSystemDefault'>
 export type UpdateFieldInput = Omit<TemplateField, 'id' | 'isSystemDefault'>
-
 export type CreateIndicatorInput = Omit<TemplateIndicator, 'id' | 'hasReportData'>
 export type UpdateIndicatorInput = Omit<TemplateIndicator, 'id' | 'hasReportData'>
 
