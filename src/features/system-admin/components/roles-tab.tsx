@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle, Trash2, UserPen } from 'lucide-react'
+import axios from 'axios'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -50,6 +51,43 @@ import {
 const EMPTY_ROLES: Role[] = []
 const EMPTY_USERS: SystemUser[] = []
 const EMPTY_PERMISSIONS: Permission[] = []
+
+const getErrorMessage = (error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as unknown
+    if (typeof data === 'string' && data.trim()) return data
+    if (data && typeof data === 'object') {
+      const record = data as {
+        message?: unknown
+        error?: { message?: unknown } | unknown
+      }
+
+      const directMessage = record.message
+      if (typeof directMessage === 'string' && directMessage.trim()) return directMessage
+      if (Array.isArray(directMessage)) {
+        const parts = directMessage.filter(
+          (item): item is string => typeof item === 'string' && item.trim().length > 0,
+        )
+        if (parts.length > 0) return parts.join('\n')
+      }
+
+      const nestedMessage =
+        record.error && typeof record.error === 'object'
+          ? (record.error as { message?: unknown }).message
+          : undefined
+      if (typeof nestedMessage === 'string' && nestedMessage.trim()) return nestedMessage
+      if (Array.isArray(nestedMessage)) {
+        const parts = nestedMessage.filter(
+          (item): item is string => typeof item === 'string' && item.trim().length > 0,
+        )
+        if (parts.length > 0) return parts.join('\n')
+      }
+    }
+  }
+
+  if (error instanceof Error) return error.message
+  return 'Có lỗi xảy ra.'
+}
 
 const humanizePermissionCode = (code: string) => {
   const normalized = (code ?? '').trim()
@@ -213,7 +251,7 @@ export function RolesTab() {
             )
           })
         })
-        .catch((error: Error) => toast.error(error.message))
+        .catch((error: unknown) => toast.error(getErrorMessage(error)))
     })
   }, [queryClient, roles])
 
@@ -259,7 +297,7 @@ export function RolesTab() {
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getErrorMessage(error)),
   })
 
   const updateMutation = useMutation({
@@ -279,7 +317,7 @@ export function RolesTab() {
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
@@ -289,7 +327,7 @@ export function RolesTab() {
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       setDeletingRole(null)
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getErrorMessage(error)),
   })
 
   const closeForm = () => {
@@ -330,24 +368,22 @@ export function RolesTab() {
             return items.map((item) => (item.id === role.id ? { ...item, permissionIds: ids } : item))
           })
         })
-        .catch((error: Error) => toast.error(error.message))
+        .catch((error: unknown) => toast.error(getErrorMessage(error)))
     }
   }
 
   const submitForm = () => {
-    const code = form.code.trim()
+    const rawCode = form.code.trim()
     const name = form.name.trim()
     const description = form.description.trim()
     const permissionIds = Array.isArray(form.permissionIds) ? form.permissionIds : []
 
-    if (!code || !name || permissionIds.length === 0) {
+    if (!rawCode || !name || permissionIds.length === 0) {
       toast.error('Vui lòng nhập mã role, tên role và chọn ít nhất 1 quyền.')
       return
     }
-    if (!/^[a-z0-9_]{1,50}$/.test(code)) {
-      toast.error('Mã role chỉ gồm chữ thường, số và dấu gạch dưới (tối đa 50 ký tự).')
-      return
-    }
+
+    const code = editingRole ? rawCode : rawCode.toLowerCase()
 
     const payload: RoleFormState = {
       ...form,

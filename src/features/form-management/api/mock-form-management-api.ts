@@ -20,6 +20,14 @@ import { apiClient } from '@/lib/api-client'
 
 const NETWORK_DELAY_MS = 220
 
+const getHttpStatus = (error: unknown): number | undefined =>
+  (error as { response?: { status?: number } } | undefined)?.response?.status
+
+const shouldFallbackToUnderscorePath = (error: unknown) => {
+  const status = getHttpStatus(error)
+  return status === 404 || status === 405
+}
+
 const db: { templates: FormTemplate[] } = {
   templates: [
     {
@@ -657,7 +665,10 @@ export const formManagementApi = {
 
     try {
       return await fetch('/field-categories')
-    } catch {
+    } catch (error) {
+      if (!shouldFallbackToUnderscorePath(error)) {
+        throw error
+      }
       return await fetch('/field_categories')
     }
   },
@@ -674,7 +685,10 @@ export const formManagementApi = {
     try {
       const response = await apiClient.post<FieldCategory>('/field-categories', payload)
       return response.data
-    } catch {
+    } catch (error) {
+      if (!shouldFallbackToUnderscorePath(error)) {
+        throw error
+      }
       const response = await apiClient.post<FieldCategory>('/field_categories', payload)
       return response.data
     }
@@ -692,20 +706,44 @@ export const formManagementApi = {
     try {
       const response = await apiClient.patch<FieldCategory>(`/field-categories/${id}`, payload)
       return response.data
-    } catch {
+    } catch (error) {
+      if (!shouldFallbackToUnderscorePath(error)) {
+        throw error
+      }
       const response = await apiClient.patch<FieldCategory>(`/field_categories/${id}`, payload)
       return response.data
     }
   },
 
   deleteFieldCategory: async (id: string) => {
-    try {
-      await apiClient.delete(`/field-categories/${id}`)
-      return true
-    } catch {
-      await apiClient.delete(`/field_categories/${id}`)
-      return true
+    const attempts: Array<() => Promise<void>> = [
+      () => apiClient.delete(`/field-categories/${id}`),
+      () => apiClient.delete(`/field_categories/${id}`),
+      () => apiClient.delete('/field-categories', { data: { id } }),
+      () => apiClient.delete('/field_categories', { data: { id } }),
+      () => apiClient.delete('/field-categories', { params: { id } }),
+      () => apiClient.delete('/field_categories', { params: { id } }),
+    ]
+
+    const errors: unknown[] = []
+
+    for (const attempt of attempts) {
+      try {
+        await attempt()
+        return true
+      } catch (error) {
+        errors.push(error)
+        if (!shouldFallbackToUnderscorePath(error)) {
+          throw error
+        }
+      }
     }
+
+    const message =
+      errors.length > 0
+        ? 'Backend chưa hỗ trợ API xóa lĩnh vực biểu mẫu. Vui lòng kiểm tra lại endpoint xóa.'
+        : 'Không thể xóa lĩnh vực biểu mẫu.'
+    throw new Error(message)
   },
 
   listTemplates: async (params?: FormTemplateListParams) => {

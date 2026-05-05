@@ -305,12 +305,13 @@ export function FormTemplateListPage() {
             </Button>
             <Button
               onClick={() => {
-                const code = form.code.trim()
+                const code = form.code.trim().toLowerCase()
                 const name = form.name.trim()
                 if (!code || !name) {
                   toast.error('Mã lĩnh vực và tên lĩnh vực là bắt buộc.')
                   return
                 }
+                setForm((prev) => ({ ...prev, code }))
                 if (editingCategory) {
                   updateMutation.mutate()
                 } else {
