@@ -11,6 +11,8 @@ import {
   type FormTemplateListParams,
   type PeriodType,
   type TemplateField,
+  type TemplateCellConfig,
+  type EffectiveTemplateCellConfig,
   type TemplateIndicator,
   type UpdateFieldInput,
   type UpdateFieldCategoryInput,
@@ -36,6 +38,9 @@ type BeForm = {
   periodType?: PeriodType
   isActive?: boolean
   updatedAt?: string
+  attributes?: BeAttribute[]
+  indicators?: BeIndicator[]
+  cellConfigs?: TemplateCellConfig[]
 }
 type BeAttribute = {
   id: string
@@ -44,10 +49,12 @@ type BeAttribute = {
   key?: string
   dataType?: string
   isRequired?: boolean
+  isReadonly?: boolean
   isVisible?: boolean
   sortOrder?: number
   order?: number
   level?: number
+  validationRule?: Record<string, unknown> | null
 }
 type BeIndicator = {
   id: string
@@ -58,13 +65,25 @@ type BeIndicator = {
   unit?: string
   dataType?: string
   isRequired?: boolean
+  isReadonly?: boolean
   isCalculated?: boolean
   sortOrder?: number
   order?: number
   level?: number
   formula?: string | null
+  validationRule?: Record<string, unknown> | null
   isActive?: boolean
 }
+
+type FormulaValidateResponse = {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+  refs?: string[]
+  missingRefs?: string[]
+}
+
+type BeEffectiveCellConfig = EffectiveTemplateCellConfig
 
 const mapAttribute = (item: BeAttribute): TemplateField => ({
   id: item.id,
@@ -72,10 +91,12 @@ const mapAttribute = (item: BeAttribute): TemplateField => ({
   label: item.name ?? item.key ?? '',
   dataType: item.dataType ?? 'text',
   required: item.isRequired ?? false,
+  readonly: item.isReadonly ?? false,
   visible: item.isVisible ?? true,
   order: item.sortOrder ?? item.order ?? 0,
   parentId: item.parentId ?? null,
   level: item.level ?? 0,
+  validationRule: item.validationRule ?? null,
   isSystemDefault: false,
 })
 
@@ -87,29 +108,15 @@ const mapIndicator = (item: BeIndicator): TemplateIndicator => ({
   type: item.isCalculated ? 'calculated' : 'input',
   group: '',
   formula: item.formula ?? null,
+  dataType: item.dataType ?? 'number',
+  required: item.isRequired ?? true,
+  readonly: item.isReadonly ?? false,
+  validationRule: item.validationRule ?? null,
   parentId: item.parentId ?? null,
   order: item.sortOrder ?? item.order ?? 0,
   level: item.level ?? 0,
   hasReportData: false,
 })
-
-async function listAttributes(formId: string) {
-  const response = await apiClient.get<BeAttribute[] | { items?: BeAttribute[] }>(
-    `/forms/${formId}/attributes`
-  )
-  const payload = response.data
-  const items = Array.isArray(payload) ? payload : (payload.items ?? [])
-  return items.map(mapAttribute)
-}
-
-async function listIndicators(formId: string) {
-  const response = await apiClient.get<BeIndicator[] | { items?: BeIndicator[] }>(
-    `/forms/${formId}/indicators`
-  )
-  const payload = response.data
-  const items = Array.isArray(payload) ? payload : (payload.items ?? [])
-  return items.map(mapIndicator)
-}
 
 export const formManagementApi = {
   listFieldCategories: async () => {
@@ -299,12 +306,10 @@ export const formManagementApi = {
   },
 
   getTemplate: async (templateId: string) => {
-    const [formResponse, fields, indicators] = await Promise.all([
-      apiClient.get<BeForm>(`/forms/${templateId}`),
-      listAttributes(templateId),
-      listIndicators(templateId),
-    ])
+    const formResponse = await apiClient.get<BeForm>(`/forms/${templateId}`)
     const form = formResponse.data
+    const fields = (form.attributes ?? []).map(mapAttribute)
+    const indicators = (form.indicators ?? []).map(mapIndicator)
     return {
       id: form.id,
       code: form.code,
@@ -319,6 +324,7 @@ export const formManagementApi = {
       updatedAt: form.updatedAt,
       fields,
       indicators,
+      cellConfigs: form.cellConfigs ?? [],
     } satisfies FormTemplate
   },
 
@@ -358,7 +364,9 @@ export const formManagementApi = {
       name: input.label,
       dataType: input.dataType,
       isRequired: input.required,
+      isReadonly: input.readonly ?? false,
       isVisible: input.visible,
+      validationRule: input.validationRule ?? null,
     }
     const response = await apiClient.post<BeAttribute>(`/forms/${templateId}/attributes`, payload)
     return mapAttribute(response.data)
@@ -370,7 +378,9 @@ export const formManagementApi = {
       name: input.label,
       dataType: input.dataType,
       isRequired: input.required,
+      isReadonly: input.readonly ?? false,
       isVisible: input.visible,
+      validationRule: input.validationRule ?? null,
     }
     const response = await apiClient.patch<BeAttribute>(`/forms/${templateId}/attributes/${fieldId}`, payload)
     return mapAttribute(response.data)
@@ -393,10 +403,13 @@ export const formManagementApi = {
       code: input.code,
       name: input.name,
       unit: input.unit,
-      dataType: 'number',
-      isRequired: true,
+      dataType: input.dataType ?? 'number',
+      isRequired: input.required ?? true,
+      isReadonly: input.readonly ?? false,
       isCalculated: input.type === 'calculated',
-      sortOrder: input.order ?? 0,
+      formula: input.formula ?? null,
+      groupName: input.group || null,
+      validationRule: input.validationRule ?? null,
       isActive: true,
     }
     const response = await apiClient.post<BeIndicator>(`/forms/${templateId}/indicators`, payload)
@@ -407,8 +420,16 @@ export const formManagementApi = {
     const payload = {
       parentId: input.parentId ?? null,
       displayIndex: input.code,
+      code: input.code,
       name: input.name,
       unit: input.unit,
+      dataType: input.dataType ?? 'number',
+      isRequired: input.required ?? true,
+      isReadonly: input.readonly ?? false,
+      isCalculated: input.type === 'calculated',
+      formula: input.formula ?? null,
+      groupName: input.group || null,
+      validationRule: input.validationRule ?? null,
     }
     const response = await apiClient.patch<BeIndicator>(`/forms/${templateId}/indicators/${indicatorId}`, payload)
     return mapIndicator(response.data)
@@ -431,6 +452,41 @@ export const formManagementApi = {
 
   reorderIndicators: async (templateId: string, items: Array<{ id: string; parentId?: string | null }>) => {
     await apiClient.post(`/forms/${templateId}/indicators/reorder`, { items })
+    return true
+  },
+
+  validateIndicatorFormula: async (templateId: string, payload: { formula: string; code?: string; indicatorId?: string }) => {
+    const response = await apiClient.post<FormulaValidateResponse>(
+      `/forms/${templateId}/indicators/formula/validate`,
+      payload
+    )
+    return response.data
+  },
+
+  listCellConfigs: async (templateId: string) => {
+    const response = await apiClient.get<{ items?: TemplateCellConfig[] }>(
+      `/forms/${templateId}/cell-configs`
+    )
+    return response.data.items ?? []
+  },
+
+  listEffectiveCellConfigs: async (templateId: string) => {
+    const response = await apiClient.get<{ items?: BeEffectiveCellConfig[] }>(
+      `/forms/${templateId}/cell-configs/effective`
+    )
+    return response.data.items ?? []
+  },
+
+  upsertCellConfigs: async (templateId: string, items: TemplateCellConfig[]) => {
+    await apiClient.post(`/forms/${templateId}/cell-configs`, { items })
+    return true
+  },
+
+  deleteCellConfigs: async (
+    templateId: string,
+    items: Array<{ indicatorId: string; attributeId: string }>
+  ) => {
+    await apiClient.delete(`/forms/${templateId}/cell-configs`, { data: { items } })
     return true
   },
 }

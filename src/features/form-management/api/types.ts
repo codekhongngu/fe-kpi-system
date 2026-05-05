@@ -2,7 +2,7 @@
 
 export type TemplateCycle = 'week' | 'month' | 'quarter' | 'year'
 export type TemplateStatus = 'active' | 'inactive'
-export type FieldDataType = 'text' | 'number' | 'percentage' | 'currency' | 'boolean' | 'date'
+export type FieldDataType = 'text' | 'number'
 export type IndicatorType = 'input' | 'calculated'
 export type PeriodType = 'TUAN' | 'THANG' | 'QUY' | 'NAM'
 
@@ -47,10 +47,12 @@ export type TemplateField = {
   label: string
   dataType: FieldDataType | string
   required: boolean
+  readonly?: boolean
   visible: boolean
   order: number
   parentId?: string | null
   level?: number
+  validationRule?: Record<string, unknown> | null
   isSystemDefault: boolean
 }
 
@@ -62,10 +64,30 @@ export type TemplateIndicator = {
   type: IndicatorType
   group: string
   formula: string | null
+  dataType?: FieldDataType | string
+  required?: boolean
+  readonly?: boolean
+  validationRule?: Record<string, unknown> | null
   parentId?: string | null
   order?: number
   level?: number
   hasReportData: boolean
+}
+
+export type TemplateCellConfig = {
+  id?: string
+  indicatorId: string
+  attributeId: string
+  isEditable: boolean
+  validationRule?: Record<string, unknown> | null
+  defaultValue?: string | null
+  dataType?: FieldDataType | string | null
+  isRequired?: boolean | null
+  formula?: string | null
+}
+
+export type EffectiveTemplateCellConfig = Omit<TemplateCellConfig, 'id'> & {
+  hasOverride: boolean
 }
 
 export type FormTemplate = {
@@ -80,6 +102,7 @@ export type FormTemplate = {
   updatedAt?: string
   fields: TemplateField[]
   indicators: TemplateIndicator[]
+  cellConfigs?: TemplateCellConfig[]
   domain?: string
   cycle?: TemplateCycle
   status?: TemplateStatus
@@ -106,10 +129,34 @@ export type UpdateTemplateInput = {
   isActive: boolean
 }
 
-export type CreateFieldInput = Omit<TemplateField, 'id' | 'isSystemDefault'>
-export type UpdateFieldInput = Omit<TemplateField, 'id' | 'isSystemDefault'>
-export type CreateIndicatorInput = Omit<TemplateIndicator, 'id' | 'hasReportData'>
-export type UpdateIndicatorInput = Omit<TemplateIndicator, 'id' | 'hasReportData'>
+export type CreateFieldInput = {
+  key: string
+  label: string
+  dataType: FieldDataType | string
+  required: boolean
+  readonly?: boolean
+  visible: boolean
+  parentId?: string | null
+  validationRule?: Record<string, unknown> | null
+}
+
+export type UpdateFieldInput = CreateFieldInput
+
+export type CreateIndicatorInput = {
+  code: string
+  name: string
+  unit: string
+  type: IndicatorType
+  group: string
+  formula: string | null
+  dataType?: FieldDataType | string
+  required?: boolean
+  readonly?: boolean
+  validationRule?: Record<string, unknown> | null
+  parentId?: string | null
+}
+
+export type UpdateIndicatorInput = CreateIndicatorInput
 
 export type CreateFieldCategoryInput = Omit<FieldCategory, 'id'>
 export type UpdateFieldCategoryInput = Omit<FieldCategory, 'id'>
@@ -129,10 +176,6 @@ export const templateStatusOptions: Array<{ value: TemplateStatus; label: string
 export const fieldDataTypeOptions: Array<{ value: FieldDataType; label: string }> = [
   { value: 'text', label: 'Văn bản' },
   { value: 'number', label: 'Số' },
-  { value: 'percentage', label: 'Phần trăm' },
-  { value: 'currency', label: 'Tiền tệ' },
-  { value: 'boolean', label: 'Đúng/Sai' },
-  { value: 'date', label: 'Ngày' },
 ]
 
 export const indicatorTypeOptions: Array<{ value: IndicatorType; label: string }> = [
