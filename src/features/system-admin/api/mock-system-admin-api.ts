@@ -459,14 +459,14 @@ export const systemAdminMockApi = {
   },
 
   resetUserPassword: async (userId: string) => {
-    const response = await apiClient.post<{ tempPassword?: string; email?: string }>(
-      `/users/${userId}/reset-password`,
-      {},
-    )
-    return {
-      tempPassword: response.data?.tempPassword ?? '',
-      email: response.data?.email ?? '',
-    }
+    const response = await apiClient.post<unknown>(`/users/${userId}/reset-password`, {})
+    const payload = response.data as any
+    const tempPassword =
+      (typeof payload?.tempPassword === 'string' && payload.tempPassword) ||
+      (typeof payload?.temporaryPassword === 'string' && payload.temporaryPassword) ||
+      ''
+    const email = typeof payload?.email === 'string' ? payload.email : ''
+    return { tempPassword, email }
   },
 
   deleteUser: async (userId: string) => {

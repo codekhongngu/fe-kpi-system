@@ -2,7 +2,9 @@ import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { type Row } from '@tanstack/react-table'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2, UserCheck, UserPen, UserX } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -24,6 +26,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow } = useUsers()
   const queryClient = useQueryClient()
   const isActive = row.original.isActive
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false)
 
   const statusMutation = useMutation({
     mutationFn: async () => {
@@ -63,17 +66,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           <DropdownMenuItem
             disabled={statusMutation.isPending}
             onClick={() => {
-              toast.promise(statusMutation.mutateAsync(), {
-                loading: isActive
-                  ? 'Đang vô hiệu hóa người dùng...'
-                  : 'Đang kích hoạt người dùng...',
-                success: isActive
-                  ? 'Đã vô hiệu hóa người dùng'
-                  : 'Đã kích hoạt người dùng',
-                error: isActive
-                  ? 'Không thể vô hiệu hóa người dùng'
-                  : 'Không thể kích hoạt người dùng',
-              })
+              setStatusDialogOpen(true)
             }}
           >
             {isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
@@ -96,6 +89,23 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <ConfirmDialog
+        open={statusDialogOpen}
+        onOpenChange={setStatusDialogOpen}
+        title={isActive ? 'Vô hiệu hóa người dùng' : 'Kích hoạt người dùng'}
+        desc={`Xác nhận ${isActive ? 'vô hiệu hóa' : 'kích hoạt'} người dùng ${row.original.username}.`}
+        handleConfirm={() => {
+          toast.promise(statusMutation.mutateAsync(), {
+            loading: isActive ? 'Đang vô hiệu hóa người dùng...' : 'Đang kích hoạt người dùng...',
+            success: isActive ? 'Đã vô hiệu hóa người dùng' : 'Đã kích hoạt người dùng',
+            error: isActive ? 'Không thể vô hiệu hóa người dùng' : 'Không thể kích hoạt người dùng',
+          })
+        }}
+        confirmText={isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+        destructive={isActive}
+        isLoading={statusMutation.isPending}
+      />
     </>
   )
 }

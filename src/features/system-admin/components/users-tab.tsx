@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle, RotateCcw, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
@@ -83,6 +83,7 @@ export function UsersTab() {
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null)
   const [form, setForm] = useState<UserFormState>(defaultForm)
   const [deletingUser, setDeletingUser] = useState<SystemUser | null>(null)
+  const [statusDialog, setStatusDialog] = useState<SystemUser | null>(null)
 
   const users = usersQuery.data ?? EMPTY_USERS
   const roles = rolesQuery.data ?? []
@@ -143,7 +144,11 @@ export function UsersTab() {
   const resetPasswordMutation = useMutation({
     mutationFn: systemAdminMockApi.resetUserPassword,
     onSuccess: (result) => {
-      toast.success(`Đã reset mật khẩu. Mật khẩu tạm: ${result.tempPassword}`)
+      if (result.tempPassword) {
+        toast.success(`Đã reset mật khẩu. Mật khẩu tạm: ${result.tempPassword}`)
+        return
+      }
+      toast.success('Đã reset mật khẩu.')
     },
     onError: (error) => toast.error(error.message),
   })
@@ -297,7 +302,7 @@ export function UsersTab() {
                       <Button
                         size='sm'
                         variant='outline'
-                        onClick={() => statusMutation.mutate(user.id)}
+                        onClick={() => setStatusDialog(user)}
                       >
                         {user.status === 'active' ? 'Khóa' : 'Mở'}
                       </Button>
@@ -492,6 +497,27 @@ export function UsersTab() {
         handleConfirm={() => deletingUser && deleteMutation.mutate(deletingUser.id)}
         confirmText='Xác nhận xóa'
         isLoading={deleteMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={Boolean(statusDialog)}
+        onOpenChange={(open) => {
+          if (!open) setStatusDialog(null)
+        }}
+        title={statusDialog?.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+        desc={
+          statusDialog
+            ? `${statusDialog.status === 'active' ? 'Khóa' : 'Mở khóa'} tài khoản ${statusDialog.fullName}.`
+            : ''
+        }
+        handleConfirm={() => {
+          if (!statusDialog) return
+          statusMutation.mutate(statusDialog.id)
+          setStatusDialog(null)
+        }}
+        confirmText={statusDialog?.status === 'active' ? 'Khóa' : 'Mở khóa'}
+        destructive={statusDialog?.status === 'active'}
+        isLoading={statusMutation.isPending}
       />
     </Card>
   )

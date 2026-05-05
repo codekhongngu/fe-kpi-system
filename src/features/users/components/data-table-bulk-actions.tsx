@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { type Table } from '@tanstack/react-table'
 import { Trash2, UserX, UserCheck, Mail } from 'lucide-react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -22,11 +23,15 @@ export function DataTableBulkActions<TData>({
   table,
 }: DataTableBulkActionsProps<TData>) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [statusDialog, setStatusDialog] = useState<{
+    status: 'active' | 'inactive'
+    users: User[]
+  } | null>(null)
   const queryClient = useQueryClient()
   const selectedRows = table.getFilteredSelectedRowModel().rows
 
-  const handleBulkStatusChange = (status: 'active' | 'inactive') => {
-    const selectedUsers = selectedRows.map((row) => row.original as User)
+  const handleBulkStatusChange = (status: 'active' | 'inactive', selectedUsers: User[]) => {
+    if (selectedUsers.length === 0) return
 
     const promise = Promise.all(
       selectedUsers.map((user) =>
@@ -79,7 +84,12 @@ export function DataTableBulkActions<TData>({
             <Button
               variant='outline'
               size='icon'
-              onClick={() => handleBulkStatusChange('active')}
+              onClick={() =>
+                setStatusDialog({
+                  status: 'active',
+                  users: selectedRows.map((row) => row.original as User),
+                })
+              }
               className='size-8'
               aria-label='Kích hoạt người dùng đã chọn'
               title='Kích hoạt người dùng đã chọn'
@@ -98,7 +108,12 @@ export function DataTableBulkActions<TData>({
             <Button
               variant='outline'
               size='icon'
-              onClick={() => handleBulkStatusChange('inactive')}
+              onClick={() =>
+                setStatusDialog({
+                  status: 'inactive',
+                  users: selectedRows.map((row) => row.original as User),
+                })
+              }
               className='size-8'
               aria-label='Vô hiệu hóa người dùng đã chọn'
               title='Vô hiệu hóa người dùng đã chọn'
@@ -136,6 +151,32 @@ export function DataTableBulkActions<TData>({
         table={table}
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
+      />
+
+      <ConfirmDialog
+        open={Boolean(statusDialog)}
+        onOpenChange={(open) => {
+          if (!open) setStatusDialog(null)
+        }}
+        title={
+          statusDialog?.status === 'inactive'
+            ? `Vô hiệu hóa ${statusDialog.users.length} người dùng`
+            : `Kích hoạt ${statusDialog?.users.length ?? 0} người dùng`
+        }
+        desc={
+          statusDialog
+            ? `Xác nhận ${statusDialog.status === 'inactive' ? 'vô hiệu hóa' : 'kích hoạt'} ${
+                statusDialog.users.length
+              } người dùng đã chọn.`
+            : ''
+        }
+        handleConfirm={() => {
+          if (!statusDialog) return
+          handleBulkStatusChange(statusDialog.status, statusDialog.users)
+          setStatusDialog(null)
+        }}
+        confirmText={statusDialog?.status === 'inactive' ? 'Vô hiệu hóa' : 'Kích hoạt'}
+        destructive={statusDialog?.status === 'inactive'}
       />
     </>
   )

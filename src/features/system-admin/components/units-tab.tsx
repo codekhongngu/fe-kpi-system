@@ -314,6 +314,10 @@ export function UnitsTab() {
   const [editingUnit, setEditingUnit] = useState<OrganizationUnit | null>(null)
   const [form, setForm] = useState<UnitFormState>(defaultForm)
   const [deletingUnit, setDeletingUnit] = useState<OrganizationUnit | null>(null)
+  const [statusDialog, setStatusDialog] = useState<{
+    unit: OrganizationUnit
+    action: 'lock' | 'unlock'
+  } | null>(null)
 
   const units = unitsQuery.data ?? EMPTY_UNITS
 
@@ -541,12 +545,7 @@ export function UnitsTab() {
               <Button
                 size='sm'
                 variant='outline'
-                onClick={() =>
-                  statusMutation.mutate({
-                    id: unit.id,
-                    action: unit.status === 'active' ? 'lock' : 'unlock',
-                  })
-                }
+                onClick={() => setStatusDialog({ unit, action: unit.status === 'active' ? 'lock' : 'unlock' })}
               >
                 {unit.status === 'active' ? 'Khóa' : 'Mở'}
               </Button>
@@ -717,8 +716,8 @@ export function UnitsTab() {
                     variant='outline'
                     onClick={() =>
                       selectedUnit &&
-                      statusMutation.mutate({
-                        id: selectedUnit.id,
+                      setStatusDialog({
+                        unit: selectedUnit,
                         action: selectedUnit.status === 'active' ? 'lock' : 'unlock',
                       })
                     }
@@ -949,6 +948,27 @@ export function UnitsTab() {
         handleConfirm={() => deletingUnit && deleteMutation.mutate(deletingUnit.id)}
         confirmText='Xóa đơn vị'
         isLoading={deleteMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={Boolean(statusDialog)}
+        onOpenChange={(open) => {
+          if (!open) setStatusDialog(null)
+        }}
+        title={statusDialog?.action === 'lock' ? 'Khóa đơn vị' : 'Mở khóa đơn vị'}
+        desc={
+          statusDialog
+            ? `${statusDialog.action === 'lock' ? 'Khóa' : 'Mở khóa'} ${statusDialog.unit.name}.`
+            : ''
+        }
+        handleConfirm={() => {
+          if (!statusDialog) return
+          statusMutation.mutate({ id: statusDialog.unit.id, action: statusDialog.action })
+          setStatusDialog(null)
+        }}
+        confirmText={statusDialog?.action === 'lock' ? 'Khóa' : 'Mở khóa'}
+        destructive={statusDialog?.action === 'lock'}
+        isLoading={statusMutation.isPending}
       />
     </Card>
   )
