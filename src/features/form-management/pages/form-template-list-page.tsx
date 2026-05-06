@@ -268,9 +268,6 @@ export function FormTemplateListPage() {
           <DialogHeader className='text-start'>
             <DialogTitle>{editingTemplate ? 'Cập nhật biểu mẫu' : 'Tạo biểu mẫu mới'}</DialogTitle>
             <DialogDescription>
-              {editingTemplate
-                ? 'Patch Form chỉ cập nhật tên, nhóm biểu mẫu, mô tả, trạng thái. Mã biểu mẫu được giữ cố định.'
-                : 'Create Form yêu cầu mã, tên, nhóm biểu mẫu, mô tả và trạng thái.'}
             </DialogDescription>
           </DialogHeader>
 

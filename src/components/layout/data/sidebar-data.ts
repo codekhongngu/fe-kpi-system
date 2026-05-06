@@ -156,7 +156,7 @@ function buildNavGroups(role: AppRole): NavGroup[] {
         title: 'Nghiệp vụ',
         items: [
           {
-            title: 'Thiết kế biểu mẫu',
+            title: 'Quản lí biểu mẫu',
             url: '/form-management',
             icon: FileSpreadsheet,
           },
@@ -188,7 +188,7 @@ function buildNavGroups(role: AppRole): NavGroup[] {
         title: 'Nghiệp vụ',
         items: [
           {
-            title: 'Thiết kế biểu mẫu',
+            title: 'Quản lí biểu mẫu',
             url: '/form-management',
             icon: FileSpreadsheet,
           },

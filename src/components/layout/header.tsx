@@ -28,7 +28,7 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
       className={cn(
         'z-40 h-16',
         fixed && 'header-fixed peer/header sticky top-0 w-[inherit]',
-        offset > 10 && fixed ? 'shadow-sm' : 'shadow-none',
+        // offset > 10 && fixed ? 'shadow-sm' : 'shadow-none',
         className
       )}
       {...props}

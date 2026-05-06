@@ -9,6 +9,9 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import { useAuthStore } from '@/stores/auth-store'
 import { authApi } from '@/features/auth/api/auth-api'
 // import { SkipToMain } from '@/components/skip-to-main'
+import { Header } from '@/components/layout/header'
+import { ProfileDropdown } from '@/components/profile-dropdown'
+import { Search } from '@/components/search'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -61,6 +64,12 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
               'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]',
             )}
           >
+            <Header fixed>
+              <Search />
+              <div className='ms-auto flex items-center space-x-4'>
+                <ProfileDropdown />
+              </div>
+            </Header>
             {children ?? <Outlet />}
           </SidebarInset>
         </SidebarProvider>
