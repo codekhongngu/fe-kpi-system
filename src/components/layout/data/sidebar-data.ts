@@ -171,7 +171,7 @@ function buildNavGroups(role: AppRole): NavGroup[] {
             icon: ChartColumnBig,
           },
           {
-            title: 'Theo dõi trạng thái',
+            title: 'Quản lý báo cáo',
             url: '/report-management?tab=list',
             icon: SearchCheck,
           },
@@ -203,7 +203,7 @@ function buildNavGroups(role: AppRole): NavGroup[] {
             icon: ChartColumnBig,
           },
           {
-            title: 'Theo dõi trạng thái',
+            title: 'Quản lý báo cáo',
             url: '/report-management?tab=list',
             icon: SearchCheck,
           },

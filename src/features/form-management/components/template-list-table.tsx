@@ -1,4 +1,4 @@
-﻿import { Link } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { Eye, PencilLine } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { FormTemplate } from '../api/types'
+import type { FormTemplate, PeriodType } from '../api/types'
+
+const periodTypeLabel: Record<PeriodType, string> = {
+  TUAN: 'Tuần',
+  THANG: 'Tháng',
+  QUY: 'Quý',
+  NAM: 'Năm',
+}
 
 type TemplateListTableProps = {
   templates: FormTemplate[]
@@ -26,7 +33,8 @@ export function TemplateListTable({ templates, onPreview, onEditGeneral }: Templ
           <TableRow>
             <TableHead>Mã biểu mẫu</TableHead>
             <TableHead>Tên biểu mẫu</TableHead>
-            <TableHead>Nhóm biểu mẫu</TableHead>
+            <TableHead>Lĩnh vực</TableHead>
+            <TableHead>Kỳ</TableHead>
             <TableHead>Trạng thái</TableHead>
             <TableHead className='text-right'>Thao tác</TableHead>
           </TableRow>
@@ -34,7 +42,7 @@ export function TemplateListTable({ templates, onPreview, onEditGeneral }: Templ
         <TableBody>
           {templates.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className='h-20 text-center'>
+              <TableCell colSpan={6} className='h-20 text-center'>
                 Không có biểu mẫu phù hợp điều kiện lọc.
               </TableCell>
             </TableRow>
@@ -47,6 +55,7 @@ export function TemplateListTable({ templates, onPreview, onEditGeneral }: Templ
                 <div className='text-xs text-muted-foreground'>{template.description}</div>
               </TableCell>
               <TableCell>{template.fieldCategoryName ?? template.fieldCategoryId}</TableCell>
+              <TableCell>{periodTypeLabel[template.periodType ?? 'THANG']}</TableCell>
               <TableCell>
                 <Badge variant={template.isActive ? 'default' : 'secondary'}>
                   {template.isActive ? 'Hoạt động' : 'Ngừng hoạt động'}

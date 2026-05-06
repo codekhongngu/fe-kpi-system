@@ -1,6 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import { Settings2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -10,13 +14,6 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -24,8 +21,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { formManagementApi } from '@/features/form-management/api/mock-form-management-api'
+import type { FormTemplate, PeriodType } from '@/features/form-management/api/types'
 import { reportManagementApi } from '../api/mock-report-management-api'
-import { reportStatusOptions, type ReportInstance, type ReportStatus } from '../api/types'
+import { type ReportInstance, type ReportStatus } from '../api/types'
+
+const periodTypeLabel: Record<PeriodType, string> = {
+  TUAN: 'Tuần',
+  THANG: 'Tháng',
+  QUY: 'Quý',
+  NAM: 'Năm',
+}
 
 const EMPTY_REPORTS: ReportInstance[] = []
 
@@ -51,190 +57,290 @@ function statusVariant(status: ReportStatus): 'default' | 'destructive' | 'secon
   return 'secondary'
 }
 
+function effectiveStatus(report: ReportInstance): ReportStatus {
+  if (
+    report.status !== 'APPROVED' &&
+    report.status !== 'PENDING' &&
+    report.status !== 'REJECTED' &&
+    report.dueDate
+  ) {
+    const due = new Date(report.dueDate)
+    if (!Number.isNaN(due.getTime()) && due.getTime() < Date.now()) {
+      return 'OVERDUE'
+    }
+  }
+  return report.status
+}
+
+const statusPriority: Record<ReportStatus, number> = {
+  OVERDUE: 6,
+  REJECTED: 5,
+  PENDING: 4,
+  DRAFT: 3,
+  NOT_STARTED: 2,
+  APPROVED: 1,
+}
+
 export function ReportsListTab() {
-  const refsQuery = useQuery({
-    queryKey: ['report-management', 'refs'],
-    queryFn: () => reportManagementApi.listReferenceData(),
-  })
-  const reportsQuery = useQuery({
-    queryKey: ['report-management', 'reports'],
-    queryFn: () => reportManagementApi.listReports(),
-  })
-  const summaryQuery = useQuery({
-    queryKey: ['report-management', 'summary'],
-    queryFn: () => reportManagementApi.getSummary(),
-  })
-
-  const reports = reportsQuery.data ?? EMPTY_REPORTS
-  const forms = refsQuery.data?.forms ?? []
-  const periods = refsQuery.data?.periods ?? []
-  const units = refsQuery.data?.units ?? []
-
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState<'all' | ReportStatus>('all')
-  const [formTemplateId, setFormTemplateId] = useState('all')
-  const [reportPeriodId, setReportPeriodId] = useState('all')
-  const [unitId, setUnitId] = useState('all')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [quickStatus, setQuickStatus] = useState<'all' | ReportStatus>('all')
 
-  const filteredReports = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    return reports
-      .filter((report) => {
-        const matchesKeyword =
-          !keyword ||
-          [report.formTemplateName, report.unitName, report.reportPeriodName].some((value) =>
-            value.toLowerCase().includes(keyword)
-          )
-        const matchesStatus = status === 'all' || report.status === status
-        const matchesForm = formTemplateId === 'all' || report.formTemplateId === formTemplateId
-        const matchesPeriod = reportPeriodId === 'all' || report.reportPeriodId === reportPeriodId
-        const matchesUnit = unitId === 'all' || report.unitId === unitId
-        return (
-          matchesKeyword && matchesStatus && matchesForm && matchesPeriod && matchesUnit
-        )
-      })
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-  }, [search, status, formTemplateId, reportPeriodId, unitId, reports])
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => window.clearTimeout(handle)
+  }, [search])
 
-  const summary = summaryQuery.data
+  const reportsQuery = useQuery({
+    queryKey: [
+      'report-management',
+      'reports',
+      {
+        q: debouncedSearch,
+      },
+    ],
+    queryFn: () =>
+      reportManagementApi.listReports({
+        keyword: debouncedSearch.length > 0 ? debouncedSearch : undefined,
+        formTemplateId: 'all',
+        reportPeriodId: 'all',
+        status: 'all',
+        unitId: 'all',
+      }),
+    retry: false,
+  })
+
+  const templatesQuery = useQuery({
+    queryKey: ['report-management', 'forms', { q: debouncedSearch }],
+    queryFn: () =>
+      formManagementApi.listTemplates({
+        search: debouncedSearch,
+        page: 1,
+        limit: 200,
+        status: 'all',
+        period: '',
+        category: '',
+      }),
+    retry: false,
+  })
+
+  const templates = templatesQuery.data?.items ?? []
+  const reports = reportsQuery.data ?? EMPTY_REPORTS
+
+  const statusByUnit = useMemo(() => {
+    const map = new Map<string, ReportStatus>()
+    reports.forEach((report) => {
+      const status = effectiveStatus(report)
+      const current = map.get(report.unitId)
+      if (!current || statusPriority[status] > statusPriority[current]) {
+        map.set(report.unitId, status)
+      }
+    })
+    return map
+  }, [reports])
+
+  const statusCounts = useMemo(() => {
+    const initial = {
+      APPROVED: 0,
+      PENDING: 0,
+      DRAFT: 0,
+      OVERDUE: 0,
+      REJECTED: 0,
+      NOT_STARTED: 0,
+    } satisfies Record<ReportStatus, number>
+    const next = { ...initial }
+    statusByUnit.forEach((value) => {
+      next[value] += 1
+    })
+    return next
+  }, [statusByUnit])
+
+  const totalUnits = statusByUnit.size
+
+  const percentOfTotal = (value: number) => {
+    if (!totalUnits) return '0%'
+    return `${Math.round((value / totalUnits) * 100)}%`
+  }
 
   return (
-    <Card>
-      <CardHeader className='gap-4'>
-        <div>
-          <CardTitle>Danh sách báo cáo</CardTitle>
-          <CardDescription>
-            Theo dõi báo cáo theo trạng thái nghiệp vụ, ưu tiên gần hạn và quá hạn.
-          </CardDescription>
-        </div>
+    <>
+      <Card>
+        <CardHeader className='gap-4'>
+          <div>
+            <CardTitle>Quản lý báo cáo</CardTitle>
+            <CardDescription>Giao báo cáo, theo dõi tiến độ nộp và hỗ trợ nhắc nhở các đơn vị.</CardDescription>
+          </div>
 
-        <div className='grid gap-2 sm:grid-cols-2 xl:grid-cols-5'>
-          <Input
-            placeholder='Tìm theo biểu mẫu, kỳ, đơn vị...'
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <Select value={status} onValueChange={(value: 'all' | ReportStatus) => setStatus(value)}>
-            <SelectTrigger className='w-full'>
-              <SelectValue placeholder='Trạng thái' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>Tất cả trạng thái</SelectItem>
-              {reportStatusOptions.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={formTemplateId} onValueChange={setFormTemplateId}>
-            <SelectTrigger className='w-full'>
-              <SelectValue placeholder='Biểu mẫu' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>Tất cả biểu mẫu</SelectItem>
-              {forms.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.code} - {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={reportPeriodId} onValueChange={setReportPeriodId}>
-            <SelectTrigger className='w-full'>
-              <SelectValue placeholder='Kỳ báo cáo' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>Tất cả kỳ báo cáo</SelectItem>
-              {periods.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.code} - {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={unitId} onValueChange={setUnitId}>
-            <SelectTrigger className='w-full'>
-              <SelectValue placeholder='Đơn vị' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>Tất cả đơn vị</SelectItem>
-              {units.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.code} - {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className='grid grid-cols-1 gap-6 lg:grid-cols-12'>
+            <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 lg:col-span-8 lg:grid-cols-5'>
+              <div className='rounded-xl border bg-background p-4 text-sm'>
+                <p className='text-muted-foreground'>Tổng đơn vị</p>
+                <div className='mt-2 flex items-end justify-between'>
+                  <p className='text-3xl font-semibold tracking-tight'>{totalUnits}</p>
+                </div>
+              </div>
+              <div className='rounded-xl border bg-background p-4 text-sm'>
+                <p className='text-muted-foreground'>Approved</p>
+                <div className='mt-2 flex items-end justify-between'>
+                  <p className='text-3xl font-semibold tracking-tight text-primary'>{statusCounts.APPROVED}</p>
+                  <span className='rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary'>
+                    {percentOfTotal(statusCounts.APPROVED)}
+                  </span>
+                </div>
+              </div>
+              <div className='rounded-xl border bg-background p-4 text-sm'>
+                <p className='text-muted-foreground'>Pending</p>
+                <div className='mt-2 flex items-end justify-between'>
+                  <p className='text-3xl font-semibold tracking-tight'>{statusCounts.PENDING}</p>
+                  <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'>
+                    {percentOfTotal(statusCounts.PENDING)}
+                  </span>
+                </div>
+              </div>
+              <div className='rounded-xl border bg-background p-4 text-sm'>
+                <p className='text-muted-foreground'>Draft</p>
+                <div className='mt-2 flex items-end justify-between'>
+                  <p className='text-3xl font-semibold tracking-tight text-muted-foreground'>{statusCounts.DRAFT}</p>
+                  <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'>
+                    {percentOfTotal(statusCounts.DRAFT)}
+                  </span>
+                </div>
+              </div>
+              <div className='rounded-xl border border-destructive/30 bg-background p-4 text-sm'>
+                <p className='text-destructive'>Overdue</p>
+                <div className='mt-2 flex items-end justify-between'>
+                  <p className='text-3xl font-semibold tracking-tight text-destructive'>{statusCounts.OVERDUE}</p>
+                </div>
+              </div>
+            </div>
 
-        {summary && (
-          <div className='grid gap-2 sm:grid-cols-2 xl:grid-cols-4'>
-            <div className='rounded-md border p-3 text-sm'>
-              <p className='text-muted-foreground'>Tổng báo cáo</p>
-              <p className='text-xl font-semibold'>{summary.total}</p>
-            </div>
-            <div className='rounded-md border p-3 text-sm'>
-              <p className='text-muted-foreground'>Chờ duyệt</p>
-              <p className='text-xl font-semibold'>{summary.byStatus.PENDING}</p>
-            </div>
-            <div className='rounded-md border p-3 text-sm'>
-              <p className='text-muted-foreground'>Gần đến hạn</p>
-              <p className='text-xl font-semibold'>{summary.nearDueCount}</p>
-            </div>
-            <div className='rounded-md border p-3 text-sm'>
-              <p className='text-muted-foreground'>Quá hạn</p>
-              <p className='text-xl font-semibold text-destructive'>{summary.overdueCount}</p>
+            <div className='rounded-xl border bg-background p-4 lg:col-span-4'>
+              <div className='pb-4'>
+                <div className='text-sm font-semibold'>Bộ lọc nhanh</div>
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                <Button size='sm' variant={quickStatus === 'all' ? 'default' : 'outline'} onClick={() => setQuickStatus('all')}>
+                  Tất cả
+                </Button>
+                <Button size='sm' variant={quickStatus === 'APPROVED' ? 'default' : 'outline'} onClick={() => setQuickStatus('APPROVED')}>
+                  Approved ({statusCounts.APPROVED})
+                </Button>
+                <Button size='sm' variant={quickStatus === 'PENDING' ? 'default' : 'outline'} onClick={() => setQuickStatus('PENDING')}>
+                  Pending ({statusCounts.PENDING})
+                </Button>
+                <Button size='sm' variant={quickStatus === 'DRAFT' ? 'default' : 'outline'} onClick={() => setQuickStatus('DRAFT')}>
+                  Draft ({statusCounts.DRAFT})
+                </Button>
+                <Button size='sm' variant={quickStatus === 'OVERDUE' ? 'destructive' : 'outline'} onClick={() => setQuickStatus('OVERDUE')}>
+                  Overdue ({statusCounts.OVERDUE})
+                </Button>
+                <Button size='sm' variant={quickStatus === 'REJECTED' ? 'default' : 'outline'} onClick={() => setQuickStatus('REJECTED')}>
+                  Rejected ({statusCounts.REJECTED})
+                </Button>
+              </div>
             </div>
           </div>
-        )}
-      </CardHeader>
+        </CardHeader>
+      </Card>
 
-      <CardContent>
-        <div className='overflow-hidden rounded-md border'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Biểu mẫu</TableHead>
-                <TableHead>Đơn vị</TableHead>
-                <TableHead>Kỳ báo cáo</TableHead>
-                <TableHead>Hạn nộp</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>% hoàn thành</TableHead>
-                <TableHead>Lưu gần nhất</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredReports.length === 0 && (
+      <Card className='overflow-hidden'>
+        <CardHeader className='gap-3 sm:flex sm:flex-row sm:items-start sm:justify-between'>
+          <div className='min-w-0'>
+            <CardTitle className='text-base'>Danh sách báo cáo</CardTitle>
+            <CardDescription>Danh sách báo cáo phục vụ giao và theo dõi tiến độ.</CardDescription>
+          </div>
+          <div className='w-full sm:w-[320px] sm:shrink-0'>
+            <Input
+              placeholder='Tìm theo mã, tên...'
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent className='p-0'>
+          <div className='overflow-hidden border-t'>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className='h-20 text-center'>
-                    Không có dữ liệu báo cáo phù hợp.
-                  </TableCell>
+                  <TableHead>Mã biểu mẫu</TableHead>
+                  <TableHead>Tên biểu mẫu</TableHead>
+                  <TableHead>Lĩnh vực</TableHead>
+                  <TableHead>Kỳ</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className='text-right'>Thao tác</TableHead>
                 </TableRow>
-              )}
-              {filteredReports.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell className='font-medium'>{report.formTemplateName}</TableCell>
-                  <TableCell>{report.unitName}</TableCell>
-                  <TableCell>{report.reportPeriodName}</TableCell>
-                  <TableCell>{report.dueDate}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant(report.status)}>
-                      {statusLabel[report.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{report.completionPercent}%</TableCell>
-                  <TableCell>
-                    {report.lastSavedAt
-                      ? new Date(report.lastSavedAt).toLocaleString('vi-VN')
-                      : '--'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {templatesQuery.isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className='h-20 text-center text-sm text-muted-foreground'>
+                      Đang tải danh sách biểu mẫu...
+                    </TableCell>
+                  </TableRow>
+                )}
+                {templatesQuery.isError && (
+                  <TableRow>
+                    <TableCell colSpan={6} className='h-20 text-center text-sm text-destructive'>
+                      Không tải được danh sách biểu mẫu.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!templatesQuery.isLoading && !templatesQuery.isError && templates.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className='h-20 text-center text-sm text-muted-foreground'>
+                      Không có biểu mẫu phù hợp.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!templatesQuery.isLoading &&
+                  !templatesQuery.isError &&
+                  templates.map((template: FormTemplate) => (
+                    <TableRow key={template.id}>
+                      <TableCell className='font-medium'>{template.code}</TableCell>
+                      <TableCell>
+                        <div>{template.name}</div>
+                        <div className='text-xs text-muted-foreground'>{template.description}</div>
+                      </TableCell>
+                      <TableCell>{template.fieldCategoryName ?? template.fieldCategoryId}</TableCell>
+                      <TableCell>{periodTypeLabel[template.periodType ?? 'THANG']}</TableCell>
+                      <TableCell>
+                        <Badge variant={template.isActive ? 'default' : 'secondary'}>
+                          {template.isActive ? 'Hoạt động' : 'Ngừng hoạt động'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className='text-right'>
+                        <div className='flex justify-end gap-2'>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                          asChild
+                          >
+                          <Link to='/form-management/details/$templateId' params={{ templateId: template.id }}>
+                            <Settings2 />
+                            Cấu hình
+                          </Link>
+                          </Button>
+                          <Button size='sm' variant='outline' asChild>
+                          <Link to='/report-management' search={{ tab: 'assignment', templateId: template.id }}>
+                            Giao
+                          </Link>
+                          </Button>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                          onClick={() => toast.message('Chức năng tổng hợp đang được phát triển.')}
+                          >
+                          Tổng hợp
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   )
 }

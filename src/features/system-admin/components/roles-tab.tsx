@@ -400,16 +400,13 @@ export function RolesTab() {
     createMutation.mutate(payload)
   }
 
-  const getScopeLabel = (scope: DataScope) =>
-    dataScopes.find((item) => item.value === scope)?.label ?? scope
-
   return (
     <Card>
       <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
           <CardTitle>Roles & Permissions (RBAC)</CardTitle>
           <CardDescription>
-            Quản lý vai trò, quyền chi tiết và phạm vi dữ liệu áp dụng.
+            Quản lý vai trò và quyền chi tiết.
           </CardDescription>
         </div>
         <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
@@ -432,7 +429,6 @@ export function RolesTab() {
               <TableRow>
                 <TableHead>Mã role</TableHead>
                 <TableHead>Tên role</TableHead>
-                <TableHead>Phạm vi dữ liệu</TableHead>
                 <TableHead>Số quyền</TableHead>
                 <TableHead>Thành viên</TableHead>
                 <TableHead className='text-right'>Thao tác</TableHead>
@@ -441,7 +437,7 @@ export function RolesTab() {
             <TableBody>
               {filteredRoles.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center'>
+                  <TableCell colSpan={5} className='h-20 text-center'>
                     Không có dữ liệu vai trò.
                   </TableCell>
                 </TableRow>
@@ -458,7 +454,6 @@ export function RolesTab() {
                       {role.description}
                     </div>
                   </TableCell>
-                  <TableCell>{getScopeLabel(role.dataScope)}</TableCell>
                   <TableCell>
                     {role.permissionIds.length > 0 ? role.permissionIds.length : role.permissions.length}
                   </TableCell>
@@ -520,26 +515,6 @@ export function RolesTab() {
                   setForm((prev) => ({ ...prev, name: event.target.value }))
                 }
               />
-            </div>
-            <div className='space-y-2'>
-              <Label>Phạm vi dữ liệu</Label>
-              <Select
-                value={form.dataScope}
-                onValueChange={(value: DataScope) =>
-                  setForm((prev) => ({ ...prev, dataScope: value }))
-                }
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {dataScopes.map((scope) => (
-                    <SelectItem key={scope.value} value={scope.value}>
-                      {scope.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <div className='space-y-2'>
