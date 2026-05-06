@@ -78,12 +78,10 @@ export type TemplateCellConfig = {
   id?: string
   indicatorId: string
   attributeId: string
-  isEditable: boolean
-  validationRule?: Record<string, unknown> | null
-  defaultValue?: string | null
-  dataType?: FieldDataType | string | null
-  isRequired?: boolean | null
-  formula?: string | null
+  dataType: FieldDataType
+  required: boolean
+  readOnly: boolean
+  formula: string | null
 }
 
 export type EffectiveTemplateCellConfig = Omit<TemplateCellConfig, 'id'> & {

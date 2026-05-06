@@ -158,6 +158,7 @@ type PreviewHeaderCell = {
 }
 
 type CellConfigScope = 'single' | 'row' | 'column'
+type BuilderViewMode = 'structure' | 'preview'
 
 const defaultFieldForm: FieldFormState = {
   key: '',
@@ -549,7 +550,9 @@ function TemplateStructureContent({
   const [indicatorDialogOpen, setIndicatorDialogOpen] = useState(false)
   const [editingIndicator, setEditingIndicator] = useState<TemplateIndicator | null>(null)
   const [indicatorForm, setIndicatorForm] = useState<IndicatorFormState>(defaultIndicatorForm)
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<BuilderViewMode>('structure')
+  const [selectedCellKeys, setSelectedCellKeys] = useState<string[]>([])
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState<boolean>(true)
   const [formulaPreview, setFormulaPreview] = useState<{
     valid: boolean
     errors: string[]
@@ -558,10 +561,17 @@ function TemplateStructureContent({
   const [cellConfigScope, setCellConfigScope] = useState<CellConfigScope>('single')
   const [cellConfigIndicatorId, setCellConfigIndicatorId] = useState<string>('')
   const [cellConfigAttributeId, setCellConfigAttributeId] = useState<string>('')
-  const [cellConfigEditable, setCellConfigEditable] = useState<boolean>(true)
-  const [cellConfigDefaultValue, setCellConfigDefaultValue] = useState<string>('')
-  const [cellConfigValidationText, setCellConfigValidationText] = useState<string>('')
+  const [cellConfigDataType, setCellConfigDataType] = useState<FieldDataType>('text')
+  const [cellConfigRequired, setCellConfigRequired] = useState<boolean>(false)
+  const [cellConfigReadOnly, setCellConfigReadOnly] = useState<boolean>(false)
+  const [cellConfigFormula, setCellConfigFormula] = useState<string>('')
   const [cellConfigs, setCellConfigs] = useState<TemplateCellConfig[]>([])
+
+  const effectiveCellConfigsQuery = useQuery({
+    queryKey: ['form-management', currentTemplateId, 'cell-configs', 'effective'],
+    queryFn: () => formManagementApi.listEffectiveCellConfigs(currentTemplateId),
+    enabled: Boolean(currentTemplateId),
+  })
 
   useEffect(() => {
     if (!selectedTemplate) {
@@ -674,6 +684,58 @@ function TemplateStructureContent({
     [attributeOptions]
   )
 
+  const effectiveCellConfigMap = useMemo(() => {
+    const map = new Map<string, TemplateCellConfig>()
+    for (const item of effectiveCellConfigsQuery.data ?? []) {
+      map.set(`${item.indicatorId}:${item.attributeId}`, item)
+    }
+    return map
+  }, [effectiveCellConfigsQuery.data])
+
+  const resolveEffectiveCellConfig = (indicatorId: string, attributeId: string): TemplateCellConfig => {
+    const fromApi = effectiveCellConfigMap.get(`${indicatorId}:${attributeId}`)
+    if (fromApi) {
+      return fromApi
+    }
+
+    const indicator = indicators.find((item) => item.id === indicatorId)
+    const attribute = attributes.find((item) => item.id === attributeId)
+    const formula = indicator?.formula?.trim() ? indicator.formula.trim() : null
+    const dataType: FieldDataType =
+      indicator?.dataType === 'number' || attribute?.dataType === 'number' ? 'number' : 'text'
+    const required = Boolean(indicator?.required) || Boolean(attribute?.required)
+    const readOnly = formula ? true : Boolean(indicator?.readonly) || Boolean(attribute?.readonly)
+
+    return {
+      indicatorId,
+      attributeId,
+      dataType,
+      required,
+      readOnly,
+      formula,
+    }
+  }
+
+  const buildCellKey = (indicatorId: string, attributeId: string) => `${indicatorId}:${attributeId}`
+
+  const handlePreviewCellSelect = (indicatorId: string, attributeId: string) => {
+    const key = buildCellKey(indicatorId, attributeId)
+    const effective = resolveEffectiveCellConfig(indicatorId, attributeId)
+    setCellConfigScope('single')
+    setCellConfigIndicatorId(indicatorId)
+    setCellConfigAttributeId(attributeId)
+    setCellConfigDataType(effective.dataType)
+    setCellConfigRequired(effective.required)
+    setCellConfigReadOnly(effective.readOnly)
+    setCellConfigFormula(effective.formula ?? '')
+
+    setSelectedCellKeys((prev) => {
+      if (!isMultiSelectMode) return [key]
+      if (prev.includes(key)) return prev.filter((item) => item !== key)
+      return [...prev, key]
+    })
+  }
+
   const previewColumns = useMemo<ColumnDef<PreviewRow>[]>(() => {
     const cols: ColumnDef<PreviewRow>[] = [
       {
@@ -708,21 +770,41 @@ function TemplateStructureContent({
         cell: ({ row }) => {
           const indicatorId = row.original.id
           const attributeId = attr.id
+          const effective = resolveEffectiveCellConfig(indicatorId, attributeId)
+          const key = buildCellKey(indicatorId, attributeId)
+          const isSelected = selectedCellKeys.includes(key)
           return (
-            <span
-              className='block text-center text-muted-foreground'
+            <button
+              type='button'
+              className={`w-full rounded-sm border px-2 py-1 text-start ${
+                isSelected
+                  ? 'border-primary bg-primary/10'
+                  : 'border-dashed border-transparent hover:border-primary/40 hover:bg-primary/5'
+              }`}
               data-indicator-id={indicatorId}
               data-attribute-id={attributeId}
+              onClick={() => handlePreviewCellSelect(indicatorId, attributeId)}
             >
-              -
-            </span>
+              <div className='text-xs font-medium'>
+                {effective.dataType === 'number' ? 'Số' : 'Văn bản'}
+              </div>
+              <div className='text-[11px] text-muted-foreground'>
+                {effective.required ? 'Bắt buộc' : 'Không bắt buộc'} ·{' '}
+                {effective.readOnly ? 'Chỉ đọc' : 'Cho nhập'}
+              </div>
+              {effective.formula && (
+                <div className='truncate text-[11px] text-muted-foreground'>
+                  fx: {effective.formula}
+                </div>
+              )}
+            </button>
           )
         },
       })
     })
 
     return cols
-  }, [previewLeafAttributes])
+  }, [previewLeafAttributes, resolveEffectiveCellConfig, selectedCellKeys])
 
   const previewTable = useReactTable({
     data: previewRows,
@@ -1107,6 +1189,15 @@ function TemplateStructureContent({
   }
 
   const resolveCellConfigTargets = () => {
+    if (viewMode === 'preview' && selectedCellKeys.length > 0) {
+      return selectedCellKeys
+        .map((key) => {
+          const [indicatorId, attributeId] = key.split(':')
+          if (!indicatorId || !attributeId) return null
+          return { indicatorId, attributeId }
+        })
+        .filter((item): item is { indicatorId: string; attributeId: string } => item !== null)
+    }
     if (cellConfigScope === 'single') {
       if (!cellConfigIndicatorId || !cellConfigAttributeId) return []
       return [{ indicatorId: cellConfigIndicatorId, attributeId: cellConfigAttributeId }]
@@ -1135,17 +1226,15 @@ function TemplateStructureContent({
       toast.error('Vui lòng chọn phạm vi cell hợp lệ.')
       return
     }
-    const validationRule = parseValidationRule(cellConfigValidationText)
-    if (validationRule === undefined) {
-      toast.error('JSON kiểm tra dữ liệu không hợp lệ.')
-      return
-    }
+    const normalizedFormula = cellConfigFormula.trim() || null
+    const normalizedReadOnly = normalizedFormula ? true : cellConfigReadOnly
     const items: TemplateCellConfig[] = targets.map((target) => ({
       indicatorId: target.indicatorId,
       attributeId: target.attributeId,
-      isEditable: cellConfigEditable,
-      defaultValue: cellConfigDefaultValue || null,
-      validationRule,
+      dataType: cellConfigDataType,
+      required: cellConfigRequired,
+      readOnly: normalizedReadOnly,
+      formula: normalizedFormula,
     }))
     upsertCellConfigMutation.mutate({ templateId: currentTemplateId, items })
   }
@@ -1246,12 +1335,18 @@ function TemplateStructureContent({
             </div>
             <div className='flex flex-wrap gap-2'>
               <Button
+                variant={viewMode === 'structure' ? 'default' : 'outline'}
+                onClick={() => setViewMode('structure')}
+              >
+                Cấu trúc
+              </Button>
+              <Button
                 variant='outline'
                 disabled={!selectedTemplate}
-                onClick={() => setPreviewDialogOpen(true)}
+                onClick={() => setViewMode('preview')}
               >
                 <Eye />
-                Xem preview
+                Preview
               </Button>
               <Button
                 disabled={!selectedTemplate || !isDirty || builderStatus === 'saving'}
@@ -1301,6 +1396,8 @@ function TemplateStructureContent({
                 )}
               </div>
 
+              {viewMode === 'structure' ? (
+              <>
               <div className='grid gap-4 xl:grid-cols-2'>
                 <Card className='h-fit'>
                   <CardHeader className='pb-3'>
@@ -1478,30 +1575,48 @@ function TemplateStructureContent({
 
                   <div className='grid gap-3 md:grid-cols-2'>
                     <div className='space-y-2'>
-                      <Label>Default value</Label>
+                      <Label>Kiểu dữ liệu</Label>
+                      <Select
+                        value={cellConfigDataType}
+                        onValueChange={(value: FieldDataType) => setCellConfigDataType(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='text'>Văn bản</SelectItem>
+                          <SelectItem value='number'>Số</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Công thức</Label>
                       <Input
-                        value={cellConfigDefaultValue}
-                        onChange={(event) => setCellConfigDefaultValue(event.target.value)}
+                        placeholder='Ví dụ: CT_A + CT_B'
+                        value={cellConfigFormula}
+                        onChange={(event) => setCellConfigFormula(event.target.value)}
                       />
                     </div>
-                    <label className='inline-flex items-center gap-2 text-sm md:mt-8'>
-                      <input
-                        type='checkbox'
-                        checked={cellConfigEditable}
-                        onChange={(event) => setCellConfigEditable(event.target.checked)}
-                      />
-                      Cho phép chỉnh sửa (`is_editable`)
-                    </label>
                   </div>
 
-                  <div className='space-y-2'>
-                    <Label>Validation override (JSON)</Label>
-                    <Textarea
-                      rows={3}
-                      placeholder='Ví dụ: {"min":0,"max":100}'
-                      value={cellConfigValidationText}
-                      onChange={(event) => setCellConfigValidationText(event.target.value)}
-                    />
+                  <div className='grid gap-3 md:grid-cols-2'>
+                    <label className='inline-flex items-center gap-2 text-sm'>
+                      <input
+                        type='checkbox'
+                        checked={cellConfigRequired}
+                        onChange={(event) => setCellConfigRequired(event.target.checked)}
+                      />
+                      Bắt buộc nhập
+                    </label>
+                    <label className='inline-flex items-center gap-2 text-sm'>
+                      <input
+                        type='checkbox'
+                        checked={cellConfigReadOnly || Boolean(cellConfigFormula.trim())}
+                        onChange={(event) => setCellConfigReadOnly(event.target.checked)}
+                        disabled={Boolean(cellConfigFormula.trim())}
+                      />
+                      Chỉ đọc
+                    </label>
                   </div>
 
                   <div className='flex justify-end'>
@@ -1521,15 +1636,16 @@ function TemplateStructureContent({
                           <TableRow>
                             <TableHead>Chỉ tiêu</TableHead>
                             <TableHead>Thuộc tính</TableHead>
-                            <TableHead>Editable</TableHead>
-                            <TableHead>Default</TableHead>
+                            <TableHead>Kiểu dữ liệu</TableHead>
+                            <TableHead>Bắt buộc</TableHead>
+                            <TableHead>Chỉ đọc</TableHead>
                             <TableHead className='w-24 text-end'>Thao tác</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {cellConfigs.length === 0 && (
                             <TableRow>
-                              <TableCell colSpan={5} className='text-center text-muted-foreground'>
+                              <TableCell colSpan={6} className='text-center text-muted-foreground'>
                                 Chưa có override.
                               </TableCell>
                             </TableRow>
@@ -1538,8 +1654,9 @@ function TemplateStructureContent({
                             <TableRow key={`${row.indicatorId}:${row.attributeId}`}>
                               <TableCell>{indicatorNameById.get(row.indicatorId) ?? row.indicatorId}</TableCell>
                               <TableCell>{attributeNameById.get(row.attributeId) ?? row.attributeId}</TableCell>
-                              <TableCell>{row.isEditable ? 'Có' : 'Không'}</TableCell>
-                              <TableCell>{row.defaultValue ?? '-'}</TableCell>
+                              <TableCell>{row.dataType === 'number' ? 'Số' : 'Văn bản'}</TableCell>
+                              <TableCell>{row.required ? 'Có' : 'Không'}</TableCell>
+                              <TableCell>{row.readOnly ? 'Có' : 'Không'}</TableCell>
                               <TableCell className='text-end'>
                                 <Button
                                   size='sm'
@@ -1565,73 +1682,159 @@ function TemplateStructureContent({
                   </div>
                 </CardContent>
               </Card>
+              </>
+              ) : (
+                <div className='grid gap-4 xl:grid-cols-3'>
+                  <Card className='xl:col-span-2'>
+                    <CardHeader className='pb-3'>
+                      <CardTitle className='text-base'>
+                        Preview - {selectedTemplate.name}
+                      </CardTitle>
+                      <CardDescription>
+                        Chọn một hoặc nhiều ô trong lưới để cấu hình cell.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className='space-y-3'>
+                      <label className='inline-flex items-center gap-2 text-sm'>
+                        <input
+                          type='checkbox'
+                          checked={isMultiSelectMode}
+                          onChange={(event) => {
+                            const checked = event.target.checked
+                            setIsMultiSelectMode(checked)
+                            if (!checked && selectedCellKeys.length > 1) {
+                              setSelectedCellKeys(selectedCellKeys.slice(0, 1))
+                            }
+                          }}
+                        />
+                        Chọn nhiều ô
+                      </label>
+                      <div className='max-h-[72vh] overflow-auto rounded-md border'>
+                        <Table className='border-collapse'>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead
+                                rowSpan={2}
+                                className='border bg-muted/70 text-center align-middle font-semibold'
+                              >
+                                Chỉ tiêu
+                              </TableHead>
+                              {previewParentHeaders.map((header) => (
+                                <TableHead
+                                  key={header.id}
+                                  colSpan={header.colSpan}
+                                  className='border bg-muted/70 text-center align-middle font-semibold'
+                                >
+                                  <div>{header.label}</div>
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                            {previewTable.getHeaderGroups().map((headerGroup) => (
+                              <TableRow key={headerGroup.id}>
+                                {headerGroup.headers.slice(1).map((header) => (
+                                  <TableHead
+                                    key={header.id}
+                                    className='border bg-muted/50 text-center align-middle'
+                                  >
+                                    {header.isPlaceholder
+                                      ? null
+                                      : flexRender(header.column.columnDef.header, header.getContext())}
+                                  </TableHead>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableHeader>
+                          <TableBody>
+                            {previewTable.getRowModel().rows.map((row) => (
+                              <TableRow key={row.id}>
+                                {row.getVisibleCells().map((cell) => (
+                                  <TableCell
+                                    key={cell.id}
+                                    className={
+                                      cell.column.id === 'indicator'
+                                        ? 'border bg-muted/20 align-middle'
+                                        : 'border text-center align-middle'
+                                    }
+                                  >
+                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className='h-fit'>
+                    <CardHeader className='pb-3'>
+                      <CardTitle className='text-base'>Cấu hình Cell</CardTitle>
+                      <CardDescription>
+                        Đang chọn {selectedCellKeys.length} ô.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className='space-y-4'>
+                      <div className='grid gap-3'>
+                        <div className='space-y-2'>
+                          <Label>Kiểu dữ liệu</Label>
+                          <Select
+                            value={cellConfigDataType}
+                            onValueChange={(value: FieldDataType) => setCellConfigDataType(value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='text'>Văn bản</SelectItem>
+                              <SelectItem value='number'>Số</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className='space-y-2'>
+                          <Label>Công thức</Label>
+                          <Input
+                            placeholder='Ví dụ: CT_A + CT_B'
+                            value={cellConfigFormula}
+                            onChange={(event) => setCellConfigFormula(event.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className='grid gap-3'>
+                        <label className='inline-flex items-center gap-2 text-sm'>
+                          <input
+                            type='checkbox'
+                            checked={cellConfigRequired}
+                            onChange={(event) => setCellConfigRequired(event.target.checked)}
+                          />
+                          Bắt buộc nhập
+                        </label>
+                        <label className='inline-flex items-center gap-2 text-sm'>
+                          <input
+                            type='checkbox'
+                            checked={cellConfigReadOnly || Boolean(cellConfigFormula.trim())}
+                            onChange={(event) => setCellConfigReadOnly(event.target.checked)}
+                            disabled={Boolean(cellConfigFormula.trim())}
+                          />
+                          Chỉ đọc
+                        </label>
+                      </div>
+                      <Button
+                        className='w-full'
+                        onClick={handleApplyCellConfig}
+                        disabled={upsertCellConfigMutation.isPending || selectedCellKeys.length === 0}
+                      >
+                        Áp dụng cho ô đã chọn
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className='sm:max-w-5xl'>
-          <DialogHeader className='text-start'>
-            <DialogTitle>Xem preview</DialogTitle>
-          </DialogHeader>
-          <div className='max-h-[70vh] overflow-auto rounded-md border'>
-            <Table className='border-collapse'>
-              <TableHeader>
-                <TableRow>
-                  <TableHead
-                    rowSpan={2}
-                    className='border bg-muted/70 text-center align-middle font-semibold'
-                  >
-                    Chỉ tiêu
-                  </TableHead>
-                  {previewParentHeaders.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      className='border bg-muted/70 text-center align-middle font-semibold'
-                    >
-                      <div>{header.label}</div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-                {previewTable.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.slice(1).map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className='border bg-muted/50 text-center align-middle'
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {previewTable.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className={
-                          cell.column.id === 'indicator'
-                            ? 'border bg-muted/20 align-middle'
-                            : 'border text-center align-middle'
-                        }
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={fieldDialogOpen} onOpenChange={setFieldDialogOpen}>
         <DialogContent className='sm:max-w-xl'>

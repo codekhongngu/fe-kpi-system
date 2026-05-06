@@ -40,7 +40,7 @@ type BeForm = {
   updatedAt?: string
   attributes?: BeAttribute[]
   indicators?: BeIndicator[]
-  cellConfigs?: TemplateCellConfig[]
+  cellConfigs?: BeCellConfig[]
 }
 type BeAttribute = {
   id: string
@@ -84,6 +84,36 @@ type FormulaValidateResponse = {
 }
 
 type BeEffectiveCellConfig = EffectiveTemplateCellConfig
+type BeCellConfig = {
+  id?: string
+  indicatorId: string
+  attributeId: string
+  dataType?: string | null
+  required?: boolean | null
+  readOnly?: boolean | null
+  formula?: string | null
+  isEditable?: boolean
+  isRequired?: boolean | null
+}
+
+const mapCellConfig = (item: BeCellConfig): TemplateCellConfig => {
+  const formula = item.formula?.trim() ? item.formula.trim() : null
+  const readOnlyRaw =
+    typeof item.readOnly === 'boolean'
+      ? item.readOnly
+      : typeof item.isEditable === 'boolean'
+        ? !item.isEditable
+        : false
+  return {
+    id: item.id,
+    indicatorId: item.indicatorId,
+    attributeId: item.attributeId,
+    dataType: item.dataType === 'number' ? 'number' : 'text',
+    required: typeof item.required === 'boolean' ? item.required : Boolean(item.isRequired),
+    readOnly: formula ? true : readOnlyRaw,
+    formula,
+  }
+}
 
 const mapAttribute = (item: BeAttribute): TemplateField => ({
   id: item.id,
@@ -324,7 +354,7 @@ export const formManagementApi = {
       updatedAt: form.updatedAt,
       fields,
       indicators,
-      cellConfigs: form.cellConfigs ?? [],
+      cellConfigs: (form.cellConfigs ?? []).map(mapCellConfig),
     } satisfies FormTemplate
   },
 
@@ -464,17 +494,17 @@ export const formManagementApi = {
   },
 
   listCellConfigs: async (templateId: string) => {
-    const response = await apiClient.get<{ items?: TemplateCellConfig[] }>(
+    const response = await apiClient.get<{ items?: BeCellConfig[] }>(
       `/forms/${templateId}/cell-configs`
     )
-    return response.data.items ?? []
+    return (response.data.items ?? []).map(mapCellConfig)
   },
 
   listEffectiveCellConfigs: async (templateId: string) => {
     const response = await apiClient.get<{ items?: BeEffectiveCellConfig[] }>(
       `/forms/${templateId}/cell-configs/effective`
     )
-    return response.data.items ?? []
+    return (response.data.items ?? []).map((item) => mapCellConfig(item))
   },
 
   upsertCellConfigs: async (templateId: string, items: TemplateCellConfig[]) => {
