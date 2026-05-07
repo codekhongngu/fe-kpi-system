@@ -32,10 +32,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
 import { canRunReportAction } from '../api/mock-report-management-api'
 import type { ReportAction, ReportListItem } from '../api/types'
-import { ReportPriorityBadge, ReportStatusBadge } from './report-status'
+import { ReportStatusBadge } from './report-status'
 
 type ReportTableProps = {
   data: ReportListItem[]
@@ -58,13 +57,6 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('vi-VN').format(new Date(value))
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
 export function ReportTable({
   data,
   isLoading,
@@ -84,7 +76,7 @@ export function ReportTable({
     () => [
       {
         accessorKey: 'name',
-        header: 'Báo cáo',
+        header: 'Tên báo cáo',
         cell: ({ row }) => {
           const report = row.original
           return (
@@ -96,33 +88,25 @@ export function ReportTable({
               >
                 {report.name}
               </button>
-              <div className='mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground'>
-                <span>{report.code}</span>
-                <span>•</span>
-                <span>{report.templateName}</span>
-              </div>
             </div>
           )
         },
       },
       {
-        accessorKey: 'unitName',
-        header: 'Đơn vị',
-        cell: ({ row }) => (
-          <div className='min-w-[160px]'>
-            <div className='font-medium'>{row.original.unitName}</div>
-            <div className='text-xs text-muted-foreground'>{row.original.ownerName}</div>
-          </div>
-        ),
+        accessorKey: 'period',
+        header: 'Kỳ dữ liệu',
+        cell: ({ row }) => <div className='min-w-[140px]'>{row.original.period}</div>,
       },
       {
-        accessorKey: 'period',
-        header: 'Kỳ / hạn nộp',
+        accessorKey: 'openDate',
+        header: 'Ngày mở',
+        cell: ({ row }) => <div className='min-w-[120px]'>{formatDate(row.original.openDate ?? null)}</div>,
+      },
+      {
+        accessorKey: 'closeDate',
+        header: 'Ngày đóng',
         cell: ({ row }) => (
-          <div className='min-w-[130px]'>
-            <div>{row.original.period}</div>
-            <div className='text-xs text-muted-foreground'>{formatDate(row.original.deadline)}</div>
-          </div>
+          <div className='min-w-[120px]'>{formatDate(row.original.closeDate ?? row.original.deadline)}</div>
         ),
       },
       {
@@ -131,47 +115,12 @@ export function ReportTable({
         cell: ({ row }) => (
           <div className='flex min-w-[130px] flex-col items-start gap-2'>
             <ReportStatusBadge status={row.original.status} />
-            <ReportPriorityBadge priority={row.original.priority} />
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'completionPercent',
-        header: 'Tiến độ',
-        cell: ({ row }) => {
-          const value = row.original.completionPercent
-          return (
-            <div className='min-w-[130px]'>
-              <div className='mb-1 flex items-center justify-between text-xs'>
-                <span className='text-muted-foreground'>Hoàn thành</span>
-                <span className='font-medium'>{value}%</span>
-              </div>
-              <div className='h-2 rounded-full bg-muted'>
-                <div
-                  className={cn(
-                    'h-2 rounded-full',
-                    value >= 100 ? 'bg-emerald-500' : 'bg-teal-600'
-                  )}
-                  style={{ width: `${value}%` }}
-                />
-              </div>
-            </div>
-          )
-        },
-      },
-      {
-        accessorKey: 'updatedAt',
-        header: 'Cập nhật',
-        cell: ({ row }) => (
-          <div className='min-w-[150px] text-sm'>
-            <div>{formatDateTime(row.original.updatedAt)}</div>
-            <div className='text-xs text-muted-foreground'>{row.original.updatedBy}</div>
           </div>
         ),
       },
       {
         id: 'actions',
-        header: '',
+        header: () => <div className='text-right'>Thao tác</div>,
         cell: ({ row }) => {
           const report = row.original
           return (

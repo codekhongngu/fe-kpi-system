@@ -77,6 +77,8 @@ const reportsDb: ReportDetail[] = [
     unitId: 'org-vp',
     unitName: 'Văn phòng UBND',
     period: 'Tháng 04/2026',
+    openDate: '2026-04-25',
+    closeDate: '2026-05-05',
     deadline: '2026-05-05',
     status: 'OVERDUE',
     priority: 'high',
@@ -110,6 +112,8 @@ const reportsDb: ReportDetail[] = [
     unitId: 'org-yte',
     unitName: 'Phòng Y tế',
     period: 'Tháng 05/2026',
+    openDate: '2026-05-01',
+    closeDate: '2026-05-20',
     deadline: '2026-05-20',
     status: 'UNDER_REVIEW',
     priority: 'normal',
@@ -143,6 +147,8 @@ const reportsDb: ReportDetail[] = [
     unitId: 'org-gddt',
     unitName: 'Phòng Giáo dục và Đào tạo',
     period: 'Quý II/2026',
+    openDate: '2026-05-02',
+    closeDate: '2026-06-30',
     deadline: '2026-06-30',
     status: 'ASSIGNED',
     priority: 'normal',
@@ -180,6 +186,8 @@ const reportsDb: ReportDetail[] = [
     unitId: 'org-tc',
     unitName: 'Phòng Tài chính',
     period: 'Tháng 04/2026',
+    openDate: '2026-04-26',
+    closeDate: '2026-05-07',
     deadline: '2026-05-07',
     status: 'APPROVED',
     priority: 'low',
@@ -335,52 +343,50 @@ export const reportManagementApi = {
   createReport: (input: CreateReportInput) =>
     simulate(() => {
       const template = references.templates.find((item) => item.id === input.templateId)
-      const period = references.periods.find((item) => item.id === input.period)
-      if (!template || !period || input.unitIds.length === 0) {
+      if (!template) {
         throw new Error('Thông tin tạo báo cáo chưa hợp lệ.')
       }
 
-      const created = input.unitIds.map((unitId) => {
-        const unit = references.units.find((item) => item.id === unitId)
-        if (!unit) {
-          throw new Error('Đơn vị được chọn không hợp lệ.')
-        }
+      const unit = references.units[0]
+      if (!unit) {
+        throw new Error('Đơn vị được chọn không hợp lệ.')
+      }
 
-        const report: ReportDetail = {
-          id: nextId('rpt'),
-          code: nextCode(),
-          name: input.name,
-          templateId: template.id,
-          templateName: template.name,
-          unitId: unit.id,
-          unitName: unit.name,
-          period: period.name,
-          deadline: input.deadline,
-          status: 'DRAFT',
-          priority: input.priority,
-          completionPercent: 0,
-          ownerName: unit.name,
-          updatedBy: 'Admin hệ thống',
-          updatedAt: new Date().toISOString(),
-          submittedAt: null,
-          approvedAt: null,
-          rejectionReason: null,
-          note: input.note ?? null,
-          description: 'Báo cáo được tạo từ template đang hiệu lực.',
-          assignees: [unit.name],
-          cells: baseCells.map((cell) => ({
-            ...cell,
-            id: `${unit.id}-${cell.id}`,
-            value: null,
-          })),
-          history: [],
-        }
-        appendHistory(report, 'Tạo báo cáo', `Tạo từ template ${template.name}`)
-        reportsDb.unshift(report)
-        return cloneDetail(report)
-      })
+      const report: ReportDetail = {
+        id: nextId('rpt'),
+        code: nextCode(),
+        name: input.name,
+        templateId: template.id,
+        templateName: template.name,
+        unitId: unit.id,
+        unitName: unit.name,
+        period: input.periodName,
+        openDate: input.openDate,
+        closeDate: input.closeDate,
+        deadline: input.closeDate,
+        status: 'DRAFT',
+        priority: input.priority,
+        completionPercent: 0,
+        ownerName: unit.name,
+        updatedBy: 'Admin hệ thống',
+        updatedAt: new Date().toISOString(),
+        submittedAt: null,
+        approvedAt: null,
+        rejectionReason: null,
+        note: input.note ?? null,
+        description: 'Báo cáo được tạo từ template đang hiệu lực.',
+        assignees: [unit.name],
+        cells: baseCells.map((cell) => ({
+          ...cell,
+          id: `${unit.id}-${cell.id}`,
+          value: null,
+        })),
+        history: [],
+      }
+      appendHistory(report, 'Tạo báo cáo', `Tạo từ template ${template.name}`)
+      reportsDb.unshift(report)
 
-      return created[0]
+      return cloneDetail(report)
     }),
 
   updateReport: (id: string, input: UpdateReportInput) =>

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocation } from '@tanstack/react-router'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Download, FilePlus2, ShieldCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { apiClient } from '@/lib/api-client'
 import { reportManagementApi } from '../api/mock-report-management-api'
 import type {
   CreateReportInput,
@@ -14,7 +15,6 @@ import type {
 } from '../api/types'
 import { PermissionGuard } from '../components/permission-guard'
 import { ReportConfirmDialog } from '../components/report-confirm-dialog'
-import { ReportDetailDialog } from '../components/report-detail-dialog'
 import { ReportFilters as ReportFiltersPanel } from '../components/report-filters'
 import { ReportFormDialog } from '../components/report-form-dialog'
 import { ReportSummaryStrip } from '../components/report-summary-strip'
@@ -98,6 +98,7 @@ function getConfirmCopy(confirmState: ConfirmState) {
 
 export function ReportListPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const href = useLocation({ select: (location) => location.href })
   const permission = usePermission()
   const initialTab = useMemo(
@@ -111,7 +112,6 @@ export function ReportListPage() {
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
   const [editingReport, setEditingReport] = useState<ReportListItem | null>(null)
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [confirmState, setConfirmState] = useState<ConfirmState>(null)
   const [roleVariantsOpen, setRoleVariantsOpen] = useState(false)
 
@@ -130,12 +130,6 @@ export function ReportListPage() {
     queryFn: () => reportManagementApi.listReports(filters),
   })
 
-  const detailQuery = useQuery({
-    queryKey: reportQueryKeys.detail(selectedReportId),
-    queryFn: () => reportManagementApi.getReport(selectedReportId ?? ''),
-    enabled: Boolean(selectedReportId),
-  })
-
   const invalidateReports = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['report-management', 'list'] }),
@@ -145,9 +139,19 @@ export function ReportListPage() {
   }
 
   const createMutation = useMutation({
-    mutationFn: (input: CreateReportInput) => reportManagementApi.createReport(input),
+    mutationFn: async (input: CreateReportInput) => {
+      await apiClient.post('/assignments', {
+        formId: input.templateId,
+        periodType: input.periodType,
+        periodCode: input.periodCode,
+        periodName: input.periodName,
+        deadlineFrom: input.openDate,
+        deadlineTo: input.closeDate,
+      })
+      return true
+    },
     onSuccess: async () => {
-      toast.success('Đã tạo báo cáo.')
+      toast.success('Đã tạo báo cáo thành công.')
       setFormOpen(false)
       await invalidateReports()
     },
@@ -282,7 +286,9 @@ export function ReportListPage() {
               isLoading={listQuery.isLoading || listQuery.isFetching}
               can={permission.can}
               onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
-              onView={(report) => setSelectedReportId(report.id)}
+              onView={(report) =>
+                navigate({ to: '/report-management/details/$reportId', params: { reportId: report.id } })
+              }
               onEdit={openEditForm}
               onDelete={(report) => setConfirmState({ type: 'delete', report })}
               onAssign={(report) => setConfirmState({ type: 'assign', report })}
@@ -302,29 +308,6 @@ export function ReportListPage() {
         onOpenChange={setFormOpen}
         onCreate={(input) => createMutation.mutate(input)}
         onUpdate={(id, input) => updateMutation.mutate({ id, input })}
-      />
-
-      <ReportDetailDialog
-        open={Boolean(selectedReportId)}
-        report={detailQuery.data}
-        isLoading={detailQuery.isLoading || detailQuery.isFetching}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedReportId(null)
-          }
-        }}
-        onEdit={() => {
-          if (!detailQuery.data) return
-          openEditForm(detailQuery.data)
-        }}
-        onApprove={() => {
-          if (!detailQuery.data) return
-          setConfirmState({ type: 'approve', report: detailQuery.data })
-        }}
-        onReject={() => {
-          if (!detailQuery.data) return
-          setConfirmState({ type: 'reject', report: detailQuery.data })
-        }}
       />
 
       <ReportConfirmDialog

@@ -1,3 +1,5 @@
+import type { PeriodType } from '@/features/form-management/api/types'
+
 export type ReportRole = 'admin' | 'manager' | 'staff'
 
 export type ReportTab =
@@ -45,6 +47,8 @@ export type ReportListItem = {
   unitId: string
   unitName: string
   period: string
+  openDate?: string
+  closeDate?: string
   deadline: string
   status: ReportStatus
   priority: ReportPriority
@@ -124,9 +128,13 @@ export type ReportReferences = {
 export type CreateReportInput = {
   name: string
   templateId: string
-  unitIds: string[]
-  period: string
+  periodType: PeriodType
+  periodCode: string
+  periodName: string
+  openDate: string
+  closeDate: string
   deadline: string
+  autoAssignNextPeriod?: boolean
   priority: ReportPriority
   note?: string | null
 }

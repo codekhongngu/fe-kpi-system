@@ -47,6 +47,7 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedFormManagementCreateRouteImport } from './routes/_authenticated/form-management/create'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedReportManagementDetailsReportIdRouteImport } from './routes/_authenticated/report-management/details.$reportId'
 import { Route as AuthenticatedFormManagementEditTemplateIdRouteImport } from './routes/_authenticated/form-management/edit.$templateId'
 import { Route as AuthenticatedFormManagementDetailsTemplateIdRouteImport } from './routes/_authenticated/form-management/details.$templateId'
 
@@ -252,6 +253,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedReportManagementDetailsReportIdRoute =
+  AuthenticatedReportManagementDetailsReportIdRouteImport.update({
+    id: '/report-management/details/$reportId',
+    path: '/report-management/details/$reportId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFormManagementEditTemplateIdRoute =
   AuthenticatedFormManagementEditTemplateIdRouteImport.update({
     id: '/edit/$templateId',
@@ -303,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/form-management/edit/$templateId': typeof AuthenticatedFormManagementEditTemplateIdRoute
+  '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -340,6 +348,7 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersIndexRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/form-management/edit/$templateId': typeof AuthenticatedFormManagementEditTemplateIdRoute
+  '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -383,6 +392,7 @@ export interface FileRoutesById {
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/_authenticated/form-management/edit/$templateId': typeof AuthenticatedFormManagementEditTemplateIdRoute
+  '/_authenticated/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/users/'
     | '/form-management/details/$templateId'
     | '/form-management/edit/$templateId'
+    | '/report-management/details/$reportId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -461,6 +472,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/form-management/details/$templateId'
     | '/form-management/edit/$templateId'
+    | '/report-management/details/$reportId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -503,6 +515,7 @@ export interface FileRouteTypes {
     | '/_authenticated/users/'
     | '/_authenticated/form-management/details/$templateId'
     | '/_authenticated/form-management/edit/$templateId'
+    | '/_authenticated/report-management/details/$reportId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -789,6 +802,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/report-management/details/$reportId': {
+      id: '/_authenticated/report-management/details/$reportId'
+      path: '/report-management/details/$reportId'
+      fullPath: '/report-management/details/$reportId'
+      preLoaderRoute: typeof AuthenticatedReportManagementDetailsReportIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/form-management/edit/$templateId': {
       id: '/_authenticated/form-management/edit/$templateId'
       path: '/edit/$templateId'
@@ -867,6 +887,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSystemAdminIndexRoute: typeof AuthenticatedSystemAdminIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedReportManagementDetailsReportIdRoute: typeof AuthenticatedReportManagementDetailsReportIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -886,6 +907,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSystemAdminIndexRoute: AuthenticatedSystemAdminIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedReportManagementDetailsReportIdRoute:
+    AuthenticatedReportManagementDetailsReportIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
