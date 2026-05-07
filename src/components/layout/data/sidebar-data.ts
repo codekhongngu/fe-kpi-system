@@ -259,6 +259,7 @@ export function getSidebarNavGroupsForUser(
   user: unknown,
   rolesById?: Record<string, string>
 ) {
-  const role = getAppRoleForUser(user, rolesById)
-  return buildNavGroups(role)
+  void user
+  void rolesById
+  return buildNavGroups('SYSTEM_ADMIN')
 }

@@ -149,7 +149,7 @@ export function FormCategoryListPage() {
       <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
           <CardTitle>Lĩnh vực biểu mẫu</CardTitle>
-          <CardDescription>Quản lý danh mục lĩnh vực biểu mẫu để phân nhóm biểu mẫu.</CardDescription>
+          <CardDescription>Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.</CardDescription>
         </div>
 
         <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>

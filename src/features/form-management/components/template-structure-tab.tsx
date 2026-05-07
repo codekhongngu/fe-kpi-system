@@ -14,7 +14,6 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table'
 import {
   Check,
   ChevronDown,
@@ -65,21 +64,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { formManagementApi } from '../api/mock-form-management-api'
 import {
   fieldDataTypeOptions,
   indicatorTypeOptions,
   type FieldDataType,
-  type TemplateCellConfig,
   type FormTemplate,
   type IndicatorType,
   type TemplateField,
@@ -95,14 +85,12 @@ import {
   indicatorReorder,
   indicatorReparent,
   markBuilderClean,
-  selectAttributeRows,
   selectAttributeTree,
   selectAttributes,
   selectBuilderDirty,
   selectBuilderStatus,
   selectExpandedAttributeIds,
   selectExpandedIndicatorIds,
-  selectIndicatorRows,
   selectIndicatorTree,
   selectIndicators,
   setBuilderStatus,
@@ -139,26 +127,6 @@ type IndicatorFormState = {
   validationRule?: Record<string, unknown> | null
   validationText: string
 }
-
-type PreviewRow = {
-  id: string
-  code: string
-  name: string
-  depth: number
-  order: number
-}
-
-type PreviewAttributeColumn = TemplateField & { depth: number }
-
-type PreviewHeaderCell = {
-  id: string
-  label: string
-  depth: number
-  colSpan: number
-}
-
-type CellConfigScope = 'single' | 'row' | 'column'
-type BuilderViewMode = 'structure' | 'preview'
 
 const defaultFieldForm: FieldFormState = {
   key: '',
@@ -534,8 +502,6 @@ function TemplateStructureContent({
 
   const indicatorTree = useFormBuilderSelector(selectIndicatorTree)
   const attributeTree = useFormBuilderSelector(selectAttributeTree)
-  const indicatorRows = useFormBuilderSelector(selectIndicatorRows)
-  const attributeRows = useFormBuilderSelector(selectAttributeRows)
   const indicators = useFormBuilderSelector(selectIndicators)
   const attributes = useFormBuilderSelector(selectAttributes)
   const expandedIndicatorIds = useFormBuilderSelector(selectExpandedIndicatorIds)
@@ -550,28 +516,11 @@ function TemplateStructureContent({
   const [indicatorDialogOpen, setIndicatorDialogOpen] = useState(false)
   const [editingIndicator, setEditingIndicator] = useState<TemplateIndicator | null>(null)
   const [indicatorForm, setIndicatorForm] = useState<IndicatorFormState>(defaultIndicatorForm)
-  const [viewMode, setViewMode] = useState<BuilderViewMode>('structure')
-  const [selectedCellKeys, setSelectedCellKeys] = useState<string[]>([])
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState<boolean>(true)
   const [formulaPreview, setFormulaPreview] = useState<{
     valid: boolean
     errors: string[]
     warnings: string[]
   } | null>(null)
-  const [cellConfigScope, setCellConfigScope] = useState<CellConfigScope>('single')
-  const [cellConfigIndicatorId, setCellConfigIndicatorId] = useState<string>('')
-  const [cellConfigAttributeId, setCellConfigAttributeId] = useState<string>('')
-  const [cellConfigDataType, setCellConfigDataType] = useState<FieldDataType>('text')
-  const [cellConfigRequired, setCellConfigRequired] = useState<boolean>(false)
-  const [cellConfigReadOnly, setCellConfigReadOnly] = useState<boolean>(false)
-  const [cellConfigFormula, setCellConfigFormula] = useState<string>('')
-  const [cellConfigs, setCellConfigs] = useState<TemplateCellConfig[]>([])
-
-  const effectiveCellConfigsQuery = useQuery({
-    queryKey: ['form-management', currentTemplateId, 'cell-configs', 'effective'],
-    queryFn: () => formManagementApi.listEffectiveCellConfigs(currentTemplateId),
-    enabled: Boolean(currentTemplateId),
-  })
 
   useEffect(() => {
     if (!selectedTemplate) {
@@ -586,62 +535,6 @@ function TemplateStructureContent({
       })
     )
   }, [dispatch, selectedTemplate])
-
-  useEffect(() => {
-    setCellConfigs(selectedTemplate?.cellConfigs ?? [])
-    const firstIndicator = selectedTemplate?.indicators?.[0]?.id ?? ''
-    const firstAttribute = selectedTemplate?.fields?.[0]?.id ?? ''
-    setCellConfigIndicatorId((prev) => prev || firstIndicator)
-    setCellConfigAttributeId((prev) => prev || firstAttribute)
-  }, [selectedTemplate])
-
-  const previewRows = useMemo<PreviewRow[]>(
-    () =>
-      indicatorRows.map((item) => ({
-        id: item.id,
-        code: item.code,
-        name: item.name,
-        depth: item.depth,
-        order: item.order ?? 0,
-      })),
-    [indicatorRows]
-  )
-
-  const previewAttributeColumns = useMemo<PreviewAttributeColumn[]>(() => {
-    return attributeRows.filter((attr) => attr.visible !== false)
-  }, [attributeRows])
-
-  const previewParentHeaders = useMemo<PreviewHeaderCell[]>(() => {
-    const visibleIds = new Set(previewAttributeColumns.map((attr) => attr.id))
-    const childrenByParent = new Map<string | null, PreviewAttributeColumn[]>()
-    previewAttributeColumns.forEach((attr) => {
-      const parentId = attr.parentId ?? null
-      const list = childrenByParent.get(parentId) ?? []
-      list.push(attr)
-      childrenByParent.set(parentId, list)
-    })
-
-    return previewAttributeColumns
-      .filter((attr) => !attr.parentId || !visibleIds.has(attr.parentId))
-      .map((attr) => {
-        const children = childrenByParent.get(attr.id) ?? []
-        return {
-          id: attr.id,
-          label: attr.label,
-          depth: attr.depth,
-          colSpan: children.length > 0 ? children.length : 1,
-        }
-      })
-  }, [previewAttributeColumns])
-
-  const previewLeafAttributes = useMemo<PreviewAttributeColumn[]>(() => {
-    const parentIds = new Set(
-      previewAttributeColumns
-        .map((attr) => attr.parentId ?? null)
-        .filter((parentId): parentId is string => Boolean(parentId))
-    )
-    return previewAttributeColumns.filter((attr) => !parentIds.has(attr.id))
-  }, [previewAttributeColumns])
 
   const attributeParentOptions = useMemo<ParentOption[]>(
     () =>
@@ -665,152 +558,6 @@ function TemplateStructureContent({
     [indicators, editingIndicator?.id]
   )
 
-  const indicatorOptions = useMemo<ParentOption[]>(
-    () => indicators.map((item) => ({ id: item.id, label: `${item.code} - ${item.name}` })),
-    [indicators]
-  )
-
-  const attributeOptions = useMemo<ParentOption[]>(
-    () => attributes.map((item) => ({ id: item.id, label: `${item.key} - ${item.label}` })),
-    [attributes]
-  )
-
-  const indicatorNameById = useMemo(
-    () => new Map(indicatorOptions.map((item) => [item.id, item.label])),
-    [indicatorOptions]
-  )
-  const attributeNameById = useMemo(
-    () => new Map(attributeOptions.map((item) => [item.id, item.label])),
-    [attributeOptions]
-  )
-
-  const effectiveCellConfigMap = useMemo(() => {
-    const map = new Map<string, TemplateCellConfig>()
-    for (const item of effectiveCellConfigsQuery.data ?? []) {
-      map.set(`${item.indicatorId}:${item.attributeId}`, item)
-    }
-    return map
-  }, [effectiveCellConfigsQuery.data])
-
-  const resolveEffectiveCellConfig = (indicatorId: string, attributeId: string): TemplateCellConfig => {
-    const fromApi = effectiveCellConfigMap.get(`${indicatorId}:${attributeId}`)
-    if (fromApi) {
-      return fromApi
-    }
-
-    const indicator = indicators.find((item) => item.id === indicatorId)
-    const attribute = attributes.find((item) => item.id === attributeId)
-    const formula = indicator?.formula?.trim() ? indicator.formula.trim() : null
-    const dataType: FieldDataType =
-      indicator?.dataType === 'number' || attribute?.dataType === 'number' ? 'number' : 'text'
-    const required = Boolean(indicator?.required) || Boolean(attribute?.required)
-    const readOnly = formula ? true : Boolean(indicator?.readonly) || Boolean(attribute?.readonly)
-
-    return {
-      indicatorId,
-      attributeId,
-      dataType,
-      required,
-      readOnly,
-      formula,
-    }
-  }
-
-  const buildCellKey = (indicatorId: string, attributeId: string) => `${indicatorId}:${attributeId}`
-
-  const handlePreviewCellSelect = (indicatorId: string, attributeId: string) => {
-    const key = buildCellKey(indicatorId, attributeId)
-    const effective = resolveEffectiveCellConfig(indicatorId, attributeId)
-    setCellConfigScope('single')
-    setCellConfigIndicatorId(indicatorId)
-    setCellConfigAttributeId(attributeId)
-    setCellConfigDataType(effective.dataType)
-    setCellConfigRequired(effective.required)
-    setCellConfigReadOnly(effective.readOnly)
-    setCellConfigFormula(effective.formula ?? '')
-
-    setSelectedCellKeys((prev) => {
-      if (!isMultiSelectMode) return [key]
-      if (prev.includes(key)) return prev.filter((item) => item !== key)
-      return [...prev, key]
-    })
-  }
-
-  const previewColumns = useMemo<ColumnDef<PreviewRow>[]>(() => {
-    const cols: ColumnDef<PreviewRow>[] = [
-      {
-        id: 'indicator',
-        header: 'Chỉ tiêu',
-        cell: ({ row }) => (
-          <div
-            className='flex items-center justify-center gap-2 text-start'
-            style={{ paddingInlineStart: `${row.original.depth * 18}px` }}
-          >
-            {row.original.depth > 0 && <span className='h-px w-4 bg-border' aria-hidden='true' />}
-            <div className='min-w-0'>
-              <div className='text-xs text-muted-foreground'>{row.original.code}</div>
-              <div className={row.original.depth === 0 ? 'font-semibold' : 'font-medium'}>
-                {row.original.name}
-              </div>
-            </div>
-          </div>
-        ),
-      },
-    ]
-
-    previewLeafAttributes.forEach((attr) => {
-      cols.push({
-        id: `attr_${attr.id}`,
-        header: () => (
-          <div className='text-center'>
-            <div className='font-medium'>{attr.label}</div>
-            <div className='text-xs text-muted-foreground'>{attr.key}</div>
-          </div>
-        ),
-        cell: ({ row }) => {
-          const indicatorId = row.original.id
-          const attributeId = attr.id
-          const effective = resolveEffectiveCellConfig(indicatorId, attributeId)
-          const key = buildCellKey(indicatorId, attributeId)
-          const isSelected = selectedCellKeys.includes(key)
-          return (
-            <button
-              type='button'
-              className={`w-full rounded-sm border px-2 py-1 text-start ${
-                isSelected
-                  ? 'border-primary bg-primary/10'
-                  : 'border-dashed border-transparent hover:border-primary/40 hover:bg-primary/5'
-              }`}
-              data-indicator-id={indicatorId}
-              data-attribute-id={attributeId}
-              onClick={() => handlePreviewCellSelect(indicatorId, attributeId)}
-            >
-              <div className='text-xs font-medium'>
-                {effective.dataType === 'number' ? 'Số' : 'Văn bản'}
-              </div>
-              <div className='text-[11px] text-muted-foreground'>
-                {effective.required ? 'Bắt buộc' : 'Không bắt buộc'} ·{' '}
-                {effective.readOnly ? 'Chỉ đọc' : 'Cho nhập'}
-              </div>
-              {effective.formula && (
-                <div className='truncate text-[11px] text-muted-foreground'>
-                  fx: {effective.formula}
-                </div>
-              )}
-            </button>
-          )
-        },
-      })
-    })
-
-    return cols
-  }, [previewLeafAttributes, resolveEffectiveCellConfig, selectedCellKeys])
-
-  const previewTable = useReactTable({
-    data: previewRows,
-    columns: previewColumns,
-    getCoreRowModel: getCoreRowModel(),
-  })
 
   const createFieldMutation = useMutation({
     mutationFn: ({ templateId, payload }: { templateId: string; payload: FieldFormState }) =>
@@ -953,38 +700,6 @@ function TemplateStructureContent({
     onError: (error) => toast.error(error.message),
   })
 
-  const upsertCellConfigMutation = useMutation({
-    mutationFn: ({
-      templateId,
-      items,
-    }: {
-      templateId: string
-      items: TemplateCellConfig[]
-    }) => formManagementApi.upsertCellConfigs(templateId, items),
-    onSuccess: () => {
-      toast.success('Đã cập nhật cấu hình ô.')
-      queryClient.invalidateQueries({ queryKey: ['form-management'] })
-    },
-    onError: (error) => toast.error(error.message),
-  })
-
-  const deleteCellConfigMutation = useMutation({
-    mutationFn: ({
-      templateId,
-      indicatorId,
-      attributeId,
-    }: {
-      templateId: string
-      indicatorId: string
-      attributeId: string
-    }) =>
-      formManagementApi.deleteCellConfigs(templateId, [{ indicatorId, attributeId }]),
-    onSuccess: () => {
-      toast.success('Đã bỏ override của ô.')
-      queryClient.invalidateQueries({ queryKey: ['form-management'] })
-    },
-    onError: (error) => toast.error(error.message),
-  })
 
   const saveBuilderMutation = useMutation({
     mutationFn: async (templateId: string) => {
@@ -1188,57 +903,6 @@ function TemplateStructureContent({
     })
   }
 
-  const resolveCellConfigTargets = () => {
-    if (viewMode === 'preview' && selectedCellKeys.length > 0) {
-      return selectedCellKeys
-        .map((key) => {
-          const [indicatorId, attributeId] = key.split(':')
-          if (!indicatorId || !attributeId) return null
-          return { indicatorId, attributeId }
-        })
-        .filter((item): item is { indicatorId: string; attributeId: string } => item !== null)
-    }
-    if (cellConfigScope === 'single') {
-      if (!cellConfigIndicatorId || !cellConfigAttributeId) return []
-      return [{ indicatorId: cellConfigIndicatorId, attributeId: cellConfigAttributeId }]
-    }
-    if (cellConfigScope === 'row') {
-      if (!cellConfigIndicatorId) return []
-      return attributes.map((attr) => ({
-        indicatorId: cellConfigIndicatorId,
-        attributeId: attr.id,
-      }))
-    }
-    if (!cellConfigAttributeId) return []
-    return indicators.map((ind) => ({
-      indicatorId: ind.id,
-      attributeId: cellConfigAttributeId,
-    }))
-  }
-
-  const handleApplyCellConfig = () => {
-    if (!currentTemplateId) {
-      toast.error('Vui lòng chọn biểu mẫu.')
-      return
-    }
-    const targets = resolveCellConfigTargets()
-    if (targets.length === 0) {
-      toast.error('Vui lòng chọn phạm vi cell hợp lệ.')
-      return
-    }
-    const normalizedFormula = cellConfigFormula.trim() || null
-    const normalizedReadOnly = normalizedFormula ? true : cellConfigReadOnly
-    const items: TemplateCellConfig[] = targets.map((target) => ({
-      indicatorId: target.indicatorId,
-      attributeId: target.attributeId,
-      dataType: cellConfigDataType,
-      required: cellConfigRequired,
-      readOnly: normalizedReadOnly,
-      formula: normalizedFormula,
-    }))
-    upsertCellConfigMutation.mutate({ templateId: currentTemplateId, items })
-  }
-
   const indicatorSensors = useSensors(useSensor(PointerSensor))
   const attributeSensors = useSensors(useSensor(PointerSensor))
 
@@ -1334,10 +998,7 @@ function TemplateStructureContent({
               </CardDescription>
             </div>
             <div className='flex flex-wrap gap-2'>
-              <Button
-                variant={viewMode === 'structure' ? 'default' : 'outline'}
-                onClick={() => setViewMode('structure')}
-              >
+              <Button variant='default'>
                 Cấu trúc
               </Button>
               <Button
@@ -1396,8 +1057,6 @@ function TemplateStructureContent({
                 )}
               </div>
 
-              {viewMode === 'structure' ? (
-              <>
               <div className='grid gap-4 xl:grid-cols-2'>
                 <Card className='h-fit'>
                   <CardHeader className='pb-3'>
@@ -1507,329 +1166,6 @@ function TemplateStructureContent({
                   </CardContent>
                 </Card>
               </div>
-
-              <Card>
-                <CardHeader className='pb-3'>
-                  <CardTitle className='text-base'>Cell Config Override</CardTitle>
-                  <CardDescription>
-                    Ghi đè cấu hình theo ô hoặc nhóm ô. Ưu tiên: cell override {'>'} chỉ tiêu/thuộc tính.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className='space-y-4'>
-                  <div className='grid gap-3 md:grid-cols-3'>
-                    <div className='space-y-2'>
-                      <Label>Phạm vi</Label>
-                      <Select
-                        value={cellConfigScope}
-                        onValueChange={(value: CellConfigScope) => setCellConfigScope(value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='single'>Một ô</SelectItem>
-                          <SelectItem value='row'>Toàn bộ theo chỉ tiêu</SelectItem>
-                          <SelectItem value='column'>Toàn bộ theo thuộc tính</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label>Chỉ tiêu</Label>
-                      <Select
-                        value={cellConfigIndicatorId}
-                        onValueChange={setCellConfigIndicatorId}
-                        disabled={cellConfigScope === 'column'}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder='Chọn chỉ tiêu' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {indicatorOptions.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label>Thuộc tính</Label>
-                      <Select
-                        value={cellConfigAttributeId}
-                        onValueChange={setCellConfigAttributeId}
-                        disabled={cellConfigScope === 'row'}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder='Chọn thuộc tính' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {attributeOptions.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className='grid gap-3 md:grid-cols-2'>
-                    <div className='space-y-2'>
-                      <Label>Kiểu dữ liệu</Label>
-                      <Select
-                        value={cellConfigDataType}
-                        onValueChange={(value: FieldDataType) => setCellConfigDataType(value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='text'>Văn bản</SelectItem>
-                          <SelectItem value='number'>Số</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label>Công thức</Label>
-                      <Input
-                        placeholder='Ví dụ: CT_A + CT_B'
-                        value={cellConfigFormula}
-                        onChange={(event) => setCellConfigFormula(event.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className='grid gap-3 md:grid-cols-2'>
-                    <label className='inline-flex items-center gap-2 text-sm'>
-                      <input
-                        type='checkbox'
-                        checked={cellConfigRequired}
-                        onChange={(event) => setCellConfigRequired(event.target.checked)}
-                      />
-                      Bắt buộc nhập
-                    </label>
-                    <label className='inline-flex items-center gap-2 text-sm'>
-                      <input
-                        type='checkbox'
-                        checked={cellConfigReadOnly || Boolean(cellConfigFormula.trim())}
-                        onChange={(event) => setCellConfigReadOnly(event.target.checked)}
-                        disabled={Boolean(cellConfigFormula.trim())}
-                      />
-                      Chỉ đọc
-                    </label>
-                  </div>
-
-                  <div className='flex justify-end'>
-                    <Button
-                      onClick={handleApplyCellConfig}
-                      disabled={upsertCellConfigMutation.isPending}
-                    >
-                      Áp dụng override
-                    </Button>
-                  </div>
-
-                  <div className='space-y-2'>
-                    <p className='text-sm font-medium'>Danh sách cell đang override</p>
-                    <div className='max-h-64 overflow-auto rounded-md border'>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Chỉ tiêu</TableHead>
-                            <TableHead>Thuộc tính</TableHead>
-                            <TableHead>Kiểu dữ liệu</TableHead>
-                            <TableHead>Bắt buộc</TableHead>
-                            <TableHead>Chỉ đọc</TableHead>
-                            <TableHead className='w-24 text-end'>Thao tác</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {cellConfigs.length === 0 && (
-                            <TableRow>
-                              <TableCell colSpan={6} className='text-center text-muted-foreground'>
-                                Chưa có override.
-                              </TableCell>
-                            </TableRow>
-                          )}
-                          {cellConfigs.map((row) => (
-                            <TableRow key={`${row.indicatorId}:${row.attributeId}`}>
-                              <TableCell>{indicatorNameById.get(row.indicatorId) ?? row.indicatorId}</TableCell>
-                              <TableCell>{attributeNameById.get(row.attributeId) ?? row.attributeId}</TableCell>
-                              <TableCell>{row.dataType === 'number' ? 'Số' : 'Văn bản'}</TableCell>
-                              <TableCell>{row.required ? 'Có' : 'Không'}</TableCell>
-                              <TableCell>{row.readOnly ? 'Có' : 'Không'}</TableCell>
-                              <TableCell className='text-end'>
-                                <Button
-                                  size='sm'
-                                  variant='destructive'
-                                  onClick={() =>
-                                    selectedTemplate &&
-                                    deleteCellConfigMutation.mutate({
-                                      templateId: selectedTemplate.id,
-                                      indicatorId: row.indicatorId,
-                                      attributeId: row.attributeId,
-                                    })
-                                  }
-                                  disabled={deleteCellConfigMutation.isPending}
-                                >
-                                  Xóa
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              </>
-              ) : (
-                <div className='grid gap-4 xl:grid-cols-3'>
-                  <Card className='xl:col-span-2'>
-                    <CardHeader className='pb-3'>
-                      <CardTitle className='text-base'>
-                        Preview - {selectedTemplate.name}
-                      </CardTitle>
-                      <CardDescription>
-                        Chọn một hoặc nhiều ô trong lưới để cấu hình cell.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className='space-y-3'>
-                      <label className='inline-flex items-center gap-2 text-sm'>
-                        <input
-                          type='checkbox'
-                          checked={isMultiSelectMode}
-                          onChange={(event) => {
-                            const checked = event.target.checked
-                            setIsMultiSelectMode(checked)
-                            if (!checked && selectedCellKeys.length > 1) {
-                              setSelectedCellKeys(selectedCellKeys.slice(0, 1))
-                            }
-                          }}
-                        />
-                        Chọn nhiều ô
-                      </label>
-                      <div className='max-h-[72vh] overflow-auto rounded-md border'>
-                        <Table className='border-collapse'>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead
-                                rowSpan={2}
-                                className='border bg-muted/70 text-center align-middle font-semibold'
-                              >
-                                Chỉ tiêu
-                              </TableHead>
-                              {previewParentHeaders.map((header) => (
-                                <TableHead
-                                  key={header.id}
-                                  colSpan={header.colSpan}
-                                  className='border bg-muted/70 text-center align-middle font-semibold'
-                                >
-                                  <div>{header.label}</div>
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                            {previewTable.getHeaderGroups().map((headerGroup) => (
-                              <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.slice(1).map((header) => (
-                                  <TableHead
-                                    key={header.id}
-                                    className='border bg-muted/50 text-center align-middle'
-                                  >
-                                    {header.isPlaceholder
-                                      ? null
-                                      : flexRender(header.column.columnDef.header, header.getContext())}
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableHeader>
-                          <TableBody>
-                            {previewTable.getRowModel().rows.map((row) => (
-                              <TableRow key={row.id}>
-                                {row.getVisibleCells().map((cell) => (
-                                  <TableCell
-                                    key={cell.id}
-                                    className={
-                                      cell.column.id === 'indicator'
-                                        ? 'border bg-muted/20 align-middle'
-                                        : 'border text-center align-middle'
-                                    }
-                                  >
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                  </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className='h-fit'>
-                    <CardHeader className='pb-3'>
-                      <CardTitle className='text-base'>Cấu hình Cell</CardTitle>
-                      <CardDescription>
-                        Đang chọn {selectedCellKeys.length} ô.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className='space-y-4'>
-                      <div className='grid gap-3'>
-                        <div className='space-y-2'>
-                          <Label>Kiểu dữ liệu</Label>
-                          <Select
-                            value={cellConfigDataType}
-                            onValueChange={(value: FieldDataType) => setCellConfigDataType(value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value='text'>Văn bản</SelectItem>
-                              <SelectItem value='number'>Số</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className='space-y-2'>
-                          <Label>Công thức</Label>
-                          <Input
-                            placeholder='Ví dụ: CT_A + CT_B'
-                            value={cellConfigFormula}
-                            onChange={(event) => setCellConfigFormula(event.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <div className='grid gap-3'>
-                        <label className='inline-flex items-center gap-2 text-sm'>
-                          <input
-                            type='checkbox'
-                            checked={cellConfigRequired}
-                            onChange={(event) => setCellConfigRequired(event.target.checked)}
-                          />
-                          Bắt buộc nhập
-                        </label>
-                        <label className='inline-flex items-center gap-2 text-sm'>
-                          <input
-                            type='checkbox'
-                            checked={cellConfigReadOnly || Boolean(cellConfigFormula.trim())}
-                            onChange={(event) => setCellConfigReadOnly(event.target.checked)}
-                            disabled={Boolean(cellConfigFormula.trim())}
-                          />
-                          Chỉ đọc
-                        </label>
-                      </div>
-                      <Button
-                        className='w-full'
-                        onClick={handleApplyCellConfig}
-                        disabled={upsertCellConfigMutation.isPending || selectedCellKeys.length === 0}
-                      >
-                        Áp dụng cho ô đã chọn
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
             </>
           )}
         </CardContent>

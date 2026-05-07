@@ -1,7 +1,14 @@
-import { Link } from '@tanstack/react-router'
-import { Eye, PencilLine } from 'lucide-react'
+﻿import { Link } from '@tanstack/react-router'
+import { Eye, MoreHorizontal, PencilLine } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -21,11 +28,10 @@ const periodTypeLabel: Record<PeriodType, string> = {
 
 type TemplateListTableProps = {
   templates: FormTemplate[]
-  onPreview: (template: FormTemplate) => void
   onEditGeneral: (template: FormTemplate) => void
 }
 
-export function TemplateListTable({ templates, onPreview, onEditGeneral }: TemplateListTableProps) {
+export function TemplateListTable({ templates, onEditGeneral }: TemplateListTableProps) {
   return (
     <div className='overflow-hidden rounded-md border bg-card'>
       <Table>
@@ -62,21 +68,29 @@ export function TemplateListTable({ templates, onPreview, onEditGeneral }: Templ
                 </Badge>
               </TableCell>
               <TableCell className='text-right'>
-                <div className='flex justify-end gap-2'>
-                  <Button size='sm' variant='outline' onClick={() => onEditGeneral(template)}>
-                    <PencilLine />
-                    Sửa thông tin
-                  </Button>
-                  <Button size='sm' variant='outline' asChild>
-                    <Link to='/form-management/details/$templateId' params={{ templateId: template.id }}>
-                      Cấu hình
-                    </Link>
-                  </Button>
-                  <Button size='sm' variant='outline' onClick={() => onPreview(template)}>
-                    <Eye />
-                    Xem nhanh
-                  </Button>
-                </div>
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant='outline' size='icon' className='h-8 w-8'>
+                      <MoreHorizontal className='size-4' />
+                      <span className='sr-only'>Mở menu thao tác</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end' className='w-48'>
+                    <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                    <DropdownMenuItem asChild className='cursor-pointer'>
+                      <Link to='/form-management/details/$templateId' params={{ templateId: template.id }}>
+                        <Eye className='size-4' />
+                        Xem chi tiết
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEditGeneral(template)} className='cursor-pointer'>
+                      <span className='flex items-center gap-2'>
+                        <PencilLine className='size-4' />
+                        Chỉnh sửa
+                      </span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}

@@ -1,41 +1,19 @@
-import { useMemo, useState } from 'react'
+﻿import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/mock-form-management-api'
 import type { FormTemplate, PeriodType } from '../api/types'
+import { DataTablePagination } from '@/components/data-table/data-table-pagination'
+import {
+  type FormModalState,
+  TemplateGeneralInfoDialog,
+} from '../components/template-general-info-dialog'
 import { TemplateListFilter } from '../components/template-list-filter'
 import { TemplateListTable } from '../components/template-list-table'
-
-type FormModalState = {
-  code: string
-  name: string
-  fieldCategoryId: string
-  periodType: PeriodType
-  description: string
-  isActive: boolean
-}
 
 const defaultFormModalState: FormModalState = {
   code: '',
@@ -62,7 +40,6 @@ export function FormTemplateListPage() {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
-  const [previewTemplate, setPreviewTemplate] = useState<FormTemplate | null>(null)
   const [editingTemplate, setEditingTemplate] = useState<FormTemplate | null>(null)
   const [openFormModal, setOpenFormModal] = useState(false)
   const [formState, setFormState] = useState<FormModalState>(defaultFormModalState)
@@ -84,7 +61,6 @@ export function FormTemplateListPage() {
   const templates = templatesQuery.data?.items ?? []
   const meta = templatesQuery.data?.meta
   const total = meta?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / limit))
   const categories = categoriesQuery.data ?? []
 
   const createMutation = useMutation({
@@ -108,7 +84,7 @@ export function FormTemplateListPage() {
     onError: (error: Error) => toast.error(error.message),
   })
 
-  const categoryOptions = useMemo(() => categories, [categories])
+  const categoryOptions = categories
 
   const openCreateModal = () => {
     setEditingTemplate(null)
@@ -137,7 +113,7 @@ export function FormTemplateListPage() {
 
   const submitFormModal = () => {
     if (!formState.name.trim() || !formState.fieldCategoryId) {
-      toast.error('Tên biểu mẫu và nhóm biểu mẫu là bắt buộc.')
+      toast.error('Tên biểu mẫu và Lĩnh vực biểu mẫu là bắt buộc.')
       return
     }
 
@@ -173,7 +149,7 @@ export function FormTemplateListPage() {
   return (
     <>
       <div className='flex w-full flex-col gap-4'>
-        <PageBreadcrumb title='Danh sách biểu mẫu' subtitle='Quản lý thông tin chung bằng modal và mở trang cấu hình riêng cho form-builder.'>
+        <PageBreadcrumb title='Danh sách biểu mẫu' subtitle='Quản lý danh sách biểu mẫu báo cáo'>
           <Button onClick={openCreateModal}>
             <PlusCircle />
             Thêm mới
@@ -205,156 +181,33 @@ export function FormTemplateListPage() {
           }}
         />
 
-        <TemplateListTable templates={templates} onPreview={setPreviewTemplate} onEditGeneral={openEditModal} />
-        <div className='flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card px-4 py-3 text-sm'>
-          <div className='text-muted-foreground'>Total: {total}</div>
-          <div className='flex items-center gap-2'>
-            <Label className='text-sm'>Limit</Label>
-            <Select value={String(limit)} onValueChange={(value) => { setLimit(Number(value)); setPage(1) }}>
-              <SelectTrigger className='w-[90px]'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='10'>10</SelectItem>
-                <SelectItem value='20'>20</SelectItem>
-                <SelectItem value='50'>50</SelectItem>
-                <SelectItem value='100'>100</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant='outline' size='sm' onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>
-              Prev
-            </Button>
-            <Input className='h-9 w-16 text-center' value={String(page)} onChange={(event) => {
-              const next = Number(event.target.value || 1)
-              if (!Number.isNaN(next)) setPage(Math.min(Math.max(1, next), totalPages))
-            }} />
-            <span className='text-muted-foreground'>/ {totalPages}</span>
-            <Button variant='outline' size='sm' onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))} disabled={page >= totalPages}>
-              Next
-            </Button>
-          </div>
-        </div>
+        <TemplateListTable templates={templates} onEditGeneral={openEditModal} />
+        <DataTablePagination
+          total={total}
+          page={page}
+          pageSize={limit}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setLimit(size)
+            setPage(1)
+          }}
+        />
       </div>
 
-      <Dialog open={Boolean(previewTemplate)} onOpenChange={(open) => !open && setPreviewTemplate(null)}>
-        <DialogContent className='sm:max-w-2xl'>
-          <DialogHeader className='text-start'>
-            <DialogTitle>
-              {previewTemplate?.code} - {previewTemplate?.name}
-            </DialogTitle>
-            <DialogDescription>Thông tin chung của biểu mẫu.</DialogDescription>
-          </DialogHeader>
-          {previewTemplate && (
-            <div className='grid gap-2 rounded-md border p-3 text-sm sm:grid-cols-2'>
-              <div>
-                <span className='text-muted-foreground'>Nhóm biểu mẫu: </span>
-                {previewTemplate.fieldCategoryName ?? previewTemplate.fieldCategoryId}
-              </div>
-              <div>
-                <span className='text-muted-foreground'>Trạng thái: </span>
-                {previewTemplate.isActive ? 'Hoạt động' : 'Ngừng hoạt động'}
-              </div>
-              <div className='sm:col-span-2'>
-                <span className='text-muted-foreground'>Mô tả: </span>
-                {previewTemplate.description || '-'}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={openFormModal} onOpenChange={setOpenFormModal}>
-        <DialogContent className='sm:max-w-xl'>
-          <DialogHeader className='text-start'>
-            <DialogTitle>{editingTemplate ? 'Cập nhật biểu mẫu' : 'Tạo biểu mẫu mới'}</DialogTitle>
-            <DialogDescription>
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='grid gap-4'>
-            <div className='space-y-2'>
-              <Label>Mã biểu mẫu</Label>
-              <Input
-                value={formState.code}
-                disabled={Boolean(editingTemplate)}
-                onChange={(event) => setFormState((prev) => ({ ...prev, code: event.target.value }))}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Tên biểu mẫu</Label>
-              <Input
-                value={formState.name}
-                onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Nhóm biểu mẫu</Label>
-              <Select
-                value={formState.fieldCategoryId}
-                onValueChange={(value) => setFormState((prev) => ({ ...prev, fieldCategoryId: value }))}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='Chọn nhóm biểu mẫu' />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoryOptions.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name || category.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2'>
-              <Label>Kỳ báo cáo</Label>
-              <Select
-                value={formState.periodType}
-                onValueChange={(value: PeriodType) => setFormState((prev) => ({ ...prev, periodType: value }))}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='TUAN'>Tuần</SelectItem>
-                  <SelectItem value='THANG'>Tháng</SelectItem>
-                  <SelectItem value='QUY'>Quý</SelectItem>
-                  <SelectItem value='NAM'>Năm</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2'>
-              <Label>Trạng thái</Label>
-              <Select
-                value={formState.isActive ? 'true' : 'false'}
-                onValueChange={(value) => setFormState((prev) => ({ ...prev, isActive: value === 'true' }))}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='true'>Hoạt động</SelectItem>
-                  <SelectItem value='false'>Ngừng hoạt động</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2'>
-              <Label>Mô tả</Label>
-              <Textarea
-                rows={3}
-                value={formState.description}
-                onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={handleCloseModal}>Hủy</Button>
-            <Button onClick={submitFormModal} disabled={createMutation.isPending || patchMutation.isPending}>
-              {editingTemplate ? 'Lưu thay đổi' : 'Tạo biểu mẫu'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <TemplateGeneralInfoDialog
+        open={openFormModal}
+        editing={Boolean(editingTemplate)}
+        formState={formState}
+        categories={categoryOptions}
+        onOpenChange={(open) => {
+          if (!open) handleCloseModal()
+          else setOpenFormModal(true)
+        }}
+        onFormStateChange={setFormState}
+        onSubmit={submitFormModal}
+        submitting={createMutation.isPending || patchMutation.isPending}
+      />
     </>
   )
 }
+

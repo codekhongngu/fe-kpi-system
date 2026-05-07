@@ -56,10 +56,10 @@ export function TemplateListFilter({
 
       <Select value={selectedCategory} onValueChange={onCategoryChange}>
         <SelectTrigger className='w-full'>
-          <SelectValue placeholder='Nhóm biểu mẫu' />
+          <SelectValue placeholder='Lĩnh vực biểu mẫu' />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value='all'>Tất cả nhóm biểu mẫu</SelectItem>
+          <SelectItem value='all'>Tất cả Lĩnh vực biểu mẫu</SelectItem>
           {categories.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name || category.code}
