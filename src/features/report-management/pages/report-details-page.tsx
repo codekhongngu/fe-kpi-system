@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
@@ -19,10 +19,11 @@ import {
   ShieldCheck,
   Settings2,
   Workflow,
+  Search,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,11 +44,29 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { apiClient } from '@/lib/api-client'
 import { reportManagementApi } from '../api/mock-report-management-api'
+import type { ReportDetail } from '../api/types'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
 import { ReportPriorityBadge, ReportStatusBadge } from '../components/report-status'
 
-type ReportDetailsPageProps = {
+type OrganizationTreeNode = {
+  id: string
+  name?: string
+  canAssignReports?: boolean
+  can_assign_reports?: boolean
+  children?: OrganizationTreeNode[]
+ }
+ 
+ type IndicatorItem = {
+   id: string
+   code: string
+   name: string
+   parentId: string | null
+   hasChildren?: boolean
+ }
+ 
+ type ReportDetailsPageProps = {
   reportId: string
 }
 
@@ -73,28 +92,146 @@ function formatTimeDashDate(value: string | null) {
 }
 
 export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
-  const detailQuery = useQuery({
+   const [unitSearch, setUnitSearch] = useState('')
+   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
+   const [indicatorSearch, setIndicatorSearch] = useState('')
+ 
+   const detailQuery = useQuery({
     queryKey: reportQueryKeys.detail(reportId),
-    queryFn: () => reportManagementApi.getReport(reportId),
+    queryFn: async () => {
+      const response = await apiClient.get<ReportDetail>(`/assignments/batches/${reportId}`)
+      return response.data
+    },
   })
-
-  const report = detailQuery.data
-  const openDate = report?.openDate ?? null
+ 
+   const orgTreeQuery = useQuery({
+     queryKey: ['report-details', 'orgs', { q: unitSearch.trim() }],
+     queryFn: async () => {
+       const q = unitSearch.trim()
+       const response = await apiClient.get<OrganizationTreeNode[] | { items?: OrganizationTreeNode[] }>(
+         '/orgs',
+         { params: { tree: true, q: q.length > 0 ? q : undefined } },
+       )
+       const payload = response.data
+       return Array.isArray(payload) ? payload : payload.items ?? []
+     },
+     retry: false,
+   })
+ 
+   const report = detailQuery.data
+ 
+   const indicatorsQuery = useQuery({
+     queryKey: ['report-details', 'indicators', report?.templateId, indicatorSearch],
+     queryFn: async () => {
+       if (!report?.templateId) return []
+       const response = await apiClient.get<IndicatorItem[] | { items: IndicatorItem[] }>(
+         `/forms/${report.templateId}/indicators`,
+         { params: { q: indicatorSearch.trim() || undefined } },
+       )
+       const payload = response.data
+       return Array.isArray(payload) ? payload : payload.items ?? []
+     },
+     enabled: !!report?.templateId,
+     retry: false,
+   })
+ 
+   const openDate = report?.openDate ?? null
   const closeDate = report?.closeDate ?? report?.deadline ?? null
   const updatedAt = report?.updatedAt ?? null
+
+  const currentUnitId = selectedUnitId || report?.unitId
+  const currentUnitName = useMemo(() => {
+    if (selectedUnitId === report?.unitId) return report?.unitName
+    
+    const findName = (nodes: OrganizationTreeNode[]): string | null => {
+      for (const node of nodes) {
+        if (node.id === selectedUnitId) return node.name ?? node.id
+        if (node.children) {
+          const found = findName(node.children)
+          if (found) return found
+        }
+      }
+      return null
+    }
+    return findName(orgTreeQuery.data ?? []) || report?.unitName
+  }, [selectedUnitId, report, orgTreeQuery.data])
+
+   const renderOrgTree = (nodes: OrganizationTreeNode[], depth = 0) => {
+     return nodes.map((node) => {
+       const isSelected = currentUnitId === node.id
+       const canAssign = Boolean(node.canAssignReports ?? node.can_assign_reports ?? true)
+       const children = Array.isArray(node.children) ? node.children : []
+       return (
+         <div key={node.id}>
+           <button
+             type='button'
+             disabled={!canAssign}
+             className={cn(
+               'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+               isSelected
+                 ? 'bg-primary/10 font-bold text-primary'
+                 : canAssign
+                   ? 'hover:bg-muted/50 font-medium text-foreground'
+                   : 'cursor-not-allowed opacity-50 font-medium text-muted-foreground',
+             )}
+             style={{ paddingLeft: `${8 + depth * 16}px` }}
+             onClick={() => canAssign && setSelectedUnitId(node.id)}
+           >
+             <Building2
+               className={cn(
+                 'size-4',
+                 isSelected ? 'text-primary' : canAssign ? 'text-muted-foreground' : 'text-muted-foreground/40',
+               )}
+             />
+             <span className='min-w-0 truncate'>{node.name ?? node.id}</span>
+           </button>
+           {children.length > 0 ? <div className='space-y-1'>{renderOrgTree(children, depth + 1)}</div> : null}
+         </div>
+       )
+     })
+   }
   const departmentRows = useMemo(() => {
     if (!report) return []
-    const units = (report.assignees ?? []).slice(0, 4)
-    const fallback = units.length > 0 ? units : [report.unitName].filter(Boolean)
+    
+    // Ưu tiên sử dụng danh sách assignments thực tế từ API mới
+    const assignments = report.assignments || []
+    
+    if (assignments.length > 0) {
+      return assignments.map((item) => {
+        const initials = (item.orgName || item.orgId || 'DV')
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((word) => word[0]?.toUpperCase() ?? '')
+          .join('')
+          
+        return {
+          id: item.id,
+          unitName: item.orgName,
+          initials: initials || 'DV',
+          assigneeName: item.assigneeName ?? 'Chưa phân công',
+          status: item.status === 'APPROVED' || item.status === 'COMPLETED' 
+            ? 'done' 
+            : ['SUBMITTED', 'UNDER_REVIEW', 'DRAFTING'].includes(item.status)
+              ? 'doing'
+              : 'not_started',
+          updatedAt: item.updatedAt || item.submittedAt || null,
+        } as const
+      })
+    }
+
+    // Fallback cho trường hợp API cũ hoặc dữ liệu mock
+    const units = (report.assignees ?? [])
+    const fallback = units.length > 0 ? units.slice(0, 10) : ([report.unitName].filter(Boolean) as string[])
     const names = fallback.length > 0 ? fallback : ['Đơn vị chưa xác định']
     const completedCount = Math.max(
       0,
       Math.min(names.length, Math.round((names.length * (report.completionPercent ?? 0)) / 100)),
     )
-    const assignees = ['Nguyễn Văn An', 'Trần Thị Bích', 'Lê Hoàng Nam', 'Phạm Minh Tuấn']
+    const mockAssignees = ['Nguyễn Văn An', 'Trần Thị Bích', 'Lê Hoàng Nam', 'Phạm Minh Tuấn']
 
     return names.map((unitName, index) => {
-      const initials = unitName
+      const initials = (unitName || 'DV')
         .split(/\s+/)
         .filter(Boolean)
         .slice(0, 2)
@@ -106,22 +243,26 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
         id: `${report.id}-${index}`,
         unitName,
         initials: initials || 'DV',
-        assigneeName: assignees[index] ?? 'Người thực hiện',
+        assigneeName: mockAssignees[index] ?? 'Người thực hiện',
         status,
         updatedAt: index < completedCount ? updatedAt : null,
       } as const
     })
   }, [report, updatedAt])
+
   const defaultRows = useMemo(() => {
-    if (!report) return []
-    const unique = new Map<string, (typeof report.cells)[number]>()
-    report.cells.forEach((cell) => {
+    const cells = report?.cells
+    if (!Array.isArray(cells)) return []
+    
+    const unique = new Map<string, (typeof cells)[number]>()
+    cells.forEach((cell) => {
+      if (!cell) return
       const key = `${cell.indicatorCode}-${cell.attributeName}`
       if (unique.has(key)) return
       unique.set(key, cell)
     })
     return Array.from(unique.entries())
-      .slice(0, 4)
+      .slice(0, 10)
       .map(([key, cell], index) => {
         const rawType = (cell.dataType ?? '').toString().toLowerCase()
         const isNumber = rawType.includes('number')
@@ -134,7 +275,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
           metricCode: cell.indicatorCode,
           attribute: cell.attributeName,
           typeLabel: isNumber ? 'Number' : isText ? 'String' : cell.dataType,
-          typeVariant: isNumber ? 'secondary' : isText ? 'outline' : 'default',
+          typeVariant: (isNumber ? 'secondary' : isText ? 'outline' : 'default') as any,
           required: Boolean(cell.required),
           control,
           initialValue: cell.value != null ? String(cell.value) : '',
@@ -247,7 +388,10 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 Kỳ báo cáo
                               </div>
                               <div className='mt-1 flex items-center gap-2 text-lg font-semibold text-foreground'>
-                                {report.period}
+                                <span className='text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded uppercase font-bold'>
+                                  {report.periodCode}
+                                </span>
+                                {report.periodName || report.period}
                               </div>
                             </div>
 
@@ -256,13 +400,17 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
                                   Ngày mở
                                 </div>
-                                <div className='mt-1 text-sm font-semibold text-foreground'>{formatDate(openDate)}</div>
+                                <div className='mt-1 text-sm font-semibold text-foreground'>
+                                  {formatDate(report.deadlineFrom || openDate)}
+                                </div>
                               </div>
                               <div>
                                 <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
                                   Ngày đóng
                                 </div>
-                                <div className='mt-1 text-sm font-semibold text-foreground'>{formatDate(closeDate)}</div>
+                                <div className='mt-1 text-sm font-semibold text-foreground'>
+                                  {formatDate(report.deadlineTo || closeDate)}
+                                </div>
                               </div>
                             </div>
 
@@ -283,11 +431,11 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                     <Card className='relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground'>
                       <div className='relative space-y-4'>
                         <div className='text-sm font-medium text-primary-foreground/80'>Tổng quan tiến độ</div>
-                        <div className='text-5xl font-bold'>{report.completionPercent}%</div>
+                        <div className='text-5xl font-bold'>{report.completionPercent ?? 0}%</div>
                         <div className='h-2.5 w-full overflow-hidden rounded-full bg-white/20'>
                           <div
                             className='h-full rounded-full bg-secondary'
-                            style={{ width: `${Math.max(0, Math.min(100, report.completionPercent))}%` }}
+                            style={{ width: `${Math.max(0, Math.min(100, report.completionPercent ?? 0))}%` }}
                           />
                         </div>
                         <div className='flex justify-between text-xs font-semibold text-primary-foreground/80'>
@@ -432,122 +580,214 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
               </TabsContent>
 
               <TabsContent value='permissions'>
-                <div className='space-y-4 px-4 pb-6 pt-6 lg:px-6'>
-                  <div className='rounded-2xl border bg-background p-4'>
-                    <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-                      <div className='min-w-[240px]'>
-                        <Label className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-                          Đơn vị đang chọn
-                        </Label>
-                        <div className='mt-2 flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2'>
-                          <div className='flex min-w-0 items-center gap-2'>
-                            <Building2 className='size-4 text-muted-foreground' />
-                            <div className='truncate text-sm font-semibold text-foreground'>{report.unitName}</div>
+                <div className='space-y-6 px-4 pb-6 pt-6 lg:px-6'>
+                  <div className='grid grid-cols-1 gap-6 lg:grid-cols-4'>
+                    <div className='lg:col-span-1'>
+                      <Card className='overflow-hidden rounded-2xl border shadow-sm'>
+                        <CardHeader className='pb-4'>
+                          <CardTitle className='text-base font-bold'>Đơn vị nhận báo cáo</CardTitle>
+                          <CardDescription className='text-xs'>
+                            Chọn đơn vị để thiết lập phân quyền chỉ tiêu.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className='p-0'>
+                          <div className='border-y bg-muted/20 px-4 py-3'>
+                            <div className='relative'>
+                              <Search className='absolute left-2.5 top-2.5 size-4 text-muted-foreground' />
+                              <Input
+                                placeholder='Tìm kiếm đơn vị...'
+                                className='h-9 rounded-lg pl-9 text-xs focus-visible:ring-primary'
+                                value={unitSearch}
+                                onChange={(e) => setUnitSearch(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div className='max-h-[600px] overflow-auto p-3'>
+                            {orgTreeQuery.isLoading ? (
+                              <div className='py-12 text-center text-xs text-muted-foreground'>
+                                Đang tải cây đơn vị...
+                              </div>
+                            ) : (orgTreeQuery.data?.length ?? 0) > 0 ? (
+                              <div className='space-y-1'>{renderOrgTree(orgTreeQuery.data ?? [])}</div>
+                            ) : (
+                              <div className='py-12 text-center text-xs text-muted-foreground'>
+                                Không tìm thấy đơn vị.
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className='space-y-6 lg:col-span-3'>
+                      <div className='rounded-2xl border bg-background p-5 shadow-sm'>
+                        <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+                          <div className='flex items-center gap-4'>
+                            <div className='flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
+                              <Building2 className='size-6' />
+                            </div>
+                            <div>
+                              <Label className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
+                                Đơn vị đang thiết lập
+                              </Label>
+                              <div className='mt-0.5 text-lg font-bold text-foreground'>
+                                {currentUnitName}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className='flex items-center gap-2'>
+                            <Button type='button' variant='outline' className='h-10 gap-2 rounded-xl text-xs font-bold'>
+                              <Filter className='size-4' />
+                              Bộ lọc nâng cao
+                            </Button>
                           </div>
                         </div>
                       </div>
 
-                      <div className='flex flex-wrap items-center justify-between gap-2 lg:flex-1 lg:justify-end'>
-                        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                          <span className='font-medium'>Tập đoàn QLDD</span>
-                          <span className='text-muted-foreground/60'>/</span>
-                          <span className='rounded-md bg-primary/10 px-2 py-1 font-semibold text-primary'>
-                            {report.unitName}
-                          </span>
-                        </div>
+                      <div className='grid gap-6 lg:grid-cols-2'>
+                        <Card className='overflow-hidden rounded-2xl border shadow-sm'>
+                          <CardHeader className='border-b bg-muted/10 pb-4 pt-5'>
+                            <div className='flex items-center justify-between'>
+                              <CardTitle className='flex items-center gap-2 text-base font-bold'>
+                                  <List className='size-4 text-muted-foreground' />
+                                  Chỉ tiêu chưa phân quyền
+                                </CardTitle>
+                                <Badge variant='outline' className='rounded-full px-2 py-0 text-[10px]'>
+                                  {indicatorsQuery.data?.length ?? 0} chỉ tiêu
+                                </Badge>
+                              </div>
+                              <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
+                                <div className='relative flex-1'>
+                                  <Search className='absolute left-2.5 top-2.5 size-3.5 text-muted-foreground' />
+                                  <Input
+                                    placeholder='Tìm mã hoặc tên...'
+                                    className='h-9 rounded-lg pl-9 text-xs'
+                                    value={indicatorSearch}
+                                    onChange={(e) => setIndicatorSearch(e.target.value)}
+                                  />
+                                </div>
+                                <Button type='button' className='h-9 gap-2 rounded-lg bg-primary text-xs font-bold'>
+                                  Gán <ArrowRight className='size-4' />
+                                </Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent className='p-0'>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className='bg-muted/30 hover:bg-muted/30'>
+                                    <TableHead className='w-12 text-center'>
+                                      <div className='flex justify-center'>
+                                        <Checkbox />
+                                      </div>
+                                    </TableHead>
+                                    <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
+                                      Mã chỉ tiêu
+                                    </TableHead>
+                                    <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
+                                      Tên chỉ tiêu
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {indicatorsQuery.isLoading ? (
+                                    <TableRow>
+                                      <TableCell colSpan={3} className='py-12 text-center text-xs text-muted-foreground'>
+                                        Đang tải danh sách chỉ tiêu...
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (indicatorsQuery.data?.length ?? 0) === 0 ? (
+                                    <TableRow>
+                                      <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
+                                        <div className='flex flex-col items-center gap-2'>
+                                          <div className='rounded-full bg-muted p-3'>
+                                            <List className='size-6 opacity-20' />
+                                          </div>
+                                          <span>Không có dữ liệu chỉ tiêu</span>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : (
+                                    indicatorsQuery.data?.map((item) => (
+                                      <TableRow key={item.id} className='hover:bg-muted/10'>
+                                        <TableCell className='w-12 text-center'>
+                                          <div className='flex justify-center'>
+                                            <Checkbox />
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className='text-xs font-medium'>{item.code}</TableCell>
+                                        <TableCell className='text-xs'>{item.name}</TableCell>
+                                      </TableRow>
+                                    ))
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </CardContent>
+                          </Card>
 
-                        <div className='flex items-center gap-2'>
-                          <div className='h-8 w-px bg-border' />
-                          <Button type='button' variant='ghost' className='h-9 gap-2 text-xs font-semibold'>
-                            <Filter className='size-4' />
-                            Bộ lọc đơn vị
-                          </Button>
-                        </div>
+                        <Card className='overflow-hidden rounded-2xl border shadow-sm'>
+                          <CardHeader className='border-b bg-muted/10 pb-4 pt-5'>
+                            <div className='flex items-center justify-between'>
+                              <CardTitle className='flex items-center gap-2 text-base font-bold'>
+                                <ShieldCheck className='size-4 text-primary' />
+                                Chỉ tiêu đã phân quyền
+                              </CardTitle>
+                              <Badge className='rounded-full bg-primary/10 px-2 py-0 text-[10px] text-primary hover:bg-primary/10'>
+                                {defaultRows.length} chỉ tiêu
+                              </Badge>
+                            </div>
+                            <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
+                              <div className='relative flex-1'>
+                                <Search className='absolute left-2.5 top-2.5 size-3.5 text-muted-foreground' />
+                                <Input
+                                  placeholder='Tìm mã hoặc tên...'
+                                  className='h-9 rounded-lg pl-9 text-xs'
+                                />
+                              </div>
+                              <Button
+                                type='button'
+                                variant='outline'
+                                className='h-9 gap-2 rounded-lg border-destructive/20 text-xs font-bold text-destructive hover:bg-destructive/5'
+                              >
+                                <ArrowLeft className='size-4' />
+                                Hủy gán
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className='p-0'>
+                            <Table>
+                              <TableHeader>
+                                <TableRow className='bg-muted/30 hover:bg-muted/30'>
+                                  <TableHead className='w-12 text-center'>
+                                    <div className='flex justify-center'>
+                                      <Checkbox />
+                                    </div>
+                                  </TableHead>
+                                  <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
+                                    Mã chỉ tiêu
+                                  </TableHead>
+                                  <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
+                                    Tên chỉ tiêu
+                                  </TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow>
+                                  <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
+                                    <div className='flex flex-col items-center gap-2'>
+                                      <div className='rounded-full bg-primary/5 p-3 text-primary/30'>
+                                        <ShieldCheck className='size-6' />
+                                      </div>
+                                      <span>Chọn đơn vị để xem danh sách</span>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
                       </div>
                     </div>
-                  </div>
-
-                  <div className='grid gap-4 lg:grid-cols-2 lg:gap-6'>
-                    <Card className='overflow-hidden'>
-                      <CardHeader className='gap-3'>
-                        <CardTitle className='flex items-center gap-2 text-base'>
-                          <List className='size-4 text-muted-foreground' />
-                          Chỉ tiêu chưa phân quyền
-                        </CardTitle>
-                        <div className='flex flex-col gap-2 sm:flex-row'>
-                          <div className='flex-1'>
-                            <Input placeholder='Nhập mã hoặc tên chỉ tiêu...' className='h-9 text-xs' />
-                          </div>
-                          <Button type='button' variant='outline' className='h-9 gap-2 text-xs font-semibold'>
-                            Gán <ArrowRight className='size-4' />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className='p-0'>
-                        <Table>
-                          <TableHeader>
-                            <TableRow className='bg-muted/40'>
-                              <TableHead className='w-12 text-center'>
-                                <div className='flex justify-center'>
-                                  <Checkbox />
-                                </div>
-                              </TableHead>
-                              <TableHead className='text-xs font-bold'>Mã chỉ tiêu</TableHead>
-                              <TableHead className='text-xs font-bold'>Tên chỉ tiêu</TableHead>
-                              <TableHead className='w-24 text-center text-xs font-bold'>Thao tác</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell colSpan={4} className='py-16 text-center text-xs text-muted-foreground'>
-                                Không có dữ liệu
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-
-                    <Card className='overflow-hidden'>
-                      <CardHeader className='gap-3'>
-                        <CardTitle className='flex items-center gap-2 text-base'>
-                          <ShieldCheck className='size-4 text-primary' />
-                          Chỉ tiêu đã phân quyền
-                        </CardTitle>
-                        <div className='flex flex-col gap-2 sm:flex-row'>
-                          <div className='flex-1'>
-                            <Input placeholder='Nhập mã hoặc tên chỉ tiêu...' className='h-9 text-xs' />
-                          </div>
-                          <Button type='button' variant='outline' className='h-9 gap-2 text-xs font-semibold'>
-                            <ArrowLeft className='size-4' />
-                            Hủy
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className='p-0'>
-                        <Table>
-                          <TableHeader>
-                            <TableRow className='bg-muted/40'>
-                              <TableHead className='w-12 text-center'>
-                                <div className='flex justify-center'>
-                                  <Checkbox />
-                                </div>
-                              </TableHead>
-                              <TableHead className='text-xs font-bold'>Mã chỉ tiêu</TableHead>
-                              <TableHead className='text-xs font-bold'>Tên chỉ tiêu</TableHead>
-                              <TableHead className='w-24 text-center text-xs font-bold'>Thao tác</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell colSpan={4} className='py-16 text-center text-xs text-muted-foreground'>
-                                Không có dữ liệu
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
                   </div>
                 </div>
               </TabsContent>
@@ -558,7 +798,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                       <div className='min-w-0'>
                         <div className='text-xs font-semibold opacity-90'>Cấu hình giá trị mặc định</div>
                         <div className='mt-1 truncate text-xl font-bold'>{report.name}</div>
-                        <div className='mt-1 text-sm opacity-90'>Mã báo cáo: {report.code}</div>
+                        <div className='mt-1 text-sm opacity-90'>Mã báo cáo: {report.formCode || report.code}</div>
                       </div>
                     </div>
                   </div>

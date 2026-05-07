@@ -127,7 +127,20 @@ export function ReportListPage() {
 
   const listQuery = useQuery({
     queryKey: reportQueryKeys.list(filters),
-    queryFn: () => reportManagementApi.listReports(filters),
+    queryFn: async () => {
+      const response = await apiClient.get<{ items: ReportListItem[]; total: number }>(
+        '/assignments/batches',
+        {
+          params: {
+            page: filters.page,
+            limit: filters.pageSize,
+            status: filters.status !== 'all' ? filters.status : undefined,
+            formId: filters.templateId || undefined,
+          },
+        }
+      )
+      return response.data
+    },
   })
 
   const invalidateReports = async () => {

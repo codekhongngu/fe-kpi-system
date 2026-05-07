@@ -42,31 +42,50 @@ export type ReportListItem = {
   id: string
   code: string
   name: string
+  formCode?: string
+  formName?: string
   templateId: string
   templateName: string
-  unitId: string
-  unitName: string
-  period: string
+  unitId?: string
+  unitName?: string
+  period?: string
+  periodCode?: string
+  periodName?: string
   openDate?: string
   closeDate?: string
-  deadline: string
+  deadlineFrom?: string
+  deadlineTo?: string
+  deadline?: string
   status: ReportStatus
-  priority: ReportPriority
+  priority?: ReportPriority
+  completionPercent?: number
+  ownerName?: string
+  updatedBy?: string
+  updatedAt?: string
+  submittedAt?: string | null
+  approvedAt?: string | null
+  rejectionReason?: string | null
+  note?: string | null
+}
+
+export type ReportAssignment = {
+  id: string
+  orgId: string
+  orgName: string
+  status: ReportStatus
   completionPercent: number
-  ownerName: string
-  updatedBy: string
-  updatedAt: string
   submittedAt: string | null
   approvedAt: string | null
-  rejectionReason: string | null
-  note: string | null
+  updatedAt: string | null
+  assigneeName?: string
 }
 
 export type ReportDetail = ReportListItem & {
-  description: string
-  cells: ReportCell[]
-  history: ReportHistoryItem[]
-  assignees: string[]
+  description?: string
+  cells?: ReportCell[]
+  history?: ReportHistoryItem[]
+  assignees?: string[]
+  assignments?: ReportAssignment[]
 }
 
 export type ReportCell = {

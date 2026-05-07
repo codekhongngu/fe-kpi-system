@@ -80,33 +80,56 @@ export function ReportTable({
         cell: ({ row }) => {
           const report = row.original
           return (
-            <div className='min-w-[260px]'>
+            <div className='min-w-[300px]'>
               <button
                 type='button'
                 className='text-left font-medium text-foreground hover:text-teal-700'
                 onClick={() => onView(report)}
               >
-                {report.name}
+                <div className='flex flex-col gap-0.5'>
+                  <span className='text-xs font-bold text-teal-700 uppercase tracking-wider'>
+                    {report.formCode || report.code}
+                  </span>
+                  <span className='line-clamp-2'>{report.formName || report.name}</span>
+                </div>
               </button>
             </div>
           )
         },
       },
       {
-        accessorKey: 'period',
+        accessorKey: 'periodName',
         header: 'Kỳ dữ liệu',
-        cell: ({ row }) => <div className='min-w-[140px]'>{row.original.period}</div>,
+        cell: ({ row }) => {
+          const report = row.original
+          return (
+            <div className='min-w-[180px]'>
+              <div className='flex flex-col gap-0.5'>
+                <span className='text-[10px] font-bold text-muted-foreground uppercase'>
+                  {report.periodCode}
+                </span>
+                <span className='font-medium'>{report.periodName || report.period}</span>
+              </div>
+            </div>
+          )
+        },
       },
       {
-        accessorKey: 'openDate',
+        accessorKey: 'deadlineFrom',
         header: 'Ngày mở',
-        cell: ({ row }) => <div className='min-w-[120px]'>{formatDate(row.original.openDate ?? null)}</div>,
+        cell: ({ row }) => (
+          <div className='min-w-[120px]'>
+            {formatDate(row.original.deadlineFrom || row.original.openDate || null)}
+          </div>
+        ),
       },
       {
-        accessorKey: 'closeDate',
+        accessorKey: 'deadlineTo',
         header: 'Ngày đóng',
         cell: ({ row }) => (
-          <div className='min-w-[120px]'>{formatDate(row.original.closeDate ?? row.original.deadline)}</div>
+          <div className='min-w-[120px]'>
+            {formatDate(row.original.deadlineTo || row.original.closeDate || row.original.deadline || null)}
+          </div>
         ),
       },
       {

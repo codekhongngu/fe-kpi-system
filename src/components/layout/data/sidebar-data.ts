@@ -161,11 +161,6 @@ function buildNavGroups(role: AppRole): NavGroup[] {
             icon: FileSpreadsheet,
           },
           {
-            title: 'Giao báo cáo',
-            url: '/report-management?tab=assignment',
-            icon: SendToBack,
-          },
-          {
             title: 'Tổng hợp',
             url: '/report-management?tab=analytics',
             icon: ChartColumnBig,
@@ -191,11 +186,6 @@ function buildNavGroups(role: AppRole): NavGroup[] {
             title: 'Quản lí biểu mẫu',
             url: '/form-management',
             icon: FileSpreadsheet,
-          },
-          {
-            title: 'Giao báo cáo',
-            url: '/report-management?tab=assignment',
-            icon: SendToBack,
           },
           {
             title: 'Tổng hợp',
