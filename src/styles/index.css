@@ -87,6 +87,98 @@
       font-size: 16px !important;
     }
   }
+
+  /* Hub Layout Styles */
+  .hub-container {
+    position: relative;
+    width: 100%;
+    height: 430px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+
+  .hub-center {
+    width: 112px;
+    height: 112px;
+    z-index: 20;
+    background: radial-gradient(circle, #0c447c 0%, #001c3a 100%);
+    border: 4px solid #ffffff;
+    box-shadow: 0 0 24px rgba(12, 68, 124, 0.32);
+  }
+
+  .hub-item {
+    position: absolute;
+    width: 108px;
+    text-align: center;
+    transition: all 0.3s ease;
+    transform: var(--hub-item-transform);
+  }
+
+  .hub-item:hover {
+    transform: var(--hub-item-transform);
+  }
+
+  .hub-item-icon {
+    @apply w-14 h-14 mx-auto rounded-full bg-white shadow-md flex items-center justify-center border-2 transition-colors;
+    border-color: #0c447c33;
+  }
+
+  .hub-item:hover .hub-item-icon {
+    border-color: #002e59;
+  }
+
+  .hub-item-label {
+    @apply mt-1.5 text-[10px] font-bold leading-tight text-center;
+    color: #0c447c;
+  }
+
+  .hub-item-1 { --hub-item-transform: translate(0, -160px); }
+  .hub-item-2 { --hub-item-transform: translate(138px, -80px); }
+  .hub-item-3 { --hub-item-transform: translate(138px, 80px); }
+  .hub-item-4 { --hub-item-transform: translate(0, 160px); }
+  .hub-item-5 { --hub-item-transform: translate(-138px, 80px); }
+  .hub-item-6 { --hub-item-transform: translate(-138px, -80px); }
+
+  @media screen and (max-width: 1024px) {
+    .hub-container {
+      height: 380px;
+    }
+
+    .hub-center {
+      width: 98px;
+      height: 98px;
+    }
+
+    .hub-item-icon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .hub-item-label {
+      margin-top: 0.5rem;
+      font-size: 10px;
+    }
+
+    .hub-item-1 { --hub-item-transform: translate(0, -142px); }
+    .hub-item-2 { --hub-item-transform: translate(122px, -70px); }
+    .hub-item-3 { --hub-item-transform: translate(122px, 70px); }
+    .hub-item-4 { --hub-item-transform: translate(0, 142px); }
+    .hub-item-5 { --hub-item-transform: translate(-122px, 70px); }
+    .hub-item-6 { --hub-item-transform: translate(-122px, -70px); }
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(0.9); opacity: 0.1; }
+    50% { opacity: 0.3; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  .ring-animate {
+    animation: pulse-ring 3s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+  }
 }
 
 @utility container {

@@ -1,203 +1,89 @@
-import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Main } from '@/components/layout/main'
-import { Analytics } from './components/analytics'
-import { Overview } from './components/overview'
-import { RecentSales } from './components/recent-sales'
+import { FileText, CheckCircle2, Clock, RefreshCcw } from 'lucide-react'
+import { HubLayout } from './components/hub-layout'
+import dashboardBackground from './backgrounds/giaoan.lik-trong-dong.png'
 
 export function Dashboard() {
   return (
     <>
       {/* ===== Main ===== */}
-      <Main>
-        <div className='mb-2 flex items-center justify-between space-y-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Bảng điều khiển</h1>
-          <div className='flex items-center space-x-2'>
-            <Button>Tải xuống</Button>
+      <Main fixed className='relative overflow-hidden p-0'>
+        <div
+          className='pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat'
+          style={{ backgroundImage: `url(${dashboardBackground})` }}
+        />
+        <div className='pointer-events-none absolute inset-0 bg-background/[0.85]' />
+
+        <div className='relative z-10 flex h-full flex-col px-6 py-[10px] sm:px-8 sm:py-[10px]'>
+          {/* Page Header */}
+          <div className='mb-3 text-center'>
+            <h2 className='text-xl sm:text-2xl font-extrabold text-primary tracking-tight mb-1.5'>
+              QUẢN LÝ DỮ LIỆU ĐIỀU HÀNH NỘI BỘ XÃ TUY PHƯỚC
+            </h2>
+          </div>
+
+          <div className='flex-1 flex flex-col overflow-hidden'>
+            {/* Radial Hub Section */}
+            <div className='flex-1 flex items-center justify-center min-h-0 mt-4'>
+              <HubLayout />
+            </div>
+
+            {/* Quick Metrics Footer */}
+            <div className='grid grid-cols-1 md:grid-cols-4 gap-6 mt-8'>
+              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
+                <div className='w-8 h-8 bg-primary/5 rounded-full flex items-center justify-center text-primary shrink-0'>
+                  <FileText size={16} />
+                </div>
+                <div className='flex flex-col min-w-0'>
+                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                    Biểu mẫu
+                  </p>
+                  <p className='text-lg font-black text-primary leading-none'>128</p>
+                </div>
+              </Card>
+              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
+                <div className='w-8 h-8 bg-green-500/5 rounded-full flex items-center justify-center text-green-600 shrink-0'>
+                  <CheckCircle2 size={16} />
+                </div>
+                <div className='flex flex-col min-w-0'>
+                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                    Hoàn thành
+                  </p>
+                  <p className='text-lg font-black text-green-600 leading-none'>94%</p>
+                </div>
+              </Card>
+              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
+                <div className='w-8 h-8 bg-orange-500/5 rounded-full flex items-center justify-center text-orange-600 shrink-0'>
+                  <Clock size={16} />
+                </div>
+                <div className='flex flex-col min-w-0'>
+                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                    Chờ duyệt
+                  </p>
+                  <p className='text-lg font-black text-orange-600 leading-none'>15</p>
+                </div>
+              </Card>
+              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
+                <div className='w-8 h-8 bg-blue-500/5 rounded-full flex items-center justify-center text-blue-600 shrink-0'>
+                  <RefreshCcw size={16} />
+                </div>
+                <div className='flex flex-col min-w-0'>
+                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                    Đang xử lý
+                  </p>
+                  <p className='text-lg font-black text-blue-600 leading-none'>42</p>
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
-        <Tabs
-          orientation='vertical'
-          defaultValue='overview'
-          className='space-y-4'
-        >
-          <div className='w-full overflow-x-auto pb-2'>
-            <TabsList>
-              <TabsTrigger value='overview'>Tổng quan</TabsTrigger>
-              <TabsTrigger value='analytics'>Phân tích</TabsTrigger>
-              <TabsTrigger value='reports' disabled>
-                Báo cáo
-              </TabsTrigger>
-              <TabsTrigger value='notifications' disabled>
-                Thông báo
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value='overview' className='space-y-4'>
-            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Tổng doanh thu
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>$45,231.89</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +20.1% so với tháng trước
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Đăng ký
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
-                    <circle cx='9' cy='7' r='4' />
-                    <path d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+2350</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +180.1% so với tháng trước
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>Doanh số</CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <rect width='20' height='14' x='2' y='5' rx='2' />
-                    <path d='M2 10h20' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+12,234</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +19% so với tháng trước
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Đang hoạt động
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+573</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +201 so với giờ trước
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-              <Card className='col-span-1 lg:col-span-4'>
-                <CardHeader>
-                  <CardTitle>Tổng quan</CardTitle>
-                </CardHeader>
-                <CardContent className='ps-2'>
-                  <Overview />
-                </CardContent>
-              </Card>
-              <Card className='col-span-1 lg:col-span-3'>
-                <CardHeader>
-                  <CardTitle>Giao dịch gần đây</CardTitle>
-                  <CardDescription>
-                    Bạn có 265 giao dịch trong tháng này.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <RecentSales />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          <TabsContent value='analytics' className='space-y-4'>
-            <Analytics />
-          </TabsContent>
-        </Tabs>
       </Main>
     </>
   )
 }
-
-const topNav = [
-  {
-    title: 'Tổng quan',
-    href: 'dashboard/overview',
-    isActive: true,
-    disabled: false,
-  },
-  {
-    title: 'Khách hàng',
-    href: 'dashboard/customers',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Sản phẩm',
-    href: 'dashboard/products',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Cài đặt',
-    href: 'dashboard/settings',
-    isActive: false,
-    disabled: true,
-  },
-]

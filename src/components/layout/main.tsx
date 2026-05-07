@@ -14,7 +14,7 @@ export function Main({ fixed, className, fluid, ...props }: MainProps) {
         'px-3 py-3 sm:px-4 sm:py-4',
 
         // If layout is fixed, make the main container flex and grow
-        fixed && 'flex grow flex-col overflow-hidden',
+        fixed && 'flex grow flex-col overflow-hidden pt-[5px] pb-[5px] sm:pt-[5px] sm:pb-[5px]',
 
         // If layout is not fluid, set the max-width
         !fluid &&
