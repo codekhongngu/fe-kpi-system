@@ -1,13 +1,14 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { PlusCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { Button } from '@/components/ui/button'
-import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
-import { formManagementApi } from '../api/mock-form-management-api'
-import type { FormTemplate, PeriodType } from '../api/types'
 import { DataTablePagination } from '@/components/data-table/data-table-pagination'
+import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
+import { formManagementApi } from '../api/template-management-api'
+import type { FormTemplate, PeriodType, TemplateType } from '../api/types'
 import {
   type FormModalState,
   TemplateGeneralInfoDialog,
@@ -20,6 +21,7 @@ const defaultFormModalState: FormModalState = {
   name: '',
   fieldCategoryId: '',
   periodType: 'THANG',
+  templateType: 'AGGREGATE',
   description: '',
   isActive: true,
 }
@@ -33,6 +35,7 @@ const REPORT_PERIOD_OPTIONS = [
 ]
 
 export function FormTemplateListPage() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState('all')
@@ -51,10 +54,10 @@ export function FormTemplateListPage() {
         search,
         page,
         limit,
-        status: selectedStatus as 'all' | 'true' | 'false',
+        status: selectedStatus,
         period: selectedPeriod === 'all' ? '' : selectedPeriod,
         category: selectedCategory === 'all' ? '' : selectedCategory,
-      }),
+      } as any),
   })
 
   const categoriesQuery = useFieldCategoriesCatalogQuery()
@@ -63,32 +66,74 @@ export function FormTemplateListPage() {
   const total = meta?.total ?? 0
   const categories = categoriesQuery.data ?? []
 
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['form-management'] })
+  }
+
   const createMutation = useMutation({
     mutationFn: formManagementApi.createTemplate,
     onSuccess: async () => {
       toast.success('Đã tạo biểu mẫu thành công.')
-      await queryClient.invalidateQueries({ queryKey: ['form-management'] })
+      await invalidate()
       handleCloseModal()
     },
     onError: (error: Error) => toast.error(error.message),
   })
 
   const patchMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: { name: string; fieldCategoryId: string; periodType: PeriodType; description: string; isActive: boolean } }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: { name: string; fieldCategoryId: string; periodType: PeriodType; templateType: TemplateType; description: string; isActive: boolean } }) =>
       formManagementApi.updateTemplate(id, payload),
     onSuccess: async () => {
       toast.success('Đã cập nhật thông tin biểu mẫu.')
-      await queryClient.invalidateQueries({ queryKey: ['form-management'] })
+      await invalidate()
       handleCloseModal()
     },
     onError: (error: Error) => toast.error(error.message),
   })
 
-  const categoryOptions = categories
+  const markReadyMutation = useMutation({
+    mutationFn: (templateId: string) => formManagementApi.markReadyTemplate(templateId),
+    onSuccess: async () => {
+      toast.success('Đã chuyển biểu mẫu sang trạng thái sẵn sàng.')
+      await invalidate()
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const archiveMutation = useMutation({
+    mutationFn: (templateId: string) => formManagementApi.archiveTemplate(templateId),
+    onSuccess: async () => {
+      toast.success('Đã lưu trữ biểu mẫu.')
+      await invalidate()
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (templateId: string) => formManagementApi.deleteTemplate(templateId),
+    onSuccess: async () => {
+      toast.success('Đã xóa biểu mẫu.')
+      await invalidate()
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  const cloneMutation = useMutation({
+    mutationFn: (template: FormTemplate) =>
+      formManagementApi.copyTemplate(template.id, { name: `${template.name} - B?n sao` }),
+    onSuccess: async (copied) => {
+      toast.success('Đã sao chép biểu mẫu.')
+      await invalidate()
+      if (copied?.id) {
+        await navigate({ to: '/form-management/details/$templateId', params: { templateId: copied.id } })
+      }
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
 
   const openCreateModal = () => {
     setEditingTemplate(null)
-    setFormState({ ...defaultFormModalState, fieldCategoryId: categoryOptions[0]?.id ?? '' })
+    setFormState({ ...defaultFormModalState, fieldCategoryId: categories[0]?.id ?? '' })
     setOpenFormModal(true)
   }
 
@@ -99,6 +144,7 @@ export function FormTemplateListPage() {
       name: template.name,
       fieldCategoryId: template.fieldCategoryId,
       periodType: template.periodType ?? 'THANG',
+      templateType: template.templateType ?? 'AGGREGATE',
       description: template.description,
       isActive: template.isActive,
     })
@@ -124,6 +170,7 @@ export function FormTemplateListPage() {
           name: formState.name.trim(),
           fieldCategoryId: formState.fieldCategoryId,
           periodType: formState.periodType,
+          templateType: formState.templateType,
           description: formState.description.trim(),
           isActive: formState.isActive,
         },
@@ -141,6 +188,7 @@ export function FormTemplateListPage() {
       name: formState.name.trim(),
       fieldCategoryId: formState.fieldCategoryId,
       periodType: formState.periodType,
+      templateType: formState.templateType,
       description: formState.description.trim(),
       isActive: formState.isActive,
     })
@@ -181,7 +229,15 @@ export function FormTemplateListPage() {
           }}
         />
 
-        <TemplateListTable templates={templates} onEditGeneral={openEditModal} />
+        <TemplateListTable
+          templates={templates}
+          onEditGeneral={openEditModal}
+          onClone={(template) => cloneMutation.mutate(template)}
+          onMarkReady={(template) => markReadyMutation.mutate(template.id)}
+          onArchive={(template) => archiveMutation.mutate(template.id)}
+          onDelete={(template) => deleteMutation.mutate(template.id)}
+        />
+
         <DataTablePagination
           total={total}
           page={page}
@@ -198,7 +254,7 @@ export function FormTemplateListPage() {
         open={openFormModal}
         editing={Boolean(editingTemplate)}
         formState={formState}
-        categories={categoryOptions}
+        categories={categories}
         onOpenChange={(open) => {
           if (!open) handleCloseModal()
           else setOpenFormModal(true)
@@ -210,4 +266,3 @@ export function FormTemplateListPage() {
     </>
   )
 }
-

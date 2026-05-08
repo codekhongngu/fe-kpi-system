@@ -1,5 +1,5 @@
-﻿import { Link } from '@tanstack/react-router'
-import { Eye, MoreHorizontal, PencilLine } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Archive, Eye, MoreHorizontal, PencilLine, Copy, Trash2, FilePlus2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -7,6 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -17,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { FormTemplate, PeriodType } from '../api/types'
+import type { FormTemplate, PeriodType, TemplateLifecycleStatus, TemplateType } from '../api/types'
+import { TemplateStatusBadge } from './shared/template-status-badge'
 
 const periodTypeLabel: Record<PeriodType, string> = {
   TUAN: 'Tuần',
@@ -26,12 +28,35 @@ const periodTypeLabel: Record<PeriodType, string> = {
   NAM: 'Năm',
 }
 
+const templateTypeLabel: Record<TemplateType, string> = {
+  AGGREGATE: 'Tổng hợp',
+  UNIQUE: 'Đơn nhất',
+}
+
+const lifecycleLabel: Record<TemplateLifecycleStatus, string> = {
+  DRAFT: 'Nhập',
+  READY: 'Sẵn sàng',
+  IN_USE: 'Đang sử dụng',
+  ARCHIVED: 'Đã lưu trữ',
+}
+
 type TemplateListTableProps = {
   templates: FormTemplate[]
   onEditGeneral: (template: FormTemplate) => void
+  onClone?: (template: FormTemplate) => void
+  onMarkReady?: (template: FormTemplate) => void
+  onArchive?: (template: FormTemplate) => void
+  onDelete?: (template: FormTemplate) => void
 }
 
-export function TemplateListTable({ templates, onEditGeneral }: TemplateListTableProps) {
+export function TemplateListTable({
+  templates,
+  onEditGeneral,
+  onClone,
+  onMarkReady,
+  onArchive,
+  onDelete,
+}: TemplateListTableProps) {
   return (
     <div className='overflow-hidden rounded-md border bg-card'>
       <Table>
@@ -40,15 +65,17 @@ export function TemplateListTable({ templates, onEditGeneral }: TemplateListTabl
             <TableHead>Mã biểu mẫu</TableHead>
             <TableHead>Tên biểu mẫu</TableHead>
             <TableHead>Lĩnh vực</TableHead>
+            <TableHead>Loại biểu mẫu</TableHead>
             <TableHead>Kỳ</TableHead>
-            <TableHead>Trạng thái</TableHead>
+            <TableHead>Trạng thái vòng đời</TableHead>
+            <TableHead>Trạng thái hoạt động</TableHead>
             <TableHead className='text-right'>Thao tác</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {templates.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className='h-20 text-center'>
+              <TableCell colSpan={8} className='h-20 text-center'>
                 Không có biểu mẫu phù hợp điều kiện lọc.
               </TableCell>
             </TableRow>
@@ -61,11 +88,13 @@ export function TemplateListTable({ templates, onEditGeneral }: TemplateListTabl
                 <div className='text-xs text-muted-foreground'>{template.description}</div>
               </TableCell>
               <TableCell>{template.fieldCategoryName ?? template.fieldCategoryId}</TableCell>
+              <TableCell>{templateTypeLabel[template.templateType ?? 'AGGREGATE']}</TableCell>
               <TableCell>{periodTypeLabel[template.periodType ?? 'THANG']}</TableCell>
               <TableCell>
-                <Badge variant={template.isActive ? 'default' : 'secondary'}>
-                  {template.isActive ? 'Hoạt động' : 'Ngừng hoạt động'}
-                </Badge>
+                <Badge variant='outline'>{lifecycleLabel[template.templateStatus ?? 'DRAFT']}</Badge>
+              </TableCell>
+              <TableCell>
+                <TemplateStatusBadge templateStatus={template.templateStatus} isActive={template.isActive} />
               </TableCell>
               <TableCell className='text-right'>
                 <DropdownMenu modal={false}>
@@ -75,7 +104,7 @@ export function TemplateListTable({ templates, onEditGeneral }: TemplateListTabl
                       <span className='sr-only'>Mở menu thao tác</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end' className='w-48'>
+                  <DropdownMenuContent align='end' className='w-52'>
                     <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                     <DropdownMenuItem asChild className='cursor-pointer'>
                       <Link to='/form-management/details/$templateId' params={{ templateId: template.id }}>
@@ -86,9 +115,44 @@ export function TemplateListTable({ templates, onEditGeneral }: TemplateListTabl
                     <DropdownMenuItem onClick={() => onEditGeneral(template)} className='cursor-pointer'>
                       <span className='flex items-center gap-2'>
                         <PencilLine className='size-4' />
-                        Chỉnh sửa
+                        Chỉnh sửa thông tin
                       </span>
                     </DropdownMenuItem>
+                    {onMarkReady && (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
+                      <DropdownMenuItem onClick={() => onMarkReady(template)} className='cursor-pointer'>
+                        <span className='flex items-center gap-2'>
+                          <FilePlus2 className='size-4' />
+                          Chuyển sẵn sàng
+                        </span>
+                      </DropdownMenuItem>
+                    )}
+                    {onArchive && ['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') && (
+                      <DropdownMenuItem onClick={() => onArchive(template)} className='cursor-pointer'>
+                        <span className='flex items-center gap-2'>
+                          <Archive className='size-4' />
+                          Lưu trữ
+                        </span>
+                      </DropdownMenuItem>
+                    )}
+                    {onClone && ['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') && (
+                      <DropdownMenuItem onClick={() => onClone(template)} className='cursor-pointer'>
+                        <span className='flex items-center gap-2'>
+                          <Copy className='size-4' />
+                          Sao chép
+                        </span>
+                      </DropdownMenuItem>
+                    )}
+                    {onDelete && (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onDelete(template)} className='cursor-pointer text-destructive'>
+                          <span className='flex items-center gap-2'>
+                            <Trash2 className='size-4' />
+                            Xóa
+                          </span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

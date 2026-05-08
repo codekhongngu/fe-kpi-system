@@ -10,10 +10,14 @@ import {
   type FormTemplateListResult,
   type FormTemplateListParams,
   type PeriodType,
+  type TemplateLifecycleStatus,
   type TemplateField,
   type TemplateCellConfig,
   type EffectiveTemplateCellConfig,
   type TemplateIndicator,
+  type TemplateScope,
+  type TemplateScopeInput,
+  type TemplateType,
   type UpdateFieldInput,
   type UpdateFieldCategoryInput,
   type UpdateIndicatorInput,
@@ -36,11 +40,14 @@ type BeForm = {
   fieldCategory?: { id: string; name?: string } | string
   fieldCategoryName?: string
   periodType?: PeriodType
+  templateType?: TemplateType
+  templateStatus?: TemplateLifecycleStatus
   isActive?: boolean
   updatedAt?: string
   attributes?: BeAttribute[]
   indicators?: BeIndicator[]
   cellConfigs?: BeCellConfig[]
+  templateScopes?: BeScope[]
 }
 type BeAttribute = {
   id: string
@@ -73,6 +80,16 @@ type BeIndicator = {
   formula?: string | null
   validationRule?: Record<string, unknown> | null
   isActive?: boolean
+}
+
+type BeScope = {
+  id?: string
+  orgId: string
+  orgCode?: string
+  orgName?: string
+  indicatorId: string
+  indicatorCode?: string
+  indicatorName?: string
 }
 
 type FormulaValidateResponse = {
@@ -146,6 +163,16 @@ const mapIndicator = (item: BeIndicator): TemplateIndicator => ({
   order: item.sortOrder ?? item.order ?? 0,
   level: item.level ?? 0,
   hasReportData: false,
+})
+
+const mapScope = (item: BeScope): TemplateScope => ({
+  id: item.id,
+  orgId: item.orgId,
+  orgCode: item.orgCode,
+  orgName: item.orgName,
+  indicatorId: item.indicatorId,
+  indicatorCode: item.indicatorCode,
+  indicatorName: item.indicatorName,
 })
 
 export const formManagementApi = {
@@ -280,15 +307,60 @@ export const formManagementApi = {
   },
 
   listTemplates: async (params?: FormTemplateListParams): Promise<FormTemplateListResult> => {
-    const response = await apiClient.get<BeForm[] | { items?: BeForm[]; meta?: { page?: number; limit?: number; total?: number } }>('/forms', {
-      params: {
-        search: params?.search ?? '',
-        page: params?.page ?? 1,
-        limit: params?.limit ?? 20,
-        status: params?.status && params.status !== 'all' ? params.status : '',
-        period: params?.period ?? '',
-        category: params?.category ?? '',
-      },
+    const rawParams = (params ?? {}) as Record<string, unknown>
+    const readString = (...values: unknown[]) =>
+      values.find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim() ?? ''
+    const search = readString(rawParams.q, rawParams.search)
+    const category = readString(rawParams.fieldCategoryId, rawParams.category, rawParams.fieldCategory)
+    const periodType = readString(rawParams.periodType, rawParams.period)
+    const statusRaw = rawParams.status
+    const statusValue =
+      statusRaw === 'true'
+        ? 'active'
+        : statusRaw === 'false'
+          ? 'inactive'
+          : statusRaw === 'active' || statusRaw === 'inactive'
+            ? statusRaw
+            : ''
+    const isActive =
+      typeof rawParams.isActive === 'boolean'
+        ? rawParams.isActive
+        : statusValue === 'active'
+          ? true
+          : statusValue === 'inactive'
+            ? false
+            : undefined
+
+    const requestParams: Record<string, string | number | boolean> = {
+      page: typeof rawParams.page === 'number' ? rawParams.page : 1,
+      limit: typeof rawParams.limit === 'number' ? rawParams.limit : 20,
+    }
+
+    if (search) {
+      requestParams.q = search
+      requestParams.search = search
+    }
+
+    if (category) {
+      requestParams.fieldCategoryId = category
+    }
+
+    if (periodType) {
+      requestParams.periodType = periodType
+    }
+
+    if (statusValue) {
+      requestParams.status = statusValue
+    }
+
+    if (typeof isActive === 'boolean') {
+      requestParams.isActive = isActive
+    }
+
+    const response = await apiClient.get<
+      BeForm[] | { items?: BeForm[]; meta?: { page?: number; limit?: number; total?: number } }
+    >('/forms', {
+      params: requestParams,
     })
     const payload = response.data
     const list = Array.isArray(payload) ? payload : (payload.items ?? [])
@@ -305,10 +377,13 @@ export const formManagementApi = {
         item.fieldCategoryName ??
         (typeof item.fieldCategory === 'string' ? item.fieldCategory : item.fieldCategory?.name),
       periodType: item.periodType,
+      templateType: item.templateType ?? 'AGGREGATE',
+      templateStatus: item.templateStatus ?? 'DRAFT',
       isActive: item.isActive ?? true,
       updatedAt: item.updatedAt,
       fields: [],
       indicators: [],
+      templateScopes: [],
     }))
 
     return {
@@ -350,11 +425,14 @@ export const formManagementApi = {
         form.fieldCategoryName ??
         (typeof form.fieldCategory === 'string' ? form.fieldCategory : form.fieldCategory?.name),
       periodType: form.periodType,
+      templateType: form.templateType ?? 'AGGREGATE',
+      templateStatus: form.templateStatus ?? 'DRAFT',
       isActive: form.isActive ?? true,
       updatedAt: form.updatedAt,
       fields,
       indicators,
       cellConfigs: (form.cellConfigs ?? []).map(mapCellConfig),
+      templateScopes: (form.templateScopes ?? []).map(mapScope),
     } satisfies FormTemplate
   },
 
@@ -372,9 +450,11 @@ export const formManagementApi = {
       description: form.description ?? '',
       fieldCategoryId: form.fieldCategoryId ?? input.fieldCategoryId,
       periodType: form.periodType ?? input.periodType,
+      templateType: form.templateType ?? input.templateType,
       isActive: form.isActive ?? input.isActive,
       fields: [],
       indicators: [],
+      templateScopes: [],
     } satisfies FormTemplate
   },
 
@@ -386,6 +466,35 @@ export const formManagementApi = {
   deleteTemplate: async (templateId: string) => {
     await apiClient.delete(`/forms/${templateId}`)
     return true
+  },
+
+  markReadyTemplate: async (templateId: string) => {
+    await apiClient.post(`/forms/${templateId}/mark-ready`)
+    return true
+  },
+
+  archiveTemplate: async (templateId: string) => {
+    await apiClient.post(`/forms/${templateId}/archive`)
+    return true
+  },
+
+  activateTemplate: async (templateId: string) => {
+    await apiClient.post(`/forms/${templateId}/activate`)
+    return true
+  },
+
+  deactivateTemplate: async (templateId: string) => {
+    await apiClient.post(`/forms/${templateId}/deactivate`)
+    return true
+  },
+
+  copyTemplate: async (templateId: string, payload?: { name?: string }) => {
+    const response = await apiClient.post<BeForm | { id: string }>(`/forms/${templateId}/copy`, payload ?? {})
+    const formId = (response.data as { id?: string }).id
+    if (formId) {
+      return await formManagementApi.getTemplate(formId)
+    }
+    return response.data as BeForm
   },
 
   createField: async (templateId: string, input: CreateFieldInput) => {
@@ -491,6 +600,21 @@ export const formManagementApi = {
       payload
     )
     return response.data
+  },
+
+  listTemplateScopes: async (templateId: string) => {
+    const response = await apiClient.get<{ items?: BeScope[] }>(`/forms/${templateId}/template-scopes`)
+    return (response.data.items ?? []).map(mapScope)
+  },
+
+  upsertTemplateScopes: async (templateId: string, items: TemplateScopeInput[]) => {
+    await apiClient.post(`/forms/${templateId}/template-scopes`, { items })
+    return true
+  },
+
+  deleteTemplateScopes: async (templateId: string, items: TemplateScopeInput[]) => {
+    await apiClient.delete(`/forms/${templateId}/template-scopes`, { data: { items } })
+    return true
   },
 
   listCellConfigs: async (templateId: string) => {

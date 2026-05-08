@@ -1,4 +1,4 @@
-﻿import { Input } from '@/components/ui/input'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -59,7 +59,7 @@ export function TemplateListFilter({
           <SelectValue placeholder='Lĩnh vực biểu mẫu' />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value='all'>Tất cả Lĩnh vực biểu mẫu</SelectItem>
+          <SelectItem value='all'>Tất cả lĩnh vực biểu mẫu</SelectItem>
           {categories.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name || category.code}
@@ -70,12 +70,12 @@ export function TemplateListFilter({
 
       <Select value={selectedStatus} onValueChange={onStatusChange}>
         <SelectTrigger className='w-full'>
-          <SelectValue placeholder='Trạng thái' />
+          <SelectValue placeholder='Trạng thái hoạt động' />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value='all'>Tất cả trạng thái</SelectItem>
-          <SelectItem value='true'>Đang hoạt động</SelectItem>
-          <SelectItem value='false'>Ngừng hoạt động</SelectItem>
+          <SelectItem value='active'>Đang hoạt động</SelectItem>
+          <SelectItem value='inactive'>Ngừng hoạt động</SelectItem>
         </SelectContent>
       </Select>
     </div>

@@ -1,4 +1,4 @@
-﻿import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import type { PeriodType } from '../api/types'
+import { templateTypeOptions } from '../api/types'
+import type { PeriodType, TemplateType } from '../api/types'
 
 type CategoryOption = {
   id: string
@@ -30,6 +31,7 @@ type FormModalState = {
   name: string
   fieldCategoryId: string
   periodType: PeriodType
+  templateType: TemplateType
   description: string
   isActive: boolean
 }
@@ -94,7 +96,7 @@ export function TemplateGeneralInfoDialog({
               onValueChange={(value) => onFormStateChange({ ...formState, fieldCategoryId: value })}
             >
               <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Chọn Lĩnh vực biểu mẫu' />
+                <SelectValue placeholder='Chọn lĩnh vực biểu mẫu' />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((category) => (
@@ -123,7 +125,25 @@ export function TemplateGeneralInfoDialog({
             </Select>
           </div>
           <div className='space-y-2'>
-            <Label>Trạng thái</Label>
+            <Label>Loại biểu mẫu</Label>
+            <Select
+              value={formState.templateType}
+              onValueChange={(value: TemplateType) => onFormStateChange({ ...formState, templateType: value })}
+            >
+              <SelectTrigger className='w-full'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {templateTypeOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className='space-y-2'>
+            <Label>Trạng thái hoạt động</Label>
             <Select
               value={formState.isActive ? 'true' : 'false'}
               onValueChange={(value) => onFormStateChange({ ...formState, isActive: value === 'true' })}
@@ -148,7 +168,9 @@ export function TemplateGeneralInfoDialog({
         </div>
 
         <DialogFooter>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>Hủy</Button>
+          <Button variant='outline' onClick={() => onOpenChange(false)}>
+            Hủy
+          </Button>
           <Button onClick={onSubmit} disabled={submitting}>
             {editing ? 'Lưu thay đổi' : 'Tạo biểu mẫu'}
           </Button>

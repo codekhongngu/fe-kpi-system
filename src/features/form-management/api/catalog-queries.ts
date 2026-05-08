@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { formManagementApi } from './mock-form-management-api'
+import { formManagementApi } from './template-management-api'
 
 export const formManagementCatalogQueryKeys = {
   fieldCategories: ['form-management', 'catalogs', 'field-categories'] as const,
@@ -11,3 +11,4 @@ export function useFieldCategoriesCatalogQuery() {
     queryFn: () => formManagementApi.listFieldCategoriesCatalog('all', true),
   })
 }
+

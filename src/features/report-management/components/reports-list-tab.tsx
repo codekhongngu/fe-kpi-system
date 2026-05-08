@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formManagementApi } from '@/features/form-management/api/mock-form-management-api'
+import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import type { FormTemplate, PeriodType } from '@/features/form-management/api/types'
 import { reportManagementApi } from '../api/mock-report-management-api'
 import { type ReportInstance, type ReportStatus } from '../api/types'
@@ -344,3 +344,4 @@ export function ReportsListTab() {
     </>
   )
 }
+

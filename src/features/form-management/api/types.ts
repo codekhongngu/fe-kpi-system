@@ -1,7 +1,9 @@
-﻿export type CatalogStatusFilter = 'all' | 'true' | 'false'
+export type CatalogStatusFilter = 'all' | 'true' | 'false'
 
 export type TemplateCycle = 'week' | 'month' | 'quarter' | 'year'
-export type TemplateStatus = 'active' | 'inactive'
+export type TemplateType = 'AGGREGATE' | 'UNIQUE'
+export type TemplateLifecycleStatus = 'DRAFT' | 'READY' | 'IN_USE' | 'ARCHIVED'
+export type TemplateActivationStatus = 'active' | 'inactive'
 export type FieldDataType = 'text' | 'number'
 export type IndicatorType = 'input' | 'calculated'
 export type PeriodType = 'TUAN' | 'THANG' | 'QUY' | 'NAM'
@@ -13,10 +15,11 @@ export type CatalogOption = {
 }
 
 export type FormTemplateListParams = {
-  search?: string
+  searc?: string
   page?: number
   limit?: number
   status?: CatalogStatusFilter
+  templateStatus?: TemplateLifecycleStatus | 'all'
   period?: string
   category?: string
 }
@@ -74,6 +77,16 @@ export type TemplateIndicator = {
   hasReportData: boolean
 }
 
+export type TemplateScope = {
+  id?: string
+  orgId: string
+  orgCode?: string
+  orgName?: string
+  indicatorId: string
+  indicatorCode?: string
+  indicatorName?: string
+}
+
 export type TemplateCellConfig = {
   id?: string
   indicatorId: string
@@ -96,14 +109,14 @@ export type FormTemplate = {
   fieldCategoryId: string
   fieldCategoryName?: string
   periodType?: PeriodType
+  templateType?: TemplateType
+  templateStatus?: TemplateLifecycleStatus
   isActive: boolean
   updatedAt?: string
   fields: TemplateField[]
   indicators: TemplateIndicator[]
   cellConfigs?: TemplateCellConfig[]
-  domain?: string
-  cycle?: TemplateCycle
-  status?: TemplateStatus
+  templateScopes?: TemplateScope[]
   assignedUnits?: number
   completionRate?: number
   hasReportData?: boolean
@@ -115,6 +128,7 @@ export type CreateTemplateInput = {
   name: string
   fieldCategoryId: string
   periodType: PeriodType
+  templateType: TemplateType
   description: string
   isActive: boolean
 }
@@ -123,6 +137,7 @@ export type UpdateTemplateInput = {
   name: string
   fieldCategoryId: string
   periodType: PeriodType
+  templateType: TemplateType
   description: string
   isActive: boolean
 }
@@ -159,6 +174,11 @@ export type UpdateIndicatorInput = CreateIndicatorInput
 export type CreateFieldCategoryInput = Omit<FieldCategory, 'id'>
 export type UpdateFieldCategoryInput = Omit<FieldCategory, 'id'>
 
+export type TemplateScopeInput = {
+  orgId: string
+  indicatorId: string
+}
+
 export const templateCycleOptions: Array<{ value: TemplateCycle; label: string }> = [
   { value: 'week', label: 'Tuần' },
   { value: 'month', label: 'Tháng' },
@@ -166,9 +186,21 @@ export const templateCycleOptions: Array<{ value: TemplateCycle; label: string }
   { value: 'year', label: 'Năm' },
 ]
 
-export const templateStatusOptions: Array<{ value: TemplateStatus; label: string }> = [
+export const templateTypeOptions: Array<{ value: TemplateType; label: string }> = [
+  { value: 'AGGREGATE', label: 'Tổng hợp' },
+  { value: 'UNIQUE', label: 'Đơn nhất' },
+]
+
+export const templateLifecycleStatusOptions: Array<{ value: TemplateLifecycleStatus; label: string }> = [
+  { value: 'DRAFT', label: 'Nháp' },
+  { value: 'READY', label: 'Sẵn sàng' },
+  { value: 'IN_USE', label: 'Đang sử dụng' },
+  { value: 'ARCHIVED', label: 'Đã lưu trữ' },
+]
+
+export const templateActivationStatusOptions: Array<{ value: TemplateActivationStatus; label: string }> = [
   { value: 'active', label: 'Hoạt động' },
-  { value: 'inactive', label: 'Ngừng sử dụng' },
+  { value: 'inactive', label: 'Ngừng hoạt động' },
 ]
 
 export const fieldDataTypeOptions: Array<{ value: FieldDataType; label: string }> = [
@@ -178,5 +210,5 @@ export const fieldDataTypeOptions: Array<{ value: FieldDataType; label: string }
 
 export const indicatorTypeOptions: Array<{ value: IndicatorType; label: string }> = [
   { value: 'input', label: 'Nhập tay' },
-  { value: 'calculated', label: 'Tự động tính' },
+  { value: 'calculated', label: 'Tính toán' },
 ]

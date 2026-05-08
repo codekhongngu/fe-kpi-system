@@ -26,7 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { formManagementApi } from '../api/mock-form-management-api'
+import { formManagementApi } from '../api/template-management-api'
 import { type FieldCategory } from '../api/types'
 
 const EMPTY_CATEGORIES: FieldCategory[] = []
