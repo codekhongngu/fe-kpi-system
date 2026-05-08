@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileUp, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileUp, GripVertical, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,7 +31,7 @@ import {
   type FieldDataType,
   type TemplateField,
 } from '../../api/types'
-import { buildTree, flattenTree, type TreeNode } from '../shared/template-tree-utils'
+import { buildTree, flattenTree, reorderSameLevelItems, type TreeNode } from '../shared/template-tree-utils'
 
 type TemplateAttributesTabProps = {
   templateId: string
@@ -64,6 +67,7 @@ type FieldTreeNodeProps = {
   node: TreeNode<TemplateField>
   depth: number
   canEdit: boolean
+  canDrag: boolean
   onAddChild: (parentId: string) => void
   onEdit: (item: TemplateField) => void
   onDelete: (item: TemplateField) => void
@@ -75,6 +79,7 @@ function FieldTreeNode({
   node,
   depth,
   canEdit,
+  canDrag,
   onAddChild,
   onEdit,
   onDelete,
@@ -82,12 +87,35 @@ function FieldTreeNode({
   onMoveDown,
 }: FieldTreeNodeProps) {
   const hasChildren = node.children.length > 0
+  const locked = node.isSystemDefault
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: node.id,
+    disabled: locked || !canDrag,
+  })
 
   return (
     <div className='space-y-2'>
-      <div className='rounded-md border bg-card p-3 shadow-xs'>
+      <div
+        ref={setNodeRef}
+        className={`rounded-md border bg-card p-3 shadow-xs transition-all duration-150 ${isDragging ? 'opacity-60 ring-2 ring-primary/40' : ''}`}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition,
+        }}
+      >
         <div className='flex items-start justify-between gap-3'>
           <div className='flex min-w-0 items-start gap-2'>
+            <button
+              ref={setActivatorNodeRef}
+              type='button'
+              className='mt-0.5 rounded p-0.5 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed'
+              disabled={locked || !canDrag}
+              aria-label='Drag handle'
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical size={14} />
+            </button>
             {depth > 0 && <span className='mt-3 h-px w-4 shrink-0 bg-border' aria-hidden='true' />}
             <button type='button' className='mt-0.5 rounded p-0.5 hover:bg-muted'>
               {hasChildren ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -123,21 +151,24 @@ function FieldTreeNode({
       </div>
 
       {hasChildren && (
-        <div className='space-y-2 border-s border-border/70 ps-3'>
-          {node.children.map((child) => (
-            <FieldTreeNode
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              canEdit={canEdit}
-              onAddChild={onAddChild}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onMoveUp={onMoveUp}
-              onMoveDown={onMoveDown}
-            />
-          ))}
-        </div>
+        <SortableContext items={node.children.map((child) => child.id)} strategy={verticalListSortingStrategy}>
+          <div className='space-y-2 border-s border-border/70 ps-3'>
+            {node.children.map((child) => (
+              <FieldTreeNode
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                canEdit={canEdit}
+                canDrag={canDrag}
+                onAddChild={onAddChild}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onMoveUp={onMoveUp}
+                onMoveDown={onMoveDown}
+              />
+            ))}
+          </div>
+        </SortableContext>
       )}
     </div>
   )
@@ -148,6 +179,8 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingField, setEditingField] = useState<TemplateField | null>(null)
   const [fieldForm, setFieldForm] = useState<FieldFormState>(defaultFieldForm)
+  const [draftFields, setDraftFields] = useState<TemplateField[]>([])
+  const [hasPendingReorder, setHasPendingReorder] = useState(false)
 
   const templateQuery = useQuery({
     queryKey: ['form-management', 'template', templateId, 'attributes-tab'],
@@ -156,10 +189,17 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   })
 
   const template = templateQuery.data ?? null
-  const fields = template?.fields ?? []
   const canEdit = Boolean(template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT'))
-  const tree = useMemo(() => buildTree(fields), [fields])
-  const flatFields = useMemo(() => getFlatFields(fields), [fields])
+  const tree = useMemo(() => buildTree(draftFields), [draftFields])
+  const flatFields = useMemo(() => getFlatFields(draftFields), [draftFields])
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    setDraftFields(template?.fields ?? [])
+    setHasPendingReorder(false)
+  }, [template?.fields])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const parentOptions = useMemo(
     () =>
@@ -246,11 +286,18 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
     onError: (error: Error) => toast.error(error.message),
   })
 
-  const reorderMutation = useMutation({
-    mutationFn: (items: Array<{ id: string; parentId?: string | null }>) =>
-      formManagementApi.reorderFields(templateId, items),
+  const saveOrderMutation = useMutation({
+    mutationFn: () =>
+      formManagementApi.reorderFields(
+        templateId,
+        flatFields
+          .filter((item) => !item.isSystemDefault)
+          .map((item) => ({ id: item.id, parentId: item.parentId ?? null })),
+      ),
     onSuccess: async () => {
       await refreshTemplate()
+      setHasPendingReorder(false)
+      toast.success('Order saved.')
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -291,38 +338,54 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
     setFieldForm(defaultFieldForm)
   }
 
-  function buildReorderPayload(activeId: string, targetId: string) {
-    const items = flatFields.map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
-    const fromIndex = items.findIndex((item) => item.id === activeId)
-    const toIndex = items.findIndex((item) => item.id === targetId)
-    if (fromIndex === -1 || toIndex === -1) return items
-    const sameParent = (flatFields[fromIndex].parentId ?? null) === (flatFields[toIndex].parentId ?? null)
-    if (!sameParent) return items
-
-    const next = [...items]
-    const [moved] = next.splice(fromIndex, 1)
-    next.splice(toIndex, 0, moved)
-    return next
-  }
-
   function handleMoveUp(item: TemplateField) {
-    const current = flatFields.find((entry) => entry.id === item.id)
-    if (!current) return
-    const siblings = flatFields.filter((entry) => (entry.parentId ?? null) === (current.parentId ?? null))
+    const current = draftFields.find((entry) => entry.id === item.id)
+    if (!current || current.isSystemDefault) return
+    const siblings = flatFields.filter(
+      (entry) => (entry.parentId ?? null) === (current.parentId ?? null) && !entry.isSystemDefault,
+    )
     const index = siblings.findIndex((entry) => entry.id === item.id)
     if (index <= 0) return
     const target = siblings[index - 1]
-    reorderMutation.mutate(buildReorderPayload(item.id, target.id))
+    const next = reorderSameLevelItems(draftFields, item.id, target.id)
+    if (next === draftFields) return
+    setDraftFields(next)
+    setHasPendingReorder(true)
   }
 
   function handleMoveDown(item: TemplateField) {
-    const current = flatFields.find((entry) => entry.id === item.id)
-    if (!current) return
-    const siblings = flatFields.filter((entry) => (entry.parentId ?? null) === (current.parentId ?? null))
+    const current = draftFields.find((entry) => entry.id === item.id)
+    if (!current || current.isSystemDefault) return
+    const siblings = flatFields.filter(
+      (entry) => (entry.parentId ?? null) === (current.parentId ?? null) && !entry.isSystemDefault,
+    )
     const index = siblings.findIndex((entry) => entry.id === item.id)
     if (index === -1 || index >= siblings.length - 1) return
     const target = siblings[index + 1]
-    reorderMutation.mutate(buildReorderPayload(item.id, target.id))
+    const next = reorderSameLevelItems(draftFields, item.id, target.id)
+    if (next === draftFields) return
+    setDraftFields(next)
+    setHasPendingReorder(true)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const activeId = String(event.active.id)
+    const overId = event.over?.id ? String(event.over.id) : null
+    if (!overId) return
+    const active = draftFields.find((entry) => entry.id === activeId)
+    const over = draftFields.find((entry) => entry.id === overId)
+    if (!active || !over) return
+    if (active.isSystemDefault || over.isSystemDefault) return
+    if ((active.parentId ?? null) !== (over.parentId ?? null)) return
+    const next = reorderSameLevelItems(draftFields, activeId, overId)
+    if (next === draftFields) return
+    setDraftFields(next)
+    setHasPendingReorder(true)
+  }
+
+  function handleSaveOrder() {
+    if (!hasPendingReorder || saveOrderMutation.isPending) return
+    saveOrderMutation.mutate()
   }
 
   function submitFieldForm() {
@@ -350,6 +413,15 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
             <Button
               size='sm'
               variant='outline'
+              onClick={handleSaveOrder}
+              disabled={!canEdit || !hasPendingReorder || saveOrderMutation.isPending}
+            >
+              <Save className='size-4' />
+              Save order
+            </Button>
+            <Button
+              size='sm'
+              variant='outline'
               onClick={() => importMutation.mutate()}
               disabled={!canEdit || importMutation.isPending}
             >
@@ -374,21 +446,26 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
             Chưa có thuộc tính nào.
           </div>
         ) : (
-          <div className='space-y-2'>
-            {tree.map((node) => (
-              <FieldTreeNode
-                key={node.id}
-                node={node}
-                depth={0}
-                canEdit={canEdit}
-                onAddChild={(parentId) => openCreateDialog(parentId)}
-                onEdit={openEditDialog}
-                onDelete={(item) => deleteMutation.mutate(item.id)}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-              />
-            ))}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={tree.map((node) => node.id)} strategy={verticalListSortingStrategy}>
+              <div className='space-y-2'>
+                {tree.map((node) => (
+                  <FieldTreeNode
+                    key={node.id}
+                    node={node}
+                    depth={0}
+                    canEdit={canEdit}
+                    canDrag={canEdit}
+                    onAddChild={(parentId) => openCreateDialog(parentId)}
+                    onEdit={openEditDialog}
+                    onDelete={(item) => deleteMutation.mutate(item.id)}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </CardContent>
 

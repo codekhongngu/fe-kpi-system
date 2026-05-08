@@ -24,6 +24,7 @@ import {
 import { formManagementApi } from '../../api/template-management-api'
 import {
   fieldDataTypeOptions,
+  type TemplateField,
   type FormTemplate,
   type TemplateCellConfig,
   type TemplateIndicator,
@@ -55,6 +56,7 @@ type MatrixRow = {
   id: string
   code: string
   name: string
+  unit: string
 }
 
 function cellKey(indicatorId: string, attributeId: string) {
@@ -77,7 +79,22 @@ function buildRows(indicators: TemplateIndicator[]): MatrixRow[] {
     id: indicator.id,
     code: indicator.code,
     name: indicator.name,
+    unit: indicator.unit,
   }))
+}
+
+function getMatrixFields(fields: TemplateField[]) {
+  const systemFields = fields.filter((field) => field.isSystemDefault)
+  const nameField = systemFields.find((field) => field.label === 'Tên chỉ tiêu') ?? systemFields[0] ?? fields[0] ?? null
+  const unitField =
+    systemFields.find((field) => field.id !== nameField?.id && field.label === 'Đơn vị tính') ??
+    systemFields.find((field) => field.id !== nameField?.id) ??
+    fields.find((field) => field.id !== nameField?.id) ??
+    fields[1] ??
+    null
+  const specialIds = new Set([nameField?.id, unitField?.id].filter(Boolean) as string[])
+  const extraFields = fields.filter((field) => !specialIds.has(field.id))
+  return { nameField, unitField, extraFields }
 }
 
 export function TemplatePreviewMatrix({
@@ -122,6 +139,16 @@ export function TemplatePreviewMatrix({
 
   const template = templateQuery.data
   const rows = useMemo(() => buildRows(template?.indicators ?? []), [template?.indicators])
+  const matrixFields = useMemo(
+    () => getMatrixFields(template?.fields ?? []),
+    [template?.fields],
+  )
+  const visibleFields = useMemo(
+    () => [matrixFields.nameField, matrixFields.unitField, ...matrixFields.extraFields].filter(
+      (field): field is TemplateField => Boolean(field),
+    ),
+    [matrixFields],
+  )
 
   const overrideMap = useMemo(() => {
     const map = new Map<string, TemplateCellConfig>()
@@ -199,8 +226,29 @@ export function TemplatePreviewMatrix({
     setEditorOpen(true)
   }
 
-  function renderCell(indicatorId: string, attributeId: string) {
-    const cell = effectiveMap.get(cellKey(indicatorId, attributeId))
+  function renderDisplayCell(row: MatrixRow, field: TemplateField) {
+    const isNameField = field.id === matrixFields.nameField?.id
+    const isUnitField = field.id === matrixFields.unitField?.id
+
+    if (isNameField) {
+      return (
+        <div className='rounded-md border border-dashed px-2 py-1 text-left'>
+          <div className='text-xs text-muted-foreground'>{row.code}</div>
+          <div className='font-medium'>{row.name}</div>
+        </div>
+      )
+    }
+
+    if (isUnitField) {
+      return (
+        <div className='rounded-md border border-dashed px-2 py-1 text-left'>
+          <div className='font-medium'>{row.unit || '-'}</div>
+          <div className='text-xs text-muted-foreground'>Đơn vị tính</div>
+        </div>
+      )
+    }
+
+    const cell = effectiveMap.get(cellKey(row.id, field.id))
 
     if (!cell) {
       return <span className='text-xs text-muted-foreground'>-</span>
@@ -210,7 +258,7 @@ export function TemplatePreviewMatrix({
       <>
         <div className='flex items-center justify-between gap-2'>
           <span className='text-xs font-medium uppercase text-muted-foreground'>{cell.dataType}</span>
-          {overrideMap.has(cellKey(indicatorId, attributeId)) && (
+          {overrideMap.has(cellKey(row.id, field.id)) && (
             <span className='text-[10px] font-semibold text-primary'>Ghi đè</span>
           )}
         </div>
@@ -229,7 +277,7 @@ export function TemplatePreviewMatrix({
       <button
         type='button'
         className='flex w-full flex-col gap-1 rounded-md border border-dashed px-2 py-1 text-left transition hover:border-primary hover:bg-primary/5'
-        onClick={() => openEditor(indicatorId, attributeId)}
+        onClick={() => openEditor(row.id, field.id)}
       >
         {content}
       </button>
@@ -279,10 +327,7 @@ export function TemplatePreviewMatrix({
             <table className='w-full border-collapse text-sm'>
               <thead>
                 <tr className='bg-muted/60'>
-                  <th className='sticky left-0 z-10 border-b border-r bg-muted/80 px-4 py-3 text-left font-semibold'>
-                    Chỉ tiêu
-                  </th>
-                  {(template.fields ?? []).map((field) => (
+                  {visibleFields.map((field) => (
                     <th key={field.id} className='border-b px-4 py-3 text-left font-semibold'>
                       {field.label}
                     </th>
@@ -292,20 +337,16 @@ export function TemplatePreviewMatrix({
               <tbody>
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={Math.max((template.fields ?? []).length + 1, 1)} className='px-4 py-8 text-center text-muted-foreground'>
+                    <td colSpan={Math.max(visibleFields.length, 1)} className='px-4 py-8 text-center text-muted-foreground'>
                       Chưa có chỉ tiêu hoặc thuộc tính để xem trước.
                     </td>
                   </tr>
                 )}
                 {rows.map((row) => (
                   <tr key={row.id} className='align-top'>
-                    <td className='sticky left-0 z-10 border-b border-r bg-background px-4 py-3'>
-                      <div className='text-xs text-muted-foreground'>{row.code}</div>
-                      <div className='font-medium'>{row.name}</div>
-                    </td>
-                    {(template.fields ?? []).map((field) => (
+                    {visibleFields.map((field) => (
                       <td key={`${row.id}_${field.id}`} className='border-b px-3 py-2 align-top'>
-                        {renderCell(row.id, field.id)}
+                        {renderDisplayCell(row, field)}
                       </td>
                     ))}
                   </tr>

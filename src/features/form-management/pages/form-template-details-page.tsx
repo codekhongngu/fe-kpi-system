@@ -159,7 +159,7 @@ export function FormTemplateDetailsPage({ templateId }: FormTemplateDetailsPageP
   return (
     <div className='flex w-full flex-col gap-6 p-6'>
       {templateQuery.isLoading ? (
-        <div className='py-12 text-center text-sm text-muted-foreground'>Đang tải chi ti?t biểu mẫu...</div>
+        <div className='py-12 text-center text-sm text-muted-foreground'>Đang tải chi tiết biểu mẫu...</div>
       ) : templateQuery.isError || !template ? (
         <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
           Không thể tải chi tiết biểu mẫu.

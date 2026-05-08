@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, FileUp, PlusCircle, Save, Trash2, UserPen, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileUp, GripVertical, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,7 +39,7 @@ import {
   type IndicatorType,
   type TemplateIndicator,
 } from '../../api/types'
-import { buildTree, flattenTree, type TreeNode } from '../shared/template-tree-utils'
+import { buildTree, flattenTree, reorderSameLevelItems, type TreeNode } from '../shared/template-tree-utils'
 
 type TemplateIndicatorsTabProps = {
   templateId: string
@@ -78,6 +81,7 @@ type IndicatorTreeNodeProps = {
   node: TreeNode<TemplateIndicator>
   depth: number
   canEdit: boolean
+  canDrag: boolean
   onAddChild: (parentId: string) => void
   onEdit: (item: TemplateIndicator) => void
   onDelete: (item: TemplateIndicator) => void
@@ -89,6 +93,7 @@ function IndicatorTreeNode({
   node,
   depth,
   canEdit,
+  canDrag,
   onAddChild,
   onEdit,
   onDelete,
@@ -96,12 +101,34 @@ function IndicatorTreeNode({
   onMoveDown,
 }: IndicatorTreeNodeProps) {
   const hasChildren = node.children.length > 0
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: node.id,
+    disabled: !canDrag,
+  })
 
   return (
     <div className='space-y-2'>
-      <div className='rounded-md border bg-card p-3 shadow-xs'>
+      <div
+        ref={setNodeRef}
+        className={`rounded-md border bg-card p-3 shadow-xs transition-all duration-150 ${isDragging ? 'opacity-60 ring-2 ring-primary/40' : ''}`}
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition,
+        }}
+      >
         <div className='flex items-start justify-between gap-3'>
           <div className='flex min-w-0 items-start gap-2'>
+            <button
+              ref={setActivatorNodeRef}
+              type='button'
+              className='mt-0.5 rounded p-0.5 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed'
+              disabled={!canDrag}
+              aria-label='Drag handle'
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical size={14} />
+            </button>
             {depth > 0 && <span className='mt-3 h-px w-4 shrink-0 bg-border' aria-hidden='true' />}
             <button
               type='button'
@@ -144,21 +171,24 @@ function IndicatorTreeNode({
       </div>
 
       {hasChildren && (
-        <div className='space-y-2 border-s border-border/70 ps-3'>
-          {node.children.map((child) => (
-            <IndicatorTreeNode
-              key={child.id}
-              node={child}
-              depth={depth + 1}
-              canEdit={canEdit}
-              onAddChild={onAddChild}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onMoveUp={onMoveUp}
-              onMoveDown={onMoveDown}
-            />
-          ))}
-        </div>
+        <SortableContext items={node.children.map((child) => child.id)} strategy={verticalListSortingStrategy}>
+          <div className='space-y-2 border-s border-border/70 ps-3'>
+            {node.children.map((child) => (
+              <IndicatorTreeNode
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                canEdit={canEdit}
+                canDrag={canDrag}
+                onAddChild={onAddChild}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onMoveUp={onMoveUp}
+                onMoveDown={onMoveDown}
+              />
+            ))}
+          </div>
+        </SortableContext>
       )}
     </div>
   )
@@ -170,6 +200,8 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   const [editingIndicator, setEditingIndicator] = useState<TemplateIndicator | null>(null)
   const [indicatorForm, setIndicatorForm] = useState<IndicatorFormState>(defaultIndicatorForm)
   const [formulaPreview, setFormulaPreview] = useState<{ valid: boolean; errors: string[]; warnings: string[] } | null>(null)
+  const [draftIndicators, setDraftIndicators] = useState<TemplateIndicator[]>([])
+  const [hasPendingReorder, setHasPendingReorder] = useState(false)
 
   const templateQuery = useQuery({
     queryKey: ['form-management', 'template', templateId, 'indicators-tab'],
@@ -178,10 +210,17 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   })
 
   const template = templateQuery.data ?? null
-  const indicators = template?.indicators ?? []
   const canEdit = Boolean(template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT'))
-  const tree = useMemo(() => buildTree(indicators), [indicators])
-  const flatIndicators = useMemo(() => currentTreeItems(indicators), [indicators])
+  const tree = useMemo(() => buildTree(draftIndicators), [draftIndicators])
+  const flatIndicators = useMemo(() => currentTreeItems(draftIndicators), [draftIndicators])
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    setDraftIndicators(template?.indicators ?? [])
+    setHasPendingReorder(false)
+  }, [template?.indicators])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const parentOptions = useMemo(
     () =>
@@ -238,11 +277,16 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     onError: (error: Error) => toast.error(error.message),
   })
 
-  const reorderMutation = useMutation({
-    mutationFn: (items: Array<{ id: string; parentId?: string | null }>) =>
-      formManagementApi.reorderIndicators(templateId, items),
+  const saveOrderMutation = useMutation({
+    mutationFn: () =>
+      formManagementApi.reorderIndicators(
+        templateId,
+        flatIndicators.map((item) => ({ id: item.id, parentId: item.parentId ?? null })),
+      ),
     onSuccess: async () => {
       await refreshTemplate()
+      setHasPendingReorder(false)
+      toast.success('Order saved.')
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -303,39 +347,49 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     setFormulaPreview(null)
   }
 
-  function buildReorderPayload(activeId: string, targetId: string, moveUp: boolean) {
-    const items = flatIndicators.map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
-    const fromIndex = items.findIndex((item) => item.id === activeId)
-    const toIndex = items.findIndex((item) => item.id === targetId)
-    if (fromIndex === -1 || toIndex === -1) return items
-
-    const sameParent = (flatIndicators[fromIndex].parentId ?? null) === (flatIndicators[toIndex].parentId ?? null)
-    if (!sameParent) return items
-
-    const next = [...items]
-    const [moved] = next.splice(fromIndex, 1)
-    next.splice(moveUp ? toIndex : toIndex, 0, moved)
-    return next
-  }
-
   function handleMoveUp(item: TemplateIndicator) {
-    const current = flatIndicators.find((entry) => entry.id === item.id)
+    const current = draftIndicators.find((entry) => entry.id === item.id)
     if (!current) return
     const siblings = flatIndicators.filter((entry) => (entry.parentId ?? null) === (current.parentId ?? null))
     const index = siblings.findIndex((entry) => entry.id === item.id)
     if (index <= 0) return
     const target = siblings[index - 1]
-    reorderMutation.mutate(buildReorderPayload(item.id, target.id, true))
+    const next = reorderSameLevelItems(draftIndicators, item.id, target.id)
+    if (next === draftIndicators) return
+    setDraftIndicators(next)
+    setHasPendingReorder(true)
   }
 
   function handleMoveDown(item: TemplateIndicator) {
-    const current = flatIndicators.find((entry) => entry.id === item.id)
+    const current = draftIndicators.find((entry) => entry.id === item.id)
     if (!current) return
     const siblings = flatIndicators.filter((entry) => (entry.parentId ?? null) === (current.parentId ?? null))
     const index = siblings.findIndex((entry) => entry.id === item.id)
     if (index === -1 || index >= siblings.length - 1) return
     const target = siblings[index + 1]
-    reorderMutation.mutate(buildReorderPayload(item.id, target.id, false))
+    const next = reorderSameLevelItems(draftIndicators, item.id, target.id)
+    if (next === draftIndicators) return
+    setDraftIndicators(next)
+    setHasPendingReorder(true)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const activeId = String(event.active.id)
+    const overId = event.over?.id ? String(event.over.id) : null
+    if (!overId) return
+    const active = draftIndicators.find((entry) => entry.id === activeId)
+    const over = draftIndicators.find((entry) => entry.id === overId)
+    if (!active || !over) return
+    if ((active.parentId ?? null) !== (over.parentId ?? null)) return
+    const next = reorderSameLevelItems(draftIndicators, activeId, overId)
+    if (next === draftIndicators) return
+    setDraftIndicators(next)
+    setHasPendingReorder(true)
+  }
+
+  function handleSaveOrder() {
+    if (!hasPendingReorder || saveOrderMutation.isPending) return
+    saveOrderMutation.mutate()
   }
 
   function submitIndicatorForm() {
@@ -375,6 +429,15 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
             <Button
               size='sm'
               variant='outline'
+              onClick={handleSaveOrder}
+              disabled={!canEdit || !hasPendingReorder || saveOrderMutation.isPending}
+            >
+              <Save className='size-4' />
+              Save order
+            </Button>
+            <Button
+              size='sm'
+              variant='outline'
               onClick={() => importMutation.mutate()}
               disabled={!canEdit || importMutation.isPending}
             >
@@ -399,21 +462,26 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
             Chưa có chỉ tiêu nào.
           </div>
         ) : (
-          <div className='space-y-2'>
-            {tree.map((node) => (
-              <IndicatorTreeNode
-                key={node.id}
-                node={node}
-                depth={0}
-                canEdit={canEdit}
-                onAddChild={(parentId) => openCreateDialog(parentId)}
-                onEdit={openEditDialog}
-                onDelete={(item) => deleteMutation.mutate(item.id)}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-              />
-            ))}
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={tree.map((node) => node.id)} strategy={verticalListSortingStrategy}>
+              <div className='space-y-2'>
+                {tree.map((node) => (
+                  <IndicatorTreeNode
+                    key={node.id}
+                    node={node}
+                    depth={0}
+                    canEdit={canEdit}
+                    canDrag={canEdit}
+                    onAddChild={(parentId) => openCreateDialog(parentId)}
+                    onEdit={openEditDialog}
+                    onDelete={(item) => deleteMutation.mutate(item.id)}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </CardContent>
 

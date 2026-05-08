@@ -58,6 +58,7 @@ type BeAttribute = {
   isRequired?: boolean
   isReadonly?: boolean
   isVisible?: boolean
+  isSystem?: boolean
   sortOrder?: number
   order?: number
   level?: number
@@ -144,7 +145,7 @@ const mapAttribute = (item: BeAttribute): TemplateField => ({
   parentId: item.parentId ?? null,
   level: item.level ?? 0,
   validationRule: item.validationRule ?? null,
-  isSystemDefault: false,
+  isSystemDefault: item.isSystem ?? false,
 })
 
 const mapIndicator = (item: BeIndicator): TemplateIndicator => ({
