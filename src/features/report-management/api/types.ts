@@ -40,32 +40,25 @@ export type ReportAction =
 
 export type ReportListItem = {
   id: string
-  code: string
-  name: string
-  formCode?: string
-  formName?: string
-  templateId: string
-  templateName: string
-  unitId?: string
-  unitName?: string
-  period?: string
-  periodCode?: string
-  periodName?: string
+  formId: string
+  periodType: string
+  periodCode: string
+  periodName: string
+  deadlineFrom: string
+  deadlineTo: string
+  createdBy: string
+  status: ReportStatus
+  dispatchedAt: string | null
+  dispatchedBy: string | null
+  createdAt: string
+  templateCode?: string
+  templateName?: string
+  // Additional fields for compatibility
+  code?: string
+  name?: string
   openDate?: string
   closeDate?: string
-  deadlineFrom?: string
-  deadlineTo?: string
   deadline?: string
-  status: ReportStatus
-  priority?: ReportPriority
-  completionPercent?: number
-  ownerName?: string
-  updatedBy?: string
-  updatedAt?: string
-  submittedAt?: string | null
-  approvedAt?: string | null
-  rejectionReason?: string | null
-  note?: string | null
 }
 
 export type ReportAssignment = {
@@ -80,12 +73,44 @@ export type ReportAssignment = {
   assigneeName?: string
 }
 
-export type ReportDetail = ReportListItem & {
+export type ReportDetail = {
+  id: string
+  formId: string
+  periodType: string
+  periodCode: string
+  periodName: string
+  deadlineFrom: string
+  deadlineTo: string
+  createdBy: string
+  status: ReportStatus
+  dispatchedAt: string | null
+  dispatchedBy: string | null
+  createdAt: string
+  templateCode: string
+  templateName: string
   description?: string
   cells?: ReportCell[]
   history?: ReportHistoryItem[]
   assignees?: string[]
   assignments?: ReportAssignment[]
+  // Additional fields for compatibility
+  code?: string
+  name?: string
+  templateId?: string
+  openDate?: string
+  closeDate?: string
+  deadline?: string
+  updatedAt?: string
+  unitId?: string
+  unitName?: string
+  period?: string
+  completionPercent?: number
+  ownerName?: string
+  updatedBy?: string
+  submittedAt?: string | null
+  approvedAt?: string | null
+  rejectionReason?: string | null
+  note?: string | null
 }
 
 export type ReportCell = {

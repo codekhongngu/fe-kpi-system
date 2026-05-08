@@ -22,6 +22,7 @@ import { ReportTable } from '../components/report-table'
 import { ReportTabs } from '../components/report-tabs'
 import { RoleVariantsDialog } from '../components/role-variants-dialog'
 import { usePermission } from '../hooks/use-permission'
+import { useTemplateInfo } from '../hooks/use-template-info'
 import {
   defaultReportFilters,
   getErrorMessage,
@@ -129,7 +130,7 @@ export function ReportListPage() {
     queryKey: reportQueryKeys.list(filters),
     queryFn: async () => {
       const response = await apiClient.get<{ items: ReportListItem[]; total: number }>(
-        '/assignments/batches',
+        '/report-campaigns',
         {
           params: {
             page: filters.page,
@@ -153,7 +154,7 @@ export function ReportListPage() {
 
   const createMutation = useMutation({
     mutationFn: async (input: CreateReportInput) => {
-      await apiClient.post('/assignments', {
+      await apiClient.post('/report-campaigns', {
         formId: input.templateId,
         periodType: input.periodType,
         periodCode: input.periodCode,
@@ -216,6 +217,9 @@ export function ReportListPage() {
   const confirmCopy = useMemo(() => getConfirmCopy(confirmState), [confirmState])
   const listData = listQuery.data?.items ?? []
   const total = listQuery.data?.total ?? 0
+
+  // Sử dụng hook để lấy thông tin template
+  const { enrichedReports, isLoading: templateLoading } = useTemplateInfo(listData)
 
   const openCreateForm = () => {
     setFormMode('create')
@@ -292,11 +296,11 @@ export function ReportListPage() {
             </div>
           ) : (
             <ReportTable
-              data={listData}
+              data={enrichedReports}
               total={total}
               page={filters.page}
               pageSize={filters.pageSize}
-              isLoading={listQuery.isLoading || listQuery.isFetching}
+              isLoading={listQuery.isLoading || listQuery.isFetching || templateLoading}
               can={permission.can}
               onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
               onView={(report) =>

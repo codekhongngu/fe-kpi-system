@@ -99,7 +99,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
    const detailQuery = useQuery({
     queryKey: reportQueryKeys.detail(reportId),
     queryFn: async () => {
-      const response = await apiClient.get<ReportDetail>(`/assignments/batches/${reportId}`)
+      const response = await apiClient.get<ReportDetail>(`/report-campaigns/${reportId}`)
       return response.data
     },
   })
@@ -797,8 +797,8 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                     <div className='flex items-center justify-between gap-4 p-6 text-primary-foreground'>
                       <div className='min-w-0'>
                         <div className='text-xs font-semibold opacity-90'>Cấu hình giá trị mặc định</div>
-                        <div className='mt-1 truncate text-xl font-bold'>{report.name}</div>
-                        <div className='mt-1 text-sm opacity-90'>Mã báo cáo: {report.formCode || report.code}</div>
+                        <div className='mt-1 truncate text-xl font-bold'>{report.templateName}</div>
+                        <div className='mt-1 text-sm opacity-90'>Mã báo cáo: {report.templateCode}</div>
                       </div>
                     </div>
                   </div>

@@ -88,9 +88,9 @@ export function ReportTable({
               >
                 <div className='flex flex-col gap-0.5'>
                   <span className='text-xs font-bold text-teal-700 uppercase tracking-wider'>
-                    {report.formCode || report.code}
+                    {report.templateCode}
                   </span>
-                  <span className='line-clamp-2'>{report.formName || report.name}</span>
+                  <span className='line-clamp-2'>{report.templateName}</span>
                 </div>
               </button>
             </div>
@@ -105,10 +105,7 @@ export function ReportTable({
           return (
             <div className='min-w-[180px]'>
               <div className='flex flex-col gap-0.5'>
-                <span className='text-[10px] font-bold text-muted-foreground uppercase'>
-                  {report.periodCode}
-                </span>
-                <span className='font-medium'>{report.periodName || report.period}</span>
+                <span className='font-medium'>{report.periodName}</span>
               </div>
             </div>
           )

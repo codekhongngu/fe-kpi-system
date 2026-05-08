@@ -14,7 +14,7 @@ export function ReportCreatePage() {
 
   const createMutation = useMutation({
     mutationFn: async (input: CreateReportInput) => {
-      await apiClient.post('/assignments', {
+      await apiClient.post('/report-campaigns', {
         formId: input.templateId,
         periodType: input.periodType,
         periodCode: input.periodCode,
