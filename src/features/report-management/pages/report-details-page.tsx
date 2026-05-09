@@ -46,6 +46,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiClient } from '@/lib/api-client'
 import { reportManagementApi } from '../api/mock-report-management-api'
+import { reportScopesApi, type ReportScope } from '../api/report-scopes-api'
 import type { ReportDetail } from '../api/types'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
 import { ReportPriorityBadge, ReportStatusBadge } from '../components/report-status'
@@ -95,8 +96,11 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
    const [unitSearch, setUnitSearch] = useState('')
    const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
    const [indicatorSearch, setIndicatorSearch] = useState('')
- 
-   const detailQuery = useQuery({
+   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set())
+   const [scopeSearch, setScopeSearch] = useState('')
+   const [sortBy, setSortBy] = useState<'code' | 'name' | 'sortOrder'>('sortOrder')
+
+  const detailQuery = useQuery({
     queryKey: reportQueryKeys.detail(reportId),
     queryFn: async () => {
       const response = await apiClient.get<ReportDetail>(`/report-campaigns/${reportId}`)
@@ -134,12 +138,140 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
      enabled: !!report?.templateId,
      retry: false,
    })
- 
-   const openDate = report?.openDate ?? null
-  const closeDate = report?.closeDate ?? report?.deadline ?? null
-  const updatedAt = report?.updatedAt ?? null
+
+   const scopesQuery = useQuery({
+     queryKey: ['report-details', 'scopes', reportId],
+     queryFn: async () => {
+       if (!reportId) return []
+       console.log('Fetching scopes for reportId:', reportId)
+       try {
+         const result = await reportScopesApi.getReportScopes(reportId)
+         console.log('Scopes API result:', result)
+         return result
+       } catch (error) {
+         console.error('Scopes API error:', error)
+         throw error
+       }
+     },
+     enabled: !!reportId,
+     retry: false,
+   })
+
+   const handleSelectAll = () => {
+     if (scopesQuery.data) {
+       const allScopeIds = scopesQuery.data.map(scope => scope.id)
+       setSelectedScopes(new Set(allScopeIds))
+     }
+   }
+
+   const handleUnselectAll = () => {
+     setSelectedScopes(new Set())
+   }
+
+   const handleToggleScope = (scopeId: string) => {
+     setSelectedScopes(prev => {
+       const newSet = new Set(prev)
+       if (newSet.has(scopeId)) {
+         newSet.delete(scopeId)
+       } else {
+         newSet.add(scopeId)
+       }
+       return newSet
+     })
+   }
+
+   const isAllSelected = scopesQuery.data ? selectedScopes.size === scopesQuery.data.length : false
+   const isIndeterminate = scopesQuery.data ? selectedScopes.size > 0 && selectedScopes.size < scopesQuery.data.length : false
 
   const currentUnitId = selectedUnitId || report?.unitId
+
+   const filteredScopes = useMemo(() => {
+     if (!scopesQuery.data || !currentUnitId) return []
+     let unitFiltered = scopesQuery.data.filter(scope => scope.orgId === currentUnitId)
+     
+     if (scopeSearch.trim()) {
+       const searchTerm = scopeSearch.toLowerCase().trim()
+       unitFiltered = unitFiltered.filter(scope => 
+         scope.indicatorCode.toLowerCase().includes(searchTerm) ||
+         scope.indicatorName.toLowerCase().includes(searchTerm)
+       )
+     }
+     
+     // Sắp xếp theo sortBy
+     return [...unitFiltered].sort((a, b) => {
+       switch (sortBy) {
+         case 'code':
+           return a.indicatorCode.localeCompare(b.indicatorCode)
+         case 'name':
+           return a.indicatorName.localeCompare(b.indicatorName)
+         case 'sortOrder':
+           // Sắp xếp theo hierarchy rule với dữ liệu thực tế
+           // 1. Cùng orgId: sắp xếp theo hierarchy
+           // 2. Khác orgId: orgId trước
+           if (a.orgId !== b.orgId) {
+             return a.orgId.localeCompare(b.orgId)
+           }
+           
+           // Tính level hierarchy từ parent_id - sửa lại logic
+           const calculateLevel = (item: any, allItems: any[], memo = new Map()): number => {
+             if (memo.has(item.id)) return memo.get(item.id)!
+             
+             // Build parent map trước
+             const itemMap = new Map(allItems.map(i => [i.id, i]))
+             
+             const getLevel = (itemId: string): number => {
+               if (memo.has(itemId)) return memo.get(itemId)!
+               
+               const currentItem = itemMap.get(itemId)
+               if (!currentItem || !currentItem.parent_id) {
+                 memo.set(itemId, 0)
+                 return 0
+               }
+               
+               const parentLevel = getLevel(currentItem.parent_id)
+               const level = parentLevel + 1
+               memo.set(itemId, level)
+               return level
+             }
+             
+             return getLevel(item.id)
+           }
+           
+           const allScopes = [...unitFiltered]
+           const aLevel = calculateLevel(a, allScopes)
+           const bLevel = calculateLevel(b, allScopes)
+           const aParentId = a.parent_id
+           const bParentId = b.parent_id
+           const aSortOrder = a.sort_order ?? 999
+           const bSortOrder = b.sort_order ?? 999
+           
+           // Rule 1: Parent luôn lên trước con bất kể sort_order
+           if (aParentId === b.id) {
+             return -1 // a là parent của b, a lên trước
+           }
+           if (bParentId === a.id) {
+             return 1 // b là parent của a, b lên trước
+           }
+           
+           // Rule 2: Khác level: parent có level nhỏ hơn lên trước
+           if (aLevel !== bLevel) {
+             return aLevel - bLevel // level nhỏ hơn lên trước
+           }
+           
+           // Rule 3: Cùng level: sort_order nhỏ hơn lên trước
+           return aSortOrder - bSortOrder
+         default:
+           return 0
+       }
+     })
+   }, [scopesQuery.data, currentUnitId, scopeSearch, sortBy])
+
+   const isAllFilteredSelected = filteredScopes.length > 0 && selectedScopes.size === filteredScopes.length
+   const isFilteredIndeterminate = selectedScopes.size > 0 && selectedScopes.size < filteredScopes.length
+
+  const openDate = report?.openDate ?? null
+  const closeDate = report?.closeDate ?? report?.deadline ?? null
+  const updatedAt = report?.updatedAt ?? null
   const currentUnitName = useMemo(() => {
     if (selectedUnitId === report?.unitId) return report?.unitName
     
@@ -332,7 +464,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                   <Workflow className='size-4' />
                   Phân quyền chỉ tiêu
                 </TabsTrigger>
-                <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='defaults'>
+                                <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='defaults'>
                   <Settings2 className='size-4' />
                   Giá trị mặc định
                 </TabsTrigger>
@@ -733,7 +865,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 Chỉ tiêu đã phân quyền
                               </CardTitle>
                               <Badge className='rounded-full bg-primary/10 px-2 py-0 text-[10px] text-primary hover:bg-primary/10'>
-                                {defaultRows.length} chỉ tiêu
+                                {filteredScopes.length} chỉ tiêu
                               </Badge>
                             </div>
                             <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
@@ -742,8 +874,20 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 <Input
                                   placeholder='Tìm mã hoặc tên...'
                                   className='h-9 rounded-lg pl-9 text-xs'
+                                  value={scopeSearch}
+                                  onChange={(e) => setScopeSearch(e.target.value)}
                                 />
                               </div>
+                              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'code' | 'name' | 'sortOrder')}>
+                                <SelectTrigger className='h-9 w-32 rounded-lg text-xs'>
+                                  <SelectValue placeholder='Sắp xếp' />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value='sortOrder'>Thứ tự mặc định</SelectItem>
+                                  <SelectItem value='code'>Mã chỉ tiêu</SelectItem>
+                                  <SelectItem value='name'>Tên chỉ tiêu</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <Button
                                 type='button'
                                 variant='outline'
@@ -760,7 +904,26 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 <TableRow className='bg-muted/30 hover:bg-muted/30'>
                                   <TableHead className='w-12 text-center'>
                                     <div className='flex justify-center'>
-                                      <Checkbox />
+                                      <Checkbox
+                                        checked={isAllFilteredSelected}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            if (scopesQuery.data) {
+                                              const filteredScopeIds = filteredScopes.map(scope => scope.id)
+                                              setSelectedScopes(new Set(filteredScopeIds))
+                                            }
+                                          } else {
+                                            if (scopesQuery.data) {
+                                              const filteredScopeIds = new Set(filteredScopes.map(scope => scope.id))
+                                              setSelectedScopes(prev => {
+                                                const newSet = new Set(prev)
+                                                filteredScopeIds.forEach(id => newSet.delete(id))
+                                                return newSet
+                                              })
+                                            }
+                                          }
+                                        }}
+                                      />
                                     </div>
                                   </TableHead>
                                   <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
@@ -772,16 +935,49 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                <TableRow>
-                                  <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
-                                    <div className='flex flex-col items-center gap-2'>
-                                      <div className='rounded-full bg-primary/5 p-3 text-primary/30'>
-                                        <ShieldCheck className='size-6' />
+                                {scopesQuery.isLoading ? (
+                                  <TableRow>
+                                    <TableCell colSpan={3} className='py-12 text-center text-xs text-muted-foreground'>
+                                      Đang tải dữ liệu chỉ tiêu đã phân quyền...
+                                    </TableCell>
+                                  </TableRow>
+                                ) : scopesQuery.isError ? (
+                                  <TableRow>
+                                    <TableCell colSpan={3} className='py-12 text-center text-sm text-destructive'>
+                                      Không thể tải dữ liệu chỉ tiêu đã phân quyền
+                                    </TableCell>
+                                  </TableRow>
+                                ) : filteredScopes.length === 0 ? (
+                                  <TableRow>
+                                    <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
+                                      <div className='flex flex-col items-center gap-2'>
+                                        <div className='rounded-full bg-primary/5 p-3 text-primary/30'>
+                                          <ShieldCheck className='size-6' />
+                                        </div>
+                                        <span>Đơn vị này chưa có chỉ tiêu nào được phân quyền</span>
                                       </div>
-                                      <span>Chọn đơn vị để xem danh sách</span>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
+                                    </TableCell>
+                                  </TableRow>
+                                ) : (
+                                  filteredScopes.map((scope, index) => (
+                                    <TableRow key={scope.id} className='hover:bg-muted/10'>
+                                      <TableCell className='w-12 text-center'>
+                                        <div className='flex justify-center'>
+                                          <Checkbox
+                                            checked={selectedScopes.has(scope.id)}
+                                            onCheckedChange={() => handleToggleScope(scope.id)}
+                                          />
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className='text-xs font-medium'>
+                                        <Badge variant='secondary' className='rounded-md px-2 py-1 text-xs font-mono'>
+                                          {scope.indicatorCode}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className='text-xs font-medium'>{scope.indicatorName}</TableCell>
+                                    </TableRow>
+                                  ))
+                                )}
                               </TableBody>
                             </Table>
                           </CardContent>
