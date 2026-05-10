@@ -185,7 +185,7 @@ export function TemplateMatrixGrid({
                   <td className='sticky left-0 z-10 min-w-[280px] max-w-[400px] border-b border-r bg-background group-hover:bg-muted/10 px-3 py-2'>
                     <div
                       className='flex items-start gap-1'
-                      style={{ paddingLeft: `${(rowNode.level || 1 - 1) * 1.5}rem` }}
+                      style={{ paddingLeft: `${((rowNode.level || 1) - 1) * 1.5}rem` }}
                     >
                       {rowNode.hasChildren ? (
                         <button

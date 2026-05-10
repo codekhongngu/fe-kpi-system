@@ -83,7 +83,26 @@ type BeScope = {
   indicatorName?: string
 }
 
+export type OrgTreeItem = {
+  id: string
+  code: string
+  name: string
+  level: number
+  parentId: string | null
+  canAssignReports: boolean
+  children: OrgTreeItem[]
+}
 
+type BeOrgTreeItem = {
+  id: string
+  code?: string
+  name?: string
+  level?: number
+  parentId?: string | null
+  canAssignReports?: boolean
+  can_assign_reports?: boolean
+  children?: BeOrgTreeItem[]
+}
 
 type BeEffectiveCellConfig = EffectiveTemplateCellConfig
 type BeCellConfig = {
@@ -151,6 +170,26 @@ const mapScope = (item: BeScope): TemplateScope => ({
 })
 
 export const formManagementApi = {
+  getOrgTree: async (): Promise<OrgTreeItem[]> => {
+    const response = await apiClient.get<{ items?: BeOrgTreeItem[] } | BeOrgTreeItem[]>('/orgs', { params: { tree: true } })
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : (payload.items ?? [])
+    
+    const mapTree = (nodes: BeOrgTreeItem[]): OrgTreeItem[] => {
+      return nodes.map((node) => ({
+        id: node.id,
+        code: node.code ?? '',
+        name: node.name ?? '',
+        level: node.level ?? 1,
+        parentId: node.parentId ?? null,
+        canAssignReports: Boolean(node.canAssignReports ?? node.can_assign_reports ?? true),
+        children: mapTree(node.children ?? []),
+      }))
+    }
+    
+    return mapTree(items)
+  },
+
   listFieldCategories: async () => {
     type BeFieldCategory = {
       id: string

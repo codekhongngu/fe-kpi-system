@@ -84,14 +84,37 @@ export function FormTemplateDetailsPage({ templateId }: FormTemplateDetailsPageP
     onError: (error: Error) => toast.error(error.message),
   })
 
+  const totalInputIndicators = (template?.indicators ?? []).filter(i => i.type === 'INPUT').length
+  const assignedInputIndicatorsCount = new Set(
+    (template?.templateScopes ?? []).map(r => r.indicatorId).filter(id => {
+      const ind = (template?.indicators ?? []).find(i => i.id === id)
+      return ind && ind.type === 'INPUT'
+    })
+  ).size
+  const isFullyAssigned = totalInputIndicators > 0 ? assignedInputIndicatorsCount === totalInputIndicators : true
+
   const markReadyMutation = useMutation({
     mutationFn: () => formManagementApi.markReadyTemplate(templateId),
     onSuccess: async () => {
-      toast.success('Đã chuyển biểu mẫu sang trạng thái sẵn sàng..')
+      toast.success('Đã chuyển biểu mẫu sang trạng thái sẵn sàng.')
       await refreshTemplate()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      if (error.message?.includes('ALL_INPUT_INDICATORS_MUST_BE_ASSIGNED')) {
+        toast.error('Vui lòng phân bổ 100% chỉ tiêu INPUT trước khi chuyển sẵn sàng.')
+      } else {
+        toast.error(error.message)
+      }
+    },
   })
+
+  const handleMarkReady = () => {
+    if (!isFullyAssigned) {
+      toast.error('Vui lòng phân bổ 100% chỉ tiêu INPUT trước khi chuyển trạng thái Sẵn sàng.')
+      return
+    }
+    markReadyMutation.mutate()
+  }
 
   const archiveMutation = useMutation({
     mutationFn: () => formManagementApi.archiveTemplate(templateId),
@@ -193,7 +216,7 @@ export function FormTemplateDetailsPage({ templateId }: FormTemplateDetailsPageP
               <TemplateActionBar
                 template={template}
                 onEditMetadata={openModal}
-                onMarkReady={canEdit ? () => markReadyMutation.mutate() : undefined}
+                onMarkReady={canEdit ? handleMarkReady : undefined}
                 onArchive={['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') ? () => archiveMutation.mutate() : undefined}
                 onClone={['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') ? () => cloneMutation.mutate() : undefined}
                 onDelete={template.templateStatus === 'DRAFT' ? () => deleteMutation.mutate() : undefined}

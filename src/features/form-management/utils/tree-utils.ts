@@ -97,23 +97,24 @@ export function flattenIndicatorTree(
 ): IndicatorRowNode[] {
   const result: IndicatorRowNode[] = []
 
-  function traverse(nodes: TreeNode<TemplateIndicator>[]) {
+  function traverse(nodes: TreeNode<TemplateIndicator>[], depth: number) {
     for (const node of nodes) {
       const hasChildren = Boolean(node.children && node.children.length > 0)
       const isExpanded = expandedIds.has(node.id)
 
       result.push({
         ...node,
+        level: depth,
         hasChildren,
         isExpanded,
       })
 
       if (hasChildren && isExpanded) {
-        traverse(node.children!)
+        traverse(node.children!, depth + 1)
       }
     }
   }
 
-  traverse(tree)
+  traverse(tree, 1)
   return result
 }
