@@ -41,6 +41,12 @@ export const submissionApi = {
       .get<SubmissionDetail>(`/submissions/${submissionId}`)
       .then((r) => r.data),
 
+  // GET /api/v1/submissions/by-assignment/:id
+  getByAssignment: (assignmentId: string) =>
+    apiClient
+      .get<SubmissionDetail>(`/submissions/by-assignment/${assignmentId}`)
+      .then((r) => r.data),
+
   // PATCH /api/v1/submissions/:id/cells
   patchCells: (
     submissionId: string,

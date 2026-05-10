@@ -12,8 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedTreePlantingOtherRouteImport } from './routes/_authenticated/tree-planting-other'
 import { Route as AuthenticatedSignOutRouteImport } from './routes/_authenticated/sign-out'
+import { Route as AuthenticatedLivestockRouteImport } from './routes/_authenticated/livestock'
+import { Route as AuthenticatedGrdpRouteImport } from './routes/_authenticated/grdp'
 import { Route as AuthenticatedFormCategoryManagementRouteImport } from './routes/_authenticated/form-category-management'
+import { Route as AuthenticatedForestryFisheryRouteImport } from './routes/_authenticated/forestry-fishery'
+import { Route as AuthenticatedAgricultureRouteImport } from './routes/_authenticated/agriculture'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -65,15 +70,43 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTreePlantingOtherRoute =
+  AuthenticatedTreePlantingOtherRouteImport.update({
+    id: '/tree-planting-other',
+    path: '/tree-planting-other',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSignOutRoute = AuthenticatedSignOutRouteImport.update({
   id: '/sign-out',
   path: '/sign-out',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLivestockRoute = AuthenticatedLivestockRouteImport.update({
+  id: '/livestock',
+  path: '/livestock',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedGrdpRoute = AuthenticatedGrdpRouteImport.update({
+  id: '/grdp',
+  path: '/grdp',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFormCategoryManagementRoute =
   AuthenticatedFormCategoryManagementRouteImport.update({
     id: '/form-category-management',
     path: '/form-category-management',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedForestryFisheryRoute =
+  AuthenticatedForestryFisheryRouteImport.update({
+    id: '/forestry-fishery',
+    path: '/forestry-fishery',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAgricultureRoute =
+  AuthenticatedAgricultureRouteImport.update({
+    id: '/agriculture',
+    path: '/agriculture',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const errors503Route = errors503RouteImport.update({
@@ -288,8 +321,13 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/agriculture': typeof AuthenticatedAgricultureRoute
+  '/forestry-fishery': typeof AuthenticatedForestryFisheryRoute
   '/form-category-management': typeof AuthenticatedFormCategoryManagementRoute
+  '/grdp': typeof AuthenticatedGrdpRoute
+  '/livestock': typeof AuthenticatedLivestockRoute
   '/sign-out': typeof AuthenticatedSignOutRoute
+  '/tree-planting-other': typeof AuthenticatedTreePlantingOtherRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -325,8 +363,13 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/agriculture': typeof AuthenticatedAgricultureRoute
+  '/forestry-fishery': typeof AuthenticatedForestryFisheryRoute
   '/form-category-management': typeof AuthenticatedFormCategoryManagementRoute
+  '/grdp': typeof AuthenticatedGrdpRoute
+  '/livestock': typeof AuthenticatedLivestockRoute
   '/sign-out': typeof AuthenticatedSignOutRoute
+  '/tree-planting-other': typeof AuthenticatedTreePlantingOtherRoute
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -369,8 +412,13 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
+  '/_authenticated/agriculture': typeof AuthenticatedAgricultureRoute
+  '/_authenticated/forestry-fishery': typeof AuthenticatedForestryFisheryRoute
   '/_authenticated/form-category-management': typeof AuthenticatedFormCategoryManagementRoute
+  '/_authenticated/grdp': typeof AuthenticatedGrdpRoute
+  '/_authenticated/livestock': typeof AuthenticatedLivestockRoute
   '/_authenticated/sign-out': typeof AuthenticatedSignOutRoute
+  '/_authenticated/tree-planting-other': typeof AuthenticatedTreePlantingOtherRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -412,8 +460,13 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/agriculture'
+    | '/forestry-fishery'
     | '/form-category-management'
+    | '/grdp'
+    | '/livestock'
     | '/sign-out'
+    | '/tree-planting-other'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -449,8 +502,13 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/agriculture'
+    | '/forestry-fishery'
     | '/form-category-management'
+    | '/grdp'
+    | '/livestock'
     | '/sign-out'
+    | '/tree-planting-other'
     | '/'
     | '/errors/$error'
     | '/settings/account'
@@ -492,8 +550,13 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/agriculture'
+    | '/_authenticated/forestry-fishery'
     | '/_authenticated/form-category-management'
+    | '/_authenticated/grdp'
+    | '/_authenticated/livestock'
     | '/_authenticated/sign-out'
+    | '/_authenticated/tree-planting-other'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
     | '/_authenticated/settings/account'
@@ -557,6 +620,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tree-planting-other': {
+      id: '/_authenticated/tree-planting-other'
+      path: '/tree-planting-other'
+      fullPath: '/tree-planting-other'
+      preLoaderRoute: typeof AuthenticatedTreePlantingOtherRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sign-out': {
       id: '/_authenticated/sign-out'
       path: '/sign-out'
@@ -564,11 +634,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSignOutRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/livestock': {
+      id: '/_authenticated/livestock'
+      path: '/livestock'
+      fullPath: '/livestock'
+      preLoaderRoute: typeof AuthenticatedLivestockRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/grdp': {
+      id: '/_authenticated/grdp'
+      path: '/grdp'
+      fullPath: '/grdp'
+      preLoaderRoute: typeof AuthenticatedGrdpRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/form-category-management': {
       id: '/_authenticated/form-category-management'
       path: '/form-category-management'
       fullPath: '/form-category-management'
       preLoaderRoute: typeof AuthenticatedFormCategoryManagementRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/forestry-fishery': {
+      id: '/_authenticated/forestry-fishery'
+      path: '/forestry-fishery'
+      fullPath: '/forestry-fishery'
+      preLoaderRoute: typeof AuthenticatedForestryFisheryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/agriculture': {
+      id: '/_authenticated/agriculture'
+      path: '/agriculture'
+      fullPath: '/agriculture'
+      preLoaderRoute: typeof AuthenticatedAgricultureRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/(errors)/503': {
@@ -870,8 +968,13 @@ const AuthenticatedSettingsRouteRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedFormManagementRouteRoute: typeof AuthenticatedFormManagementRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
+  AuthenticatedAgricultureRoute: typeof AuthenticatedAgricultureRoute
+  AuthenticatedForestryFisheryRoute: typeof AuthenticatedForestryFisheryRoute
   AuthenticatedFormCategoryManagementRoute: typeof AuthenticatedFormCategoryManagementRoute
+  AuthenticatedGrdpRoute: typeof AuthenticatedGrdpRoute
+  AuthenticatedLivestockRoute: typeof AuthenticatedLivestockRoute
   AuthenticatedSignOutRoute: typeof AuthenticatedSignOutRoute
+  AuthenticatedTreePlantingOtherRoute: typeof AuthenticatedTreePlantingOtherRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
@@ -890,9 +993,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFormManagementRouteRoute:
     AuthenticatedFormManagementRouteRouteWithChildren,
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
+  AuthenticatedAgricultureRoute: AuthenticatedAgricultureRoute,
+  AuthenticatedForestryFisheryRoute: AuthenticatedForestryFisheryRoute,
   AuthenticatedFormCategoryManagementRoute:
     AuthenticatedFormCategoryManagementRoute,
+  AuthenticatedGrdpRoute: AuthenticatedGrdpRoute,
+  AuthenticatedLivestockRoute: AuthenticatedLivestockRoute,
   AuthenticatedSignOutRoute: AuthenticatedSignOutRoute,
+  AuthenticatedTreePlantingOtherRoute: AuthenticatedTreePlantingOtherRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,

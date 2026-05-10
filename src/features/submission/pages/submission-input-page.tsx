@@ -96,7 +96,7 @@ export function SubmissionInputPage() {
     hasUnsavedChanges,
     submit,
     isSubmitting,
-  } = useSubmission(assignmentId, assignment?.submission?.id)
+  } = useSubmission(assignmentId)
 
   // 3. Lấy template schema từ formId
   useEffect(() => {

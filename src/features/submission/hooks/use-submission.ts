@@ -9,15 +9,8 @@ function cellKey(indicatorId: string, attributeId: string) {
   return `${indicatorId}__${attributeId}`
 }
 
-export function useSubmission(
-  assignmentId: string,
-  initialSubmissionId?: string
-) {
+export function useSubmission(assignmentId: string) {
   const queryClient = useQueryClient()
-  const [submissionId, setSubmissionId] = useState<string | null>(
-    initialSubmissionId ?? null
-  )
-  const hasAttemptedCreate = useRef(false)
 
   // Local state for all cell edits (accumulated changes since last save)
   const [localChanges, setLocalChanges] = useState<Record<string, CellChange>>(
@@ -25,50 +18,22 @@ export function useSubmission(
   )
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
-  // Sync initialSubmissionId when it becomes available (from parent)
-  useEffect(() => {
-    if (initialSubmissionId && !submissionId) {
-      setSubmissionId(initialSubmissionId)
-    }
-  }, [initialSubmissionId, submissionId])
-
-  // 1. Get-or-create: only when assignmentId is set AND no submissionId resolved
-  const createMutation = useMutation({
-    mutationFn: () => submissionApi.create(assignmentId),
-    onSuccess: (result) => {
-      setSubmissionId(result.id)
-    },
-    onError: (e) => {
-      console.error('Failed to create/get submission', e)
-      toast.error('Không thể khởi tạo báo cáo.')
-    },
-  })
-
-  useEffect(() => {
-    // Prevent strict-mode double firing by checking a ref
-    if (
-      assignmentId &&
-      !submissionId &&
-      !hasAttemptedCreate.current
-    ) {
-      hasAttemptedCreate.current = true
-      createMutation.mutate()
-    }
-  }, [assignmentId, submissionId])
-
-  // 2. Fetch detail
+  // 1. Fetch detail (Backend handles get-or-create)
   const {
     data: serverDetail,
     isLoading,
     error,
     refetch,
   } = useQuery<SubmissionDetail, Error>({
-    queryKey: ['submission', submissionId],
-    queryFn: () => submissionApi.getOne(submissionId!),
-    enabled: !!submissionId,
+    queryKey: ['submission', 'by-assignment', assignmentId],
+    queryFn: () => submissionApi.getByAssignment(assignmentId),
+    enabled: !!assignmentId,
   })
 
-  // 3. Merge server data with local edits to produce the "live" detail view
+  // We derive the submissionId from the server response
+  const submissionId = serverDetail?.id
+
+  // 2. Merge server data with local edits to produce the "live" detail view
   const detail: SubmissionDetail | undefined = useMemo(() => {
     if (!serverDetail) return undefined
 
