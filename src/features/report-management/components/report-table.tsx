@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { canRunReportAction } from '../api/mock-report-management-api'
+import { canRunReportAction } from '../api/report-management-api'
 import type { ReportAction, ReportListItem } from '../api/types'
 import { ReportStatusBadge } from './report-status'
 

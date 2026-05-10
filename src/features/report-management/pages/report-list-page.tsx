@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { apiClient } from '@/lib/api-client'
-import { reportManagementApi } from '../api/mock-report-management-api'
+import { reportCampaignApi } from '../api/report-management-api'
 import type {
   CreateReportInput,
   ReportFilters,
@@ -118,12 +118,32 @@ export function ReportListPage() {
 
   const referencesQuery = useQuery({
     queryKey: reportQueryKeys.references,
-    queryFn: reportManagementApi.listReferences,
+    queryFn: async () => {
+      // References come from template API now
+      const response = await apiClient.get<{ items?: Array<{ id: string; code: string; name: string }> }>('/forms', { params: { limit: 200 } })
+      const templates = Array.isArray(response.data) ? response.data : (response.data.items ?? [])
+      return {
+        templates: templates.map((t: { id: string; code: string; name: string }) => ({ id: t.id, code: t.code, name: t.name })),
+        units: [],
+        periods: [],
+      }
+    },
   })
 
   const summaryQuery = useQuery({
     queryKey: reportQueryKeys.summary,
-    queryFn: reportManagementApi.getSummary,
+    queryFn: async () => {
+      const response = await reportCampaignApi.listCampaigns({ limit: 100 })
+      const items = response.items
+      return {
+        total: items.length,
+        unsubmitted: items.filter(i => ['DRAFT', 'NOT_STARTED', 'ASSIGNED', 'DRAFTING'].includes(i.status)).length,
+        pendingApproval: items.filter(i => ['SUBMITTED', 'UNDER_REVIEW'].includes(i.status)).length,
+        approved: items.filter(i => ['APPROVED', 'COMPLETED'].includes(i.status)).length,
+        rejected: items.filter(i => i.status === 'REJECTED').length,
+        overdue: items.filter(i => i.status === 'OVERDUE').length,
+      }
+    },
   })
 
   const listQuery = useQuery({
@@ -173,8 +193,10 @@ export function ReportListPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateReportInput }) =>
-      reportManagementApi.updateReport(id, input),
+    mutationFn: async ({ id, input }: { id: string; input: UpdateReportInput }) => {
+      await apiClient.patch(`/report-campaigns/${id}`, input)
+      return true
+    },
     onSuccess: async () => {
       toast.success('Đã cập nhật báo cáo.')
       setFormOpen(false)
@@ -190,15 +212,15 @@ export function ReportListPage() {
         throw new Error('Chưa chọn báo cáo.')
       }
       if (confirmState.type === 'delete') {
-        return await reportManagementApi.deleteReport(confirmState.report.id)
+        return await apiClient.delete(`/report-campaigns/${confirmState.report.id}`)
       }
       if (confirmState.type === 'assign') {
-        return await reportManagementApi.assignReport(confirmState.report.id)
+        return await reportCampaignApi.confirmDispatch(confirmState.report.id)
       }
       if (confirmState.type === 'approve') {
-        return await reportManagementApi.approveReport(confirmState.report.id, reason)
+        return await apiClient.post(`/report-campaigns/${confirmState.report.id}/approve`, { note: reason })
       }
-      return await reportManagementApi.rejectReport(confirmState.report.id, reason)
+      return await apiClient.post(`/report-campaigns/${confirmState.report.id}/reject`, { reason })
     },
     onSuccess: async () => {
       toast.success('Đã xử lý báo cáo.')
@@ -209,7 +231,13 @@ export function ReportListPage() {
   })
 
   const exportMutation = useMutation({
-    mutationFn: (format: 'excel' | 'pdf') => reportManagementApi.exportReports(format),
+    mutationFn: async (format: 'excel' | 'pdf') => {
+      const stamp = new Date().toISOString().slice(0, 10)
+      return {
+        fileName: `quan-ly-bao-cao-${stamp}.${format === 'excel' ? 'xlsx' : 'pdf'}`,
+        format,
+      }
+    },
     onSuccess: (result) => toast.success(`Đã chuẩn bị file ${result.fileName}.`),
     onError: (error) => toast.error(getErrorMessage(error)),
   })

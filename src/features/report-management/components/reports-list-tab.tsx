@@ -23,8 +23,8 @@ import {
 } from '@/components/ui/table'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import type { FormTemplate, PeriodType } from '@/features/form-management/api/types'
-import { reportManagementApi } from '../api/mock-report-management-api'
-import { type ReportInstance, type ReportStatus } from '../api/types'
+import { reportCampaignApi } from '../api/report-management-api'
+import type { ReportListItem, ReportStatus } from '../api/types'
 
 const periodTypeLabel: Record<PeriodType, string> = {
   TUAN: 'Tuần',
@@ -33,7 +33,7 @@ const periodTypeLabel: Record<PeriodType, string> = {
   NAM: 'Năm',
 }
 
-const EMPTY_REPORTS: ReportInstance[] = []
+const EMPTY_REPORTS: ReportListItem[] = []
 
 const statusLabel: Record<ReportStatus, string> = {
   NOT_STARTED: 'Chưa nhập',
@@ -57,19 +57,9 @@ function statusVariant(status: ReportStatus): 'default' | 'destructive' | 'secon
   return 'secondary'
 }
 
-function effectiveStatus(report: ReportInstance): ReportStatus {
-  if (
-    report.status !== 'APPROVED' &&
-    report.status !== 'PENDING' &&
-    report.status !== 'REJECTED' &&
-    report.dueDate
-  ) {
-    const due = new Date(report.dueDate)
-    if (!Number.isNaN(due.getTime()) && due.getTime() < Date.now()) {
-      return 'OVERDUE'
-    }
-  }
-  return report.status
+function effectiveStatus(report: ReportListItem): ReportStatus {
+  // In real API, status comes directly from BE
+  return report.status as ReportStatus
 }
 
 const statusPriority: Record<ReportStatus, number> = {
@@ -94,19 +84,17 @@ export function ReportsListTab() {
   const reportsQuery = useQuery({
     queryKey: [
       'report-management',
-      'reports',
+      'campaigns',
       {
         q: debouncedSearch,
       },
     ],
-    queryFn: () =>
-      reportManagementApi.listReports({
-        keyword: debouncedSearch.length > 0 ? debouncedSearch : undefined,
-        formTemplateId: 'all',
-        reportPeriodId: 'all',
-        status: 'all',
-        unitId: 'all',
-      }),
+    queryFn: async () => {
+      const result = await reportCampaignApi.listCampaigns({
+        limit: 200,
+      })
+      return result.items
+    },
     retry: false,
   })
 
@@ -131,9 +119,10 @@ export function ReportsListTab() {
     const map = new Map<string, ReportStatus>()
     reports.forEach((report) => {
       const status = effectiveStatus(report)
-      const current = map.get(report.unitId)
+      const unitId = report.formId || report.id
+      const current = map.get(unitId)
       if (!current || statusPriority[status] > statusPriority[current]) {
-        map.set(report.unitId, status)
+        map.set(unitId, status)
       }
     })
     return map

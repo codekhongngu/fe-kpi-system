@@ -1,39 +1,35 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState, useEffect } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
   ArrowRight,
   Building2,
-  ChartNoAxesColumn,
   CheckCircle2,
   Download,
   Filter,
   Eye,
   Info,
-  List,
   Lock,
   MoreVertical,
   PencilLine,
   Rocket,
-  ShieldCheck,
   Settings2,
   Workflow,
-  Search,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
   Table,
@@ -45,10 +41,15 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiClient } from '@/lib/api-client'
-import { reportManagementApi } from '../api/mock-report-management-api'
 import type { ReportDetail } from '../api/types'
+import { CampaignScopesTab } from '../components/tabs/campaign-scopes-tab'
+import { CampaignDefaultValuesTab } from '../components/tabs/campaign-default-values-tab'
+import { TemplatePreviewMatrix } from '@/features/form-management/components/shared/template-preview-matrix'
+import { toast } from 'sonner'
+import { reportCampaignApi } from '../api/report-management-api'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
-import { ReportPriorityBadge, ReportStatusBadge } from '../components/report-status'
+import { ReportStatusBadge } from '../components/report-status'
+import { ReportConfirmDialog } from '../components/report-confirm-dialog'
 
 type OrganizationTreeNode = {
   id: string
@@ -119,21 +120,57 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
    })
  
    const report = detailQuery.data
+
+    const indicatorsQuery = useQuery({
+      queryKey: ['report-details', 'indicators', report?.templateId, indicatorSearch],
+      queryFn: async () => {
+        if (!report?.templateId) return []
+        const response = await apiClient.get<IndicatorItem[] | { items: IndicatorItem[] }>(
+          `/forms/${report.templateId}/indicators`,
+          { params: { q: indicatorSearch.trim() || undefined } },
+        )
+        const payload = response.data
+        return Array.isArray(payload) ? payload : payload.items ?? []
+      },
+      enabled: !!report?.templateId,
+      retry: false,
+    })
+
+    const scopesQuery = useQuery({
+      queryKey: ['report-campaign-scopes', reportId],
+      queryFn: () => reportCampaignApi.listScopes(reportId),
+      enabled: !!reportId,
+    })
+
+    const defaultValuesQuery = useQuery({
+      queryKey: ['report-campaign-default-values', reportId],
+      queryFn: () => reportCampaignApi.listDefaultValues(reportId),
+      enabled: !!reportId,
+    })
+
+    const dispatchMutation = useMutation({
+      mutationFn: () => reportCampaignApi.confirmDispatch(reportId),
+      onSuccess: () => {
+        toast.success('Đã phát hành báo cáo thành công.')
+        detailQuery.refetch()
+        scopesQuery.refetch()
+        setConfirmDispatchOpen(false)
+      },
+      onError: (error) => toast.error(getErrorMessage(error)),
+    })
+
+    const updateMutation = useMutation({
+      mutationFn: (input: UpdateReportInput) => apiClient.patch(`/report-campaigns/${reportId}`, input),
+      onSuccess: () => {
+        toast.success('Đã cập nhật thông tin báo cáo.')
+        detailQuery.refetch()
+        setEditOpen(false)
+      },
+      onError: (error) => toast.error(getErrorMessage(error)),
+    })
  
-   const indicatorsQuery = useQuery({
-     queryKey: ['report-details', 'indicators', report?.templateId, indicatorSearch],
-     queryFn: async () => {
-       if (!report?.templateId) return []
-       const response = await apiClient.get<IndicatorItem[] | { items: IndicatorItem[] }>(
-         `/forms/${report.templateId}/indicators`,
-         { params: { q: indicatorSearch.trim() || undefined } },
-       )
-       const payload = response.data
-       return Array.isArray(payload) ? payload : payload.items ?? []
-     },
-     enabled: !!report?.templateId,
-     retry: false,
-   })
+    const [confirmDispatchOpen, setConfirmDispatchOpen] = useState(false)
+    const [editOpen, setEditOpen] = useState(false)
  
    const openDate = report?.openDate ?? null
   const closeDate = report?.closeDate ?? report?.deadline ?? null
@@ -193,10 +230,9 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
   const departmentRows = useMemo(() => {
     if (!report) return []
     
-    // Ưu tiên sử dụng danh sách assignments thực tế từ API mới
-    const assignments = report.assignments || []
-    
-    if (assignments.length > 0) {
+    // Nếu DISPATCHED: hiển thị assignments thực tế
+    if (report.status !== 'DRAFT') {
+      const assignments = report.assignments || []
       return assignments.map((item) => {
         const initials = (item.orgName || item.orgId || 'DV')
           .split(/\s+/)
@@ -220,68 +256,29 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
       })
     }
 
-    // Fallback cho trường hợp API cũ hoặc dữ liệu mock
-    const units = (report.assignees ?? [])
-    const fallback = units.length > 0 ? units.slice(0, 10) : ([report.unitName].filter(Boolean) as string[])
-    const names = fallback.length > 0 ? fallback : ['Đơn vị chưa xác định']
-    const completedCount = Math.max(
-      0,
-      Math.min(names.length, Math.round((names.length * (report.completionPercent ?? 0)) / 100)),
-    )
-    const mockAssignees = ['Nguyễn Văn An', 'Trần Thị Bích', 'Lê Hoàng Nam', 'Phạm Minh Tuấn']
-
-    return names.map((unitName, index) => {
-      const initials = (unitName || 'DV')
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((word) => word[0]?.toUpperCase() ?? '')
-        .join('')
-      const status =
-        index < completedCount ? 'done' : index === completedCount ? 'doing' : 'not_started'
-      return {
-        id: `${report.id}-${index}`,
-        unitName,
-        initials: initials || 'DV',
-        assigneeName: mockAssignees[index] ?? 'Người thực hiện',
-        status,
-        updatedAt: index < completedCount ? updatedAt : null,
-      } as const
-    })
-  }, [report, updatedAt])
-
-  const defaultRows = useMemo(() => {
-    const cells = report?.cells
-    if (!Array.isArray(cells)) return []
+    // Nếu DRAFT: hiển thị danh sách đơn vị từ scopes
+    const scopes = scopesQuery.data || []
+    const orgMap = new Map<string, { id: string; name: string; count: number }>()
     
-    const unique = new Map<string, (typeof cells)[number]>()
-    cells.forEach((cell) => {
-      if (!cell) return
-      const key = `${cell.indicatorCode}-${cell.attributeName}`
-      if (unique.has(key)) return
-      unique.set(key, cell)
+    scopes.forEach(s => {
+      const existing = orgMap.get(s.orgId)
+      if (existing) {
+        existing.count++
+      } else {
+        orgMap.set(s.orgId, { id: s.orgId, name: s.orgName || s.orgId, count: 1 })
+      }
     })
-    return Array.from(unique.entries())
-      .slice(0, 10)
-      .map(([key, cell], index) => {
-        const rawType = (cell.dataType ?? '').toString().toLowerCase()
-        const isNumber = rawType.includes('number')
-        const isText = rawType.includes('text') || rawType.includes('string')
-        const control: 'number' | 'text' | 'select' = index === 1 ? 'select' : isNumber ? 'number' : 'text'
 
-        return {
-          key,
-          metricName: cell.indicatorName,
-          metricCode: cell.indicatorCode,
-          attribute: cell.attributeName,
-          typeLabel: isNumber ? 'Number' : isText ? 'String' : cell.dataType,
-          typeVariant: (isNumber ? 'secondary' : isText ? 'outline' : 'default') as any,
-          required: Boolean(cell.required),
-          control,
-          initialValue: cell.value != null ? String(cell.value) : '',
-        } as const
-      })
-  }, [report])
+    return Array.from(orgMap.values()).map(org => ({
+      id: org.id,
+      unitName: org.name,
+      initials: org.name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'DV',
+      assigneeName: `${org.count} chỉ tiêu đã gán`,
+      status: 'not_started',
+      updatedAt: null,
+    } as const))
+  }, [report, scopesQuery.data])
+
   const timelineIcon = useMemo(() => {
     return [CheckCircle2, PencilLine, Lock, Rocket] as const
   }, [])
@@ -351,12 +348,28 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                         Quản lý và theo dõi tiến độ báo cáo định kỳ hệ thống.
                       </div>
                     </div>
+                    {report.status === 'CLOSED' && (
+                      <Badge variant='outline' className='bg-muted text-muted-foreground border-muted-foreground/20 py-2 px-4 rounded-xl gap-2 h-auto'>
+                        <Lock className='size-4' />
+                        Đợt báo cáo đã kết thúc
+                      </Badge>
+                    )}
+                    {report.status === 'CANCELLED' && (
+                      <Badge variant='destructive' className='py-2 px-4 rounded-xl gap-2 h-auto'>
+                        Đợt báo cáo đã hủy
+                      </Badge>
+                    )}
                     <div className='flex flex-wrap gap-2'>
                       <Button type='button' variant='outline' className='h-10 gap-2 font-semibold'>
                         <Download className='size-4' />
                         Xuất dữ liệu
                       </Button>
-                      <Button type='button' className='h-10 gap-2 font-semibold'>
+                      <Button 
+                        type='button' 
+                        className='h-10 gap-2 font-semibold'
+                        disabled={report.status !== 'DRAFT'}
+                        onClick={() => setEditOpen(true)}
+                      >
                         <PencilLine className='size-4' />
                         Chỉnh sửa
                       </Button>
@@ -376,7 +389,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                           <div className='grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2'>
                             <div>
                               <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Tên báo cáo
+                                Tên đợt báo cáo
                               </div>
                               <div className='mt-1 text-lg font-semibold leading-snug text-foreground'>
                                 {report.name}
@@ -385,71 +398,147 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
 
                             <div>
                               <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Kỳ báo cáo
+                                Biểu mẫu gốc
                               </div>
                               <div className='mt-1 flex items-center gap-2 text-lg font-semibold text-foreground'>
                                 <span className='text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded uppercase font-bold'>
-                                  {report.periodCode}
+                                  {report.templateCode}
                                 </span>
-                                {report.periodName || report.period}
+                                {report.templateName}
                               </div>
                             </div>
 
-                            <div className='grid grid-cols-2 gap-4 sm:col-span-1'>
+                            <div>
+                              <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
+                                Kỳ báo cáo
+                              </div>
+                              <div className='mt-1 flex items-center gap-2 text-base font-semibold text-foreground'>
+                                <Badge variant='outline' className='text-[10px] uppercase font-bold'>
+                                  {report.periodType}
+                                </Badge>
+                                {report.periodName || report.periodCode}
+                              </div>
+                            </div>
+
+                            <div className='grid grid-cols-2 gap-4'>
                               <div>
                                 <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                  Ngày mở
+                                  Thời hạn
                                 </div>
                                 <div className='mt-1 text-sm font-semibold text-foreground'>
-                                  {formatDate(report.deadlineFrom || openDate)}
+                                  {formatDate(report.deadlineFrom)} → {formatDate(report.deadlineTo)}
                                 </div>
                               </div>
                               <div>
                                 <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                  Ngày đóng
+                                  Trạng thái
                                 </div>
-                                <div className='mt-1 text-sm font-semibold text-foreground'>
-                                  {formatDate(report.deadlineTo || closeDate)}
+                                <div className='mt-1'>
+                                  <ReportStatusBadge status={report.status} />
                                 </div>
                               </div>
                             </div>
 
                             <div>
                               <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Trạng thái
+                                Ngày tạo
                               </div>
-                              <div className='mt-2 inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary'>
-                                <span className='size-2 rounded-full bg-secondary' />
-                                <ReportStatusBadge status={report.status} />
+                              <div className='mt-1 text-sm font-semibold text-muted-foreground'>
+                                {formatDateTime(report.createdAt)}
                               </div>
                             </div>
+
+                            {report.dispatchedAt && (
+                              <div>
+                                <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
+                                  Ngày phát hành
+                                </div>
+                                <div className='mt-1 text-sm font-semibold text-primary'>
+                                  {formatDateTime(report.dispatchedAt)}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </Card>
                     </div>
 
-                    <Card className='relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground'>
-                      <div className='relative space-y-4'>
-                        <div className='text-sm font-medium text-primary-foreground/80'>Tổng quan tiến độ</div>
-                        <div className='text-5xl font-bold'>{report.completionPercent ?? 0}%</div>
-                        <div className='h-2.5 w-full overflow-hidden rounded-full bg-white/20'>
-                          <div
-                            className='h-full rounded-full bg-secondary'
-                            style={{ width: `${Math.max(0, Math.min(100, report.completionPercent ?? 0))}%` }}
-                          />
+                    <Card className='relative overflow-hidden rounded-3xl border bg-card p-6 shadow-sm'>
+                      {report.status === 'DRAFT' ? (
+                        <div className='relative space-y-6'>
+                          <div className='flex items-center gap-2'>
+                            <div className='size-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600'>
+                              <Settings2 className='size-5' />
+                            </div>
+                            <div className='text-base font-bold text-foreground'>Cấu hình đợt báo cáo</div>
+                          </div>
+                          
+                          <div className='space-y-4'>
+                            <div className='flex items-center justify-between text-sm'>
+                              <div className='flex items-center gap-2'>
+                                {scopesQuery.data?.length ? (
+                                  <CheckCircle2 className='size-4 text-secondary' />
+                                ) : (
+                                  <div className='size-4 rounded-full border-2' />
+                                )}
+                                <span>Phân quyền chỉ tiêu</span>
+                              </div>
+                              <Badge variant='outline'>{scopesQuery.data?.length || 0}</Badge>
+                            </div>
+
+                            <div className='flex items-center justify-between text-sm'>
+                              <div className='flex items-center gap-2'>
+                                {defaultValuesQuery.data?.length ? (
+                                  <CheckCircle2 className='size-4 text-secondary' />
+                                ) : (
+                                  <div className='size-4 rounded-full border-2' />
+                                )}
+                                <span>Giá trị mặc định</span>
+                              </div>
+                              <Badge variant='outline'>{defaultValuesQuery.data?.length || 0}</Badge>
+                            </div>
+
+                            <div className='flex items-center justify-between text-sm'>
+                              <div className='flex items-center gap-2 text-muted-foreground'>
+                                <div className='size-4 rounded-full border-2' />
+                                <span>Phát hành (Dispatch)</span>
+                              </div>
+                              <Badge variant='outline' className='opacity-50'>Chờ</Badge>
+                            </div>
+                          </div>
+
+                          <Button 
+                            className='w-full' 
+                            variant='secondary'
+                            onClick={() => setConfirmDispatchOpen(true)}
+                            disabled={dispatchMutation.isPending}
+                          >
+                            {dispatchMutation.isPending ? 'Đang xử lý...' : 'Phát hành báo cáo'}
+                          </Button>
                         </div>
-                        <div className='flex justify-between text-xs font-semibold text-primary-foreground/80'>
-                          <span>{Math.round(((report.assignees?.length ?? 0) * (report.completionPercent ?? 0)) / 100)} Đã hoàn thành</span>
-                          <span>
-                            {Math.max(
-                              0,
-                              (report.assignees?.length ?? 0) -
-                                Math.round(((report.assignees?.length ?? 0) * (report.completionPercent ?? 0)) / 100),
-                            )}{' '}
-                            Đang chờ
-                          </span>
+                      ) : (
+                        <div className='relative space-y-4 text-primary-foreground bg-gradient-to-br from-primary to-primary/80 -m-6 p-6 h-[calc(100%+3rem)]'>
+                          <div className='text-sm font-medium text-primary-foreground/80'>Tổng quan tiến độ</div>
+                          <div className='text-5xl font-bold'>{report.completionPercent ?? 0}%</div>
+                          <div className='h-2.5 w-full overflow-hidden rounded-full bg-white/20'>
+                            <div
+                              className='h-full rounded-full bg-secondary'
+                              style={{ width: `${Math.max(0, Math.min(100, report.completionPercent ?? 0))}%` }}
+                            />
+                          </div>
+                          <div className='flex justify-between text-xs font-semibold text-primary-foreground/80'>
+                            <span>{Math.round(((report.assignments?.length ?? 0) * (report.completionPercent ?? 0)) / 100)} Hoàn thành</span>
+                            <span>
+                              {Math.max(
+                                0,
+                                (report.assignments?.length ?? 0) -
+                                  Math.round(((report.assignments?.length ?? 0) * (report.completionPercent ?? 0)) / 100),
+                              )}{' '}
+                              Chờ xử lý
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </Card>
                   </section>
 
@@ -580,382 +669,125 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
               </TabsContent>
 
               <TabsContent value='permissions'>
-                <div className='space-y-6 px-4 pb-6 pt-6 lg:px-6'>
-                  <div className='grid grid-cols-1 gap-6 lg:grid-cols-4'>
-                    <div className='lg:col-span-1'>
-                      <Card className='overflow-hidden rounded-2xl border shadow-sm'>
-                        <CardHeader className='pb-4'>
-                          <CardTitle className='text-base font-bold'>Đơn vị nhận báo cáo</CardTitle>
-                          <CardDescription className='text-xs'>
-                            Chọn đơn vị để thiết lập phân quyền chỉ tiêu.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className='p-0'>
-                          <div className='border-y bg-muted/20 px-4 py-3'>
-                            <div className='relative'>
-                              <Search className='absolute left-2.5 top-2.5 size-4 text-muted-foreground' />
-                              <Input
-                                placeholder='Tìm kiếm đơn vị...'
-                                className='h-9 rounded-lg pl-9 text-xs focus-visible:ring-primary'
-                                value={unitSearch}
-                                onChange={(e) => setUnitSearch(e.target.value)}
-                              />
-                            </div>
-                          </div>
-                          <div className='max-h-[600px] overflow-auto p-3'>
-                            {orgTreeQuery.isLoading ? (
-                              <div className='py-12 text-center text-xs text-muted-foreground'>
-                                Đang tải cây đơn vị...
-                              </div>
-                            ) : (orgTreeQuery.data?.length ?? 0) > 0 ? (
-                              <div className='space-y-1'>{renderOrgTree(orgTreeQuery.data ?? [])}</div>
-                            ) : (
-                              <div className='py-12 text-center text-xs text-muted-foreground'>
-                                Không tìm thấy đơn vị.
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className='space-y-6 lg:col-span-3'>
-                      <div className='rounded-2xl border bg-background p-5 shadow-sm'>
-                        <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-                          <div className='flex items-center gap-4'>
-                            <div className='flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
-                              <Building2 className='size-6' />
-                            </div>
-                            <div>
-                              <Label className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Đơn vị đang thiết lập
-                              </Label>
-                              <div className='mt-0.5 text-lg font-bold text-foreground'>
-                                {currentUnitName}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className='flex items-center gap-2'>
-                            <Button type='button' variant='outline' className='h-10 gap-2 rounded-xl text-xs font-bold'>
-                              <Filter className='size-4' />
-                              Bộ lọc nâng cao
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className='grid gap-6 lg:grid-cols-2'>
-                        <Card className='overflow-hidden rounded-2xl border shadow-sm'>
-                          <CardHeader className='border-b bg-muted/10 pb-4 pt-5'>
-                            <div className='flex items-center justify-between'>
-                              <CardTitle className='flex items-center gap-2 text-base font-bold'>
-                                  <List className='size-4 text-muted-foreground' />
-                                  Chỉ tiêu chưa phân quyền
-                                </CardTitle>
-                                <Badge variant='outline' className='rounded-full px-2 py-0 text-[10px]'>
-                                  {indicatorsQuery.data?.length ?? 0} chỉ tiêu
-                                </Badge>
-                              </div>
-                              <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
-                                <div className='relative flex-1'>
-                                  <Search className='absolute left-2.5 top-2.5 size-3.5 text-muted-foreground' />
-                                  <Input
-                                    placeholder='Tìm mã hoặc tên...'
-                                    className='h-9 rounded-lg pl-9 text-xs'
-                                    value={indicatorSearch}
-                                    onChange={(e) => setIndicatorSearch(e.target.value)}
-                                  />
-                                </div>
-                                <Button type='button' className='h-9 gap-2 rounded-lg bg-primary text-xs font-bold'>
-                                  Gán <ArrowRight className='size-4' />
-                                </Button>
-                              </div>
-                            </CardHeader>
-                            <CardContent className='p-0'>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow className='bg-muted/30 hover:bg-muted/30'>
-                                    <TableHead className='w-12 text-center'>
-                                      <div className='flex justify-center'>
-                                        <Checkbox />
-                                      </div>
-                                    </TableHead>
-                                    <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                      Mã chỉ tiêu
-                                    </TableHead>
-                                    <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                      Tên chỉ tiêu
-                                    </TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {indicatorsQuery.isLoading ? (
-                                    <TableRow>
-                                      <TableCell colSpan={3} className='py-12 text-center text-xs text-muted-foreground'>
-                                        Đang tải danh sách chỉ tiêu...
-                                      </TableCell>
-                                    </TableRow>
-                                  ) : (indicatorsQuery.data?.length ?? 0) === 0 ? (
-                                    <TableRow>
-                                      <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
-                                        <div className='flex flex-col items-center gap-2'>
-                                          <div className='rounded-full bg-muted p-3'>
-                                            <List className='size-6 opacity-20' />
-                                          </div>
-                                          <span>Không có dữ liệu chỉ tiêu</span>
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  ) : (
-                                    indicatorsQuery.data?.map((item) => (
-                                      <TableRow key={item.id} className='hover:bg-muted/10'>
-                                        <TableCell className='w-12 text-center'>
-                                          <div className='flex justify-center'>
-                                            <Checkbox />
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className='text-xs font-medium'>{item.code}</TableCell>
-                                        <TableCell className='text-xs'>{item.name}</TableCell>
-                                      </TableRow>
-                                    ))
-                                  )}
-                                </TableBody>
-                              </Table>
-                            </CardContent>
-                          </Card>
-
-                        <Card className='overflow-hidden rounded-2xl border shadow-sm'>
-                          <CardHeader className='border-b bg-muted/10 pb-4 pt-5'>
-                            <div className='flex items-center justify-between'>
-                              <CardTitle className='flex items-center gap-2 text-base font-bold'>
-                                <ShieldCheck className='size-4 text-primary' />
-                                Chỉ tiêu đã phân quyền
-                              </CardTitle>
-                              <Badge className='rounded-full bg-primary/10 px-2 py-0 text-[10px] text-primary hover:bg-primary/10'>
-                                {defaultRows.length} chỉ tiêu
-                              </Badge>
-                            </div>
-                            <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
-                              <div className='relative flex-1'>
-                                <Search className='absolute left-2.5 top-2.5 size-3.5 text-muted-foreground' />
-                                <Input
-                                  placeholder='Tìm mã hoặc tên...'
-                                  className='h-9 rounded-lg pl-9 text-xs'
-                                />
-                              </div>
-                              <Button
-                                type='button'
-                                variant='outline'
-                                className='h-9 gap-2 rounded-lg border-destructive/20 text-xs font-bold text-destructive hover:bg-destructive/5'
-                              >
-                                <ArrowLeft className='size-4' />
-                                Hủy gán
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className='p-0'>
-                            <Table>
-                              <TableHeader>
-                                <TableRow className='bg-muted/30 hover:bg-muted/30'>
-                                  <TableHead className='w-12 text-center'>
-                                    <div className='flex justify-center'>
-                                      <Checkbox />
-                                    </div>
-                                  </TableHead>
-                                  <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                    Mã chỉ tiêu
-                                  </TableHead>
-                                  <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                    Tên chỉ tiêu
-                                  </TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                <TableRow>
-                                  <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
-                                    <div className='flex flex-col items-center gap-2'>
-                                      <div className='rounded-full bg-primary/5 p-3 text-primary/30'>
-                                        <ShieldCheck className='size-6' />
-                                      </div>
-                                      <span>Chọn đơn vị để xem danh sách</span>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  </div>
+                <div className='px-4 pb-6 pt-6 lg:px-6'>
+                  <CampaignScopesTab
+                    campaignId={reportId}
+                    templateId={report.formId || report.templateId || ''}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value='defaults'>
-                <div className='space-y-6 px-4 pb-6 pt-6 lg:px-6'>
-                  <div className='overflow-hidden rounded-xl border bg-gradient-to-r from-primary to-primary/70'>
-                    <div className='flex items-center justify-between gap-4 p-6 text-primary-foreground'>
-                      <div className='min-w-0'>
-                        <div className='text-xs font-semibold opacity-90'>Cấu hình giá trị mặc định</div>
-                        <div className='mt-1 truncate text-xl font-bold'>{report.templateName}</div>
-                        <div className='mt-1 text-sm opacity-90'>Mã báo cáo: {report.templateCode}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className='grid grid-cols-12 gap-6'>
-                    <div className='col-span-12 space-y-4 lg:col-span-8'>
-                      <div className='flex flex-wrap items-center justify-between gap-2'>
-                        <div className='text-base font-semibold text-foreground'>Cấu hình giá trị mặc định</div>
-                        <div className='flex gap-2'>
-                          <Button type='button' variant='outline' className='h-9 text-xs font-semibold'>
-                            Hủy bỏ
-                          </Button>
-                          <Button type='button' className='h-9 text-xs font-semibold'>
-                            Lưu cấu hình
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Card className='overflow-hidden'>
-                        <CardContent className='p-0'>
-                          <Table>
-                            <TableHeader>
-                              <TableRow className='bg-muted/40'>
-                                <TableHead className='text-xs font-bold'>Chỉ tiêu (Metric)</TableHead>
-                                <TableHead className='text-xs font-bold'>Thuộc tính</TableHead>
-                                <TableHead className='text-xs font-bold'>Kiểu</TableHead>
-                                <TableHead className='text-xs font-bold'>Giá trị</TableHead>
-                                <TableHead className='w-[110px] text-center text-xs font-bold'>Bắt buộc</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {defaultRows.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={5} className='py-16 text-center text-sm text-muted-foreground'>
-                                    Không có dữ liệu
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                defaultRows.map((row) => (
-                                  <TableRow key={row.key} className='hover:bg-muted/20'>
-                                    <TableCell className='px-4 py-3'>
-                                      <div className='flex flex-col'>
-                                        <div className='text-sm font-semibold text-foreground'>{row.metricName}</div>
-                                        <div className='text-[10px] font-medium text-muted-foreground'>{row.metricCode}</div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className='px-4 py-3 text-sm text-muted-foreground'>{row.attribute}</TableCell>
-                                    <TableCell className='px-4 py-3'>
-                                      <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
-                                    </TableCell>
-                                    <TableCell className='px-4 py-3'>
-                                      {row.control === 'select' ? (
-                                        <Select defaultValue={row.initialValue || 'VND'}>
-                                          <SelectTrigger className='w-full' size='sm'>
-                                            <SelectValue placeholder='Chọn giá trị' />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value='VND'>VND</SelectItem>
-                                            <SelectItem value='USD'>USD</SelectItem>
-                                            <SelectItem value='EUR'>EUR</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      ) : (
-                                        <Input
-                                          defaultValue={row.initialValue}
-                                          type={row.control}
-                                          className='h-9 text-sm'
-                                          placeholder={row.control === 'number' ? '0.00' : 'Nhập giá trị...'}
-                                        />
-                                      )}
-                                    </TableCell>
-                                    <TableCell className='px-4 py-3 text-center'>
-                                      <div className='flex justify-center'>
-                                        <Checkbox checked={row.required} disabled />
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                              )}
-                            </TableBody>
-                          </Table>
-                          <div className='flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-4 py-3'>
-                            <div className='text-xs text-muted-foreground'>
-                              Hiển thị {defaultRows.length} trên {defaultRows.length} chỉ tiêu
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Button type='button' variant='ghost' size='icon' className='h-8 w-8' disabled>
-                                <ArrowLeft className='size-4' />
-                              </Button>
-                              <Button type='button' variant='secondary' className='h-8 px-3 text-xs font-semibold' disabled>
-                                1
-                              </Button>
-                              <Button type='button' variant='ghost' size='icon' className='h-8 w-8' disabled>
-                                <ArrowRight className='size-4' />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className='col-span-12 space-y-4 lg:col-span-4'>
-                      <div className='text-base font-semibold text-foreground'>Lịch sử xử lý</div>
-                      <Card>
-                        <CardContent className='relative space-y-6 p-6'>
-                          <div className='absolute bottom-6 left-9 top-6 w-px bg-border' />
-                          {(report.history ?? []).slice(0, 4).map((item, index) => {
-                            const Icon = timelineIcon[index] ?? CheckCircle2
-                            return (
-                              <div key={item.id} className='relative flex gap-4'>
-                                <div className='mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-                                  <Icon className='size-3.5' />
-                                </div>
-                                <div className='flex min-w-0 flex-1 flex-col gap-1'>
-                                  <div className='flex items-center justify-between gap-2'>
-                                    <div className='truncate text-sm font-semibold text-foreground'>{item.action}</div>
-                                    <div className='shrink-0 text-[10px] font-medium text-muted-foreground'>
-                                      {formatDateTime(item.createdAt)}
-                                    </div>
-                                  </div>
-                                  <div className='text-xs text-muted-foreground'>
-                                    {item.note}
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                          {(report.history ?? []).length === 0 && (
-                            <div className='py-10 text-center text-sm text-muted-foreground'>Chưa có lịch sử.</div>
-                          )}
-                          <Button type='button' variant='outline' className='w-full text-xs font-semibold'>
-                            Xem toàn bộ lịch sử
-                          </Button>
-                        </CardContent>
-                      </Card>
-                      <div className='flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3'>
-                        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                          <span className='size-2 rounded-full bg-secondary' />
-                          Sẵn sàng nhập dữ liệu
-                        </div>
-                        <div className='text-xs text-muted-foreground'>
-                          © 2023 QLDD System
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div className='px-4 pb-6 pt-6 lg:px-6'>
+                  <CampaignDefaultValuesTab
+                    campaignId={reportId}
+                    templateId={report.formId || report.templateId || ''}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value='preview'>
-                <div className='px-4 pb-6 pt-6 text-sm text-muted-foreground lg:px-6'>
-                  Chưa hỗ trợ.
+                <div className='p-4 lg:p-6'>
+                  <TemplatePreviewMatrix 
+                    templateId={report.templateId} 
+                    lockTemplateSelection={true}
+                    mode='preview'
+                  />
                 </div>
               </TabsContent>
             </Tabs>
           </div>
         </>
       )}
+
+      <ReportConfirmDialog
+        open={confirmDispatchOpen}
+        onOpenChange={setConfirmDispatchOpen}
+        title="Xác nhận phát hành báo cáo"
+        description="Sau khi phát hành, cấu hình về chỉ tiêu và giá trị mặc định sẽ bị KHÓA. Hệ thống sẽ sinh bảng nhập liệu cho các đơn vị. Bạn có chắc chắn muốn tiếp tục?"
+        confirmLabel="Phát hành ngay"
+        variant="primary"
+        loading={dispatchMutation.isPending}
+        onConfirm={() => dispatchMutation.mutate()}
+      />
+
+      {report && (
+        <EditCampaignDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          report={report}
+          isLoading={updateMutation.isPending}
+          onSave={(input) => updateMutation.mutate(input)}
+        />
+      )}
     </div>
+  )
+}
+
+type EditCampaignDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  report: ReportDetail
+  isLoading: boolean
+  onSave: (input: UpdateReportInput) => void
+}
+
+function EditCampaignDialog({ open, onOpenChange, report, isLoading, onSave }: EditCampaignDialogProps) {
+  const [form, setForm] = useState<UpdateReportInput>({
+    periodName: report?.periodName ?? '',
+    deadlineFrom: report?.deadlineFrom?.split('T')[0] ?? '',
+    deadlineTo: report?.deadlineTo?.split('T')[0] ?? '',
+  })
+
+  useEffect(() => {
+    if (open && report) {
+      setForm({
+        periodName: report.periodName ?? '',
+        deadlineFrom: report.deadlineFrom?.split('T')[0] ?? '',
+        deadlineTo: report.deadlineTo?.split('T')[0] ?? '',
+      })
+    }
+  }, [open, report])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Chỉnh sửa báo cáo</DialogTitle>
+          <DialogDescription>Cập nhật thông tin cơ bản cho đợt báo cáo này.</DialogDescription>
+        </DialogHeader>
+        <div className='grid gap-4 py-4'>
+          <div className='grid gap-2'>
+            <Label>Tên kỳ báo cáo</Label>
+            <Input 
+              value={form.periodName} 
+              onChange={e => setForm(prev => ({ ...prev, periodName: e.target.value }))} 
+            />
+          </div>
+          <div className='grid grid-cols-2 gap-4'>
+            <div className='grid gap-2'>
+              <Label>Ngày mở</Label>
+              <Input 
+                type='date' 
+                value={form.deadlineFrom} 
+                onChange={e => setForm(prev => ({ ...prev, deadlineFrom: e.target.value }))} 
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label>Ngày đóng</Label>
+              <Input 
+                type='date' 
+                value={form.deadlineTo} 
+                onChange={e => setForm(prev => ({ ...prev, deadlineTo: e.target.value }))} 
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant='outline' onClick={() => onOpenChange(false)}>Hủy</Button>
+          <Button onClick={() => onSave(form)} disabled={isLoading}>
+            {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

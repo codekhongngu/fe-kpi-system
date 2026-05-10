@@ -86,8 +86,10 @@ export type ReportDetail = {
   dispatchedAt: string | null
   dispatchedBy: string | null
   createdAt: string
-  templateCode: string
-  templateName: string
+  templateCode?: string
+  templateName?: string
+  /** templateId = formId alias — dùng cho các tab con cần gọi lại API template */
+  templateId?: string
   description?: string
   cells?: ReportCell[]
   history?: ReportHistoryItem[]
@@ -96,7 +98,6 @@ export type ReportDetail = {
   // Additional fields for compatibility
   code?: string
   name?: string
-  templateId?: string
   openDate?: string
   closeDate?: string
   deadline?: string
@@ -184,9 +185,12 @@ export type CreateReportInput = {
 }
 
 export type UpdateReportInput = {
-  name: string
-  deadline: string
-  priority: ReportPriority
+  name?: string
+  periodName?: string
+  deadlineFrom?: string
+  deadlineTo?: string
+  deadline?: string
+  priority?: ReportPriority
   note?: string | null
 }
 
@@ -227,3 +231,30 @@ export const reportPriorityOptions: Array<{ value: ReportPriority; label: string
   { value: 'high', label: 'Cao' },
 ]
 
+// ── Campaign Scope & Default Value types ──────────────────────────────────────
+
+export type CampaignScope = {
+  id?: string
+  orgId: string
+  orgCode?: string
+  orgName?: string
+  indicatorId: string
+  indicatorCode?: string
+  indicatorName?: string
+}
+
+export type CampaignScopeInput = {
+  orgId: string
+  indicatorId: string
+}
+
+export type CampaignDefaultValue = {
+  id?: string
+  campaignId?: string
+  indicatorId: string
+  attributeId: string
+  valueText: string | null
+  valueNumber: number | null
+}
+
+export type CampaignStatus = 'DRAFT' | 'DISPATCHED' | 'CLOSED' | 'CANCELLED'
