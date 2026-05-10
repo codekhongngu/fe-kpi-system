@@ -10,7 +10,12 @@ export type MyAssignment = {
   } | null
 }
 
-export type SubmissionStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED'
+export type SubmissionStatus =
+  | 'DRAFT'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'NOT_STARTED'
 
 export type SubmissionDetail = {
   id: string

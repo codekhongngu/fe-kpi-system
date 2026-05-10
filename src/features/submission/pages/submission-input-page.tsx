@@ -1,14 +1,70 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { AlertCircle } from 'lucide-react'
-import { PageBreadcrumb } from '@/components/page-breadcrumb'
+import {
+  AlertCircle,
+  Lock,
+  Calculator,
+  Info,
+  ArrowLeft,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  CalendarDays,
+  Save,
+  Send,
+  Loader2,
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import type { FormTemplate } from '@/features/form-management/api/types'
 import { SubmissionGrid } from '../components/submission-grid'
-import { SubmissionToolbar } from '../components/submission-toolbar'
 import { SubmitConfirmDialog } from '../components/submit-confirm-dialog'
 import { useMyAssignments } from '../hooks/use-my-assignments'
 import { useSubmission } from '../hooks/use-submission'
+
+const statusConfig: Record<
+  string,
+  {
+    label: string
+    icon: typeof Clock
+    className: string
+  }
+> = {
+  DRAFT: {
+    label: 'Đang nhập (Nháp)',
+    icon: FileText,
+    className:
+      'border-slate-200 bg-slate-50 text-slate-700',
+  },
+  PENDING: {
+    label: 'Chờ phê duyệt',
+    icon: Clock,
+    className:
+      'border-yellow-200 bg-yellow-50 text-yellow-700',
+  },
+  APPROVED: {
+    label: 'Đã phê duyệt',
+    icon: CheckCircle2,
+    className:
+      'border-green-200 bg-green-50 text-green-700',
+  },
+  REJECTED: {
+    label: 'Bị trả lại',
+    icon: XCircle,
+    className:
+      'border-red-200 bg-red-50 text-red-700',
+  },
+}
 
 export function SubmissionInputPage() {
   const { assignmentId } = useParams({ strict: false }) as {
@@ -21,14 +77,23 @@ export function SubmissionInputPage() {
 
   // 1. Fetch danh sách để lấy thông tin assignment
   const { data: assignments, isLoading: isLoadingAssignments } =
-    useMyAssignments()
-  const assignment = assignments?.find((a) => a.assignmentId === assignmentId)
+    useMyAssignments({
+      q: '',
+      page: 1,
+      limit: 100,
+    })
+  const assignment = assignments?.items?.find(
+    (a) => a.assignmentId === assignmentId
+  )
 
-  // 2. Hook quản lý logic submission (auto-create, auto-save, sync version)
+  // 2. Hook quản lý logic submission
   const {
     detail,
     isLoading: isLoadingSubmission,
     handleCellChange,
+    saveDraft,
+    isSavingDraft,
+    hasUnsavedChanges,
     submit,
     isSubmitting,
   } = useSubmission(assignmentId, assignment?.submission?.id)
@@ -47,6 +112,10 @@ export function SubmissionInputPage() {
     detail?.status === 'PENDING' || detail?.status === 'APPROVED'
   const isRejected = detail?.status === 'REJECTED'
 
+  const handleBack = () => {
+    navigate({ to: '/my/assignments' })
+  }
+
   const handleSubmitConfirm = (note: string) => {
     submit(note, {
       onSuccess: () => {
@@ -57,55 +126,188 @@ export function SubmissionInputPage() {
   }
 
   if (isLoading) {
-    return <div className='p-8 text-center'>Đang tải dữ liệu báo cáo...</div>
+    return (
+      <div className='flex h-[calc(100vh-64px)] flex-col items-center justify-center gap-4 p-8'>
+        <div className='h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent' />
+        <p className='text-muted-foreground'>Đang tải dữ liệu báo cáo...</p>
+      </div>
+    )
   }
 
+  const currentStatus = statusConfig[detail.status] ?? statusConfig.DRAFT
+  const StatusIcon = currentStatus.icon
+  const percent = detail.completionPct ?? 0
+
   return (
-    <div className='flex h-[calc(100vh-64px)] flex-col pb-[80px]'>
-      <div className='z-10 flex shrink-0 items-center justify-between border-b bg-background p-4'>
-        <div className='flex flex-col gap-1'>
-          <PageBreadcrumb
-            title={`${assignment?.form.name} — ${assignment?.period.name}`}
-            subtitle='Nhập liệu báo cáo'
+    <div className='flex h-[calc(100vh-64px)] flex-col'>
+      {/* Redesigned Action Header */}
+      <div className='z-10 flex shrink-0 flex-col border-b bg-background shadow-sm'>
+        <div className='flex items-center justify-between px-4 py-3'>
+          <div className='flex items-center gap-3'>
+            <Button variant='ghost' size='icon' onClick={handleBack} title='Quay lại'>
+              <ArrowLeft className='size-5' />
+            </Button>
+            <div className='flex flex-col'>
+              <div className='flex items-center gap-2'>
+                <h1 className='text-lg font-bold tracking-tight'>
+                  {assignment?.form.name}
+                </h1>
+                <Badge
+                  variant='outline'
+                  className={`gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase ${currentStatus.className}`}
+                >
+                  <StatusIcon className='size-3' />
+                  {currentStatus.label}
+                </Badge>
+              </div>
+              <p className='text-sm text-muted-foreground'>
+                {assignment?.period.name} • {detail.code}
+              </p>
+            </div>
+          </div>
+
+          <div className='flex items-center gap-2'>
+            {!isReadOnly && (
+              <>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => saveDraft()}
+                  disabled={isSavingDraft || !hasUnsavedChanges}
+                  className='h-9 px-4'
+                >
+                  {isSavingDraft ? (
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  ) : (
+                    <Save className='mr-2 h-4 w-4 text-primary' />
+                  )}
+                  {isSavingDraft ? 'Đang lưu...' : 'Lưu nháp'}
+                  {hasUnsavedChanges && !isSavingDraft && (
+                    <span className='ml-2 h-1.5 w-1.5 rounded-full bg-primary' />
+                  )}
+                </Button>
+
+                <Button
+                  onClick={() => setIsSubmitDialogOpen(true)}
+                  size='sm'
+                  className='h-9 bg-primary px-4 hover:bg-primary/90'
+                >
+                  <Send className='mr-2 h-4 w-4' />
+                  Nộp báo cáo
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Integrated Progress Bar in Header */}
+        <div className='relative h-1 w-full bg-muted overflow-hidden'>
+          <div
+            className='h-full bg-primary transition-all duration-500 ease-in-out'
+            style={{ width: `${percent}%` }}
           />
         </div>
       </div>
 
-      <div className='flex flex-1 flex-col gap-4 overflow-auto p-4'>
-        {isRejected && (
-          <div className='flex items-start gap-3 rounded-md border border-destructive bg-destructive/10 p-4 text-destructive'>
-            <AlertCircle className='mt-0.5 h-5 w-5 shrink-0' />
-            <div>
-              <h3 className='font-semibold'>Báo cáo bị trả lại!</h3>
-              <p className='mt-1 text-sm'>
-                {detail.rejectReason || 'Không có lý do cụ thể.'}
-              </p>
-              <p className='mt-1 text-sm'>
-                Vui lòng cập nhật lại dữ liệu và nộp lại báo cáo.
-              </p>
-            </div>
+      {/* Content area */}
+      <div className='flex-1 overflow-auto bg-slate-50/50 p-4'>
+        <div className='mx-auto max-w-7xl space-y-4'>
+          {/* Info Panels Row */}
+          <div className='grid grid-cols-1 gap-4 lg:grid-cols-3'>
+            {/* Completion Status */}
+            <Card className='lg:col-span-1 shadow-sm'>
+              <CardContent className='pt-6'>
+                <div className='flex items-center justify-between mb-2'>
+                  <span className='text-sm font-medium'>Tiến độ hoàn thành</span>
+                  <span className='text-sm font-bold text-primary'>{percent}%</span>
+                </div>
+                <Progress value={percent} className='h-2.5' />
+                <p className='mt-2 text-[11px] text-muted-foreground'>
+                  Đã nhập dữ liệu cho {percent}% tổng số ô yêu cầu.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Submission Timeline/Info */}
+            <Card className='lg:col-span-2 shadow-sm'>
+              <CardContent className='pt-6 flex flex-wrap gap-x-8 gap-y-4 items-center'>
+                <div className='flex items-center gap-2'>
+                  <div className='rounded-full bg-blue-100 p-2 text-blue-600'>
+                    <CalendarDays className='size-4' />
+                  </div>
+                  <div>
+                    <p className='text-[10px] uppercase text-muted-foreground font-semibold'>Ngày nộp</p>
+                    <p className='text-sm font-medium'>
+                      {detail.submittedAt
+                        ? format(new Date(detail.submittedAt), 'HH:mm dd/MM/yyyy')
+                        : 'Chưa nộp'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className='flex items-center gap-2'>
+                  <div className='rounded-full bg-amber-100 p-2 text-amber-600'>
+                    <Clock className='size-4' />
+                  </div>
+                  <div>
+                    <p className='text-[10px] uppercase text-muted-foreground font-semibold'>Hạn chót</p>
+                    <p className='text-sm font-medium'>
+                      {assignment?.deadlineTo
+                        ? format(new Date(assignment.deadlineTo), 'dd/MM/yyyy')
+                        : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Legend Integrated */}
+                <div className='flex gap-4 ml-auto border-l pl-8'>
+                  <div className='flex items-center gap-1.5'>
+                    <div className='h-3 w-3 rounded border border-yellow-200 bg-yellow-50' />
+                    <span className='text-xs text-muted-foreground'>Mặc định</span>
+                  </div>
+                  <div className='flex items-center gap-1.5'>
+                    <div className='h-3 w-3 rounded border border-blue-200 bg-blue-50' />
+                    <span className='text-xs text-muted-foreground'>Công thức</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
 
-        <div className='rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800'>
-          <strong>Lưu ý:</strong> Các ô nền vàng (có biểu tượng 🔒) là dữ liệu
-          đã được cấp trên giao sẵn, bạn không thể thay đổi.
+          {/* Rejection Alert */}
+          {isRejected && detail.rejectReason && (
+            <div className='flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm'>
+              <XCircle className='h-5 w-5 shrink-0 text-red-500' />
+              <div>
+                <h4 className='text-sm font-bold text-red-800'>Báo cáo bị trả lại</h4>
+                <p className='text-sm text-red-700 mt-0.5'>{detail.rejectReason}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Read-only Alert */}
+          {isReadOnly && (
+            <div className='flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 shadow-sm'>
+              <AlertCircle className='size-4 shrink-0' />
+              <span>
+                Báo cáo đang ở trạng thái <strong>{currentStatus.label}</strong>, không thể chỉnh sửa.
+              </span>
+            </div>
+          )}
+
+          {/* Main Grid Card */}
+          <Card className='shadow-sm border-none overflow-hidden'>
+            <div className='bg-white p-2'>
+              <SubmissionGrid
+                template={template}
+                detail={detail}
+                isReadOnly={isReadOnly}
+                onCellChange={handleCellChange}
+              />
+            </div>
+          </Card>
         </div>
-
-        <SubmissionGrid
-          template={template}
-          detail={detail}
-          isReadOnly={isReadOnly}
-          onCellChange={handleCellChange}
-        />
       </div>
-
-      <SubmissionToolbar
-        completionPct={detail.completionPct}
-        isSaving={false} // Note: This state is abstracted away in useSubmission, but we can pass it if we expose it
-        isReadOnly={isReadOnly}
-        onSubmitClick={() => setIsSubmitDialogOpen(true)}
-      />
 
       <SubmitConfirmDialog
         open={isSubmitDialogOpen}

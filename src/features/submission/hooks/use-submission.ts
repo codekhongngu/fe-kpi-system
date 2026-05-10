@@ -1,10 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { AxiosError } from 'axios'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { useDebounceCallback } from '@/hooks/use-debounce-callback'
 import { submissionApi } from '../api/submission-api'
 import type { CellChange, SubmissionDetail } from '../api/types'
+
+function cellKey(indicatorId: string, attributeId: string) {
+  return `${indicatorId}__${attributeId}`
+}
 
 export function useSubmission(
   assignmentId: string,
@@ -14,34 +17,48 @@ export function useSubmission(
   const [submissionId, setSubmissionId] = useState<string | null>(
     initialSubmissionId ?? null
   )
-  const pendingChanges = useRef<CellChange[]>([])
-  const currentVersion = useRef<number>(0)
-  const isAutoSaving = useRef<boolean>(false)
+  const hasAttemptedCreate = useRef(false)
 
-  // 1. Nếu chưa có submissionId thì auto create
+  // Local state for all cell edits (accumulated changes since last save)
+  const [localChanges, setLocalChanges] = useState<Record<string, CellChange>>(
+    {}
+  )
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+  // Sync initialSubmissionId when it becomes available (from parent)
   useEffect(() => {
-    let isMounted = true
-    if (!submissionId) {
-      submissionApi
-        .create(assignmentId)
-        .then((created) => {
-          if (isMounted) {
-            setSubmissionId(created.id)
-          }
-        })
-        .catch((e) => {
-          console.error('Failed to create submission', e)
-          toast.error('Không thể khởi tạo báo cáo mới.')
-        })
+    if (initialSubmissionId && !submissionId) {
+      setSubmissionId(initialSubmissionId)
     }
-    return () => {
-      isMounted = false
+  }, [initialSubmissionId, submissionId])
+
+  // 1. Get-or-create: only when assignmentId is set AND no submissionId resolved
+  const createMutation = useMutation({
+    mutationFn: () => submissionApi.create(assignmentId),
+    onSuccess: (result) => {
+      setSubmissionId(result.id)
+    },
+    onError: (e) => {
+      console.error('Failed to create/get submission', e)
+      toast.error('Không thể khởi tạo báo cáo.')
+    },
+  })
+
+  useEffect(() => {
+    // Prevent strict-mode double firing by checking a ref
+    if (
+      assignmentId &&
+      !submissionId &&
+      !hasAttemptedCreate.current
+    ) {
+      hasAttemptedCreate.current = true
+      createMutation.mutate()
     }
   }, [assignmentId, submissionId])
 
-  // 2. Fetch Detail
+  // 2. Fetch detail
   const {
-    data: detail,
+    data: serverDetail,
     isLoading,
     error,
     refetch,
@@ -51,119 +68,125 @@ export function useSubmission(
     enabled: !!submissionId,
   })
 
-  // Sync version khi fetch detail
-  useEffect(() => {
-    if (detail) {
-      currentVersion.current = detail.version
-    }
-  }, [detail])
+  // 3. Merge server data with local edits to produce the "live" detail view
+  const detail: SubmissionDetail | undefined = useMemo(() => {
+    if (!serverDetail) return undefined
 
-  // 3. Auto save cells
-  const debouncedSave = useDebounceCallback(async () => {
-    if (
-      pendingChanges.current.length === 0 ||
-      !submissionId ||
-      isAutoSaving.current
-    )
-      return
+    const changeValues = Object.values(localChanges)
+    if (changeValues.length === 0) return serverDetail
 
-    isAutoSaving.current = true
-    const changesToSubmit = [...pendingChanges.current]
-    pendingChanges.current = []
-
-    try {
-      const result = await submissionApi.patchCells(
-        submissionId,
-        currentVersion.current,
-        changesToSubmit
+    // Merge local changes into server cells
+    const mergedCells = [...serverDetail.cells]
+    for (const change of changeValues) {
+      const idx = mergedCells.findIndex(
+        (c) =>
+          c.indicatorId === change.indicatorId &&
+          c.attributeId === change.attributeId
       )
-      currentVersion.current = result.version
-      if (result.validationErrors && result.validationErrors.length > 0) {
-        toast.error(`Có ${result.validationErrors.length} ô không hợp lệ.`)
+      const updatedCell = {
+        indicatorId: change.indicatorId,
+        attributeId: change.attributeId,
+        valueText: change.valueText ?? null,
+        valueNumeric: change.valueNumeric ?? null,
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'me',
       }
-    } catch (e) {
+      if (idx >= 0) {
+        mergedCells[idx] = updatedCell
+      } else {
+        mergedCells.push(updatedCell)
+      }
+    }
+
+    return { ...serverDetail, cells: mergedCells }
+  }, [serverDetail, localChanges])
+
+  // 4. Handle cell change — only updates local state, no API call
+  const handleCellChange = useCallback((change: CellChange) => {
+    const key = cellKey(change.indicatorId, change.attributeId)
+    setLocalChanges((prev) => ({
+      ...prev,
+      [key]: change,
+    }))
+    setHasUnsavedChanges(true)
+  }, [])
+
+  // 5. Save Draft — batch save all local changes in one API call
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => {
+      if (!submissionId || !serverDetail) {
+        throw new Error('Chưa có bản nộp để lưu.')
+      }
+
+      const changes = Object.values(localChanges)
+      if (changes.length === 0) return { saved: 0, version: serverDetail.version, validationErrors: [] }
+
+      return submissionApi.patchCells(
+        submissionId,
+        serverDetail.version,
+        changes
+      )
+    },
+    onSuccess: async (result) => {
+      if (!result) return
+      setLocalChanges({})
+      setHasUnsavedChanges(false)
+      toast.success(`Đã lưu nháp (${result.saved} ô).`)
+
+      if (result.validationErrors && result.validationErrors.length > 0) {
+        toast.warning(`Có ${result.validationErrors.length} ô không hợp lệ.`)
+      }
+
+      // Refetch to sync version
+      await refetch()
+    },
+    onError: async (e) => {
       if (e instanceof AxiosError && e.response?.status === 412) {
-        // Version mismatch
-        toast.warning('Dữ liệu đã bị thay đổi ở nơi khác, đang đồng bộ lại...')
-        const fresh = await refetch()
-        if (fresh.data) {
-          currentVersion.current = fresh.data.version
-        }
+        toast.warning(
+          'Dữ liệu đã bị thay đổi ở nơi khác. Đang đồng bộ lại...'
+        )
+        await refetch()
+        toast.info('Vui lòng thử lưu lại.')
       } else {
         toast.error('Lưu nháp thất bại.')
-        // Restore pending
-        pendingChanges.current = [...changesToSubmit, ...pendingChanges.current]
       }
-    } finally {
-      isAutoSaving.current = false
-      if (pendingChanges.current.length > 0) {
-        debouncedSave()
-      }
-    }
-  }, 800)
-
-  const handleCellChange = useCallback(
-    (change: CellChange) => {
-      pendingChanges.current = [
-        ...pendingChanges.current.filter(
-          (c) =>
-            !(
-              c.indicatorId === change.indicatorId &&
-              c.attributeId === change.attributeId
-            )
-        ),
-        change,
-      ]
-
-      // Optimistic update locally
-      queryClient.setQueryData<SubmissionDetail | undefined>(
-        ['submission', submissionId],
-        (oldData) => {
-          if (!oldData) return oldData
-
-          const newCells = [...oldData.cells]
-          const existingIndex = newCells.findIndex(
-            (c) =>
-              c.indicatorId === change.indicatorId &&
-              c.attributeId === change.attributeId
-          )
-
-          const updatedCell = {
-            indicatorId: change.indicatorId,
-            attributeId: change.attributeId,
-            valueText: change.valueText ?? null,
-            valueNumeric: change.valueNumeric ?? null,
-            updatedAt: new Date().toISOString(),
-            updatedBy: 'me',
-          }
-
-          if (existingIndex >= 0) {
-            newCells[existingIndex] = updatedCell
-          } else {
-            newCells.push(updatedCell)
-          }
-
-          return {
-            ...oldData,
-            cells: newCells,
-          }
-        }
-      )
-
-      debouncedSave()
     },
-    [submissionId, debouncedSave, queryClient]
-  )
+  })
 
-  // 4. Nộp báo cáo
+  // 6. Submit — save draft first, then submit
   const submitMutation = useMutation({
-    mutationFn: (note?: string) => submissionApi.submit(submissionId!, note),
+    mutationFn: async (note?: string) => {
+      if (!submissionId) throw new Error('Chưa có bản nộp.')
+
+      // Auto-save pending changes before submit
+      const changes = Object.values(localChanges)
+      if (changes.length > 0 && serverDetail) {
+        const saveResult = await submissionApi.patchCells(
+          submissionId,
+          serverDetail.version,
+          changes
+        )
+        if (saveResult.validationErrors?.length > 0) {
+          throw new Error(
+            `Có ${saveResult.validationErrors.length} ô không hợp lệ. Không thể nộp.`
+          )
+        }
+      }
+
+      return submissionApi.submit(submissionId, note)
+    },
     onSuccess: () => {
+      setLocalChanges({})
+      setHasUnsavedChanges(false)
       toast.success('Nộp báo cáo thành công.')
       refetch()
     },
-    onError: () => {
-      toast.error('Có lỗi khi nộp báo cáo.')
+    onError: (e) => {
+      if (e instanceof Error) {
+        toast.error(e.message)
+      } else {
+        toast.error('Có lỗi khi nộp báo cáo.')
+      }
     },
   })
 
@@ -172,7 +195,10 @@ export function useSubmission(
     detail,
     isLoading: isLoading || !submissionId,
     error,
+    hasUnsavedChanges,
     handleCellChange,
+    saveDraft: saveDraftMutation.mutate,
+    isSavingDraft: saveDraftMutation.isPending,
     submit: submitMutation.mutate,
     isSubmitting: submitMutation.isPending,
   }

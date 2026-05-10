@@ -6,12 +6,28 @@ import type {
   PatchCellsResult,
 } from './types'
 
+export type MyAssignmentsQuery = {
+  status?: string
+  overdue?: boolean
+  q?: string
+  periodType?: string
+  page?: number
+  limit?: number
+}
+
+export type PaginatedResponse<T> = {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+}
+
 export const submissionApi = {
   // GET /api/v1/my/assignments
-  myAssignments: (params?: { status?: string; overdue?: boolean }) =>
+  myAssignments: (params?: MyAssignmentsQuery) =>
     apiClient
-      .get<{ items: MyAssignment[] }>('/my/assignments', { params })
-      .then((r) => r.data.items),
+      .get<PaginatedResponse<MyAssignment>>('/my/assignments', { params })
+      .then((r) => r.data),
 
   // POST /api/v1/submissions  { assignmentId }
   create: (assignmentId: string) =>
@@ -34,7 +50,13 @@ export const submissionApi = {
     apiClient
       .patch<PatchCellsResult>(`/submissions/${submissionId}/cells`, {
         clientVersion,
-        changes,
+        changes: changes.map((c) => ({
+          indicatorId: c.indicatorId,
+          attributeId: c.attributeId,
+          valueText: c.valueText ?? null,
+          valueNumeric:
+            c.valueNumeric != null ? String(c.valueNumeric) : null,
+        })),
       })
       .then((r) => r.data),
 
@@ -45,5 +67,11 @@ export const submissionApi = {
         status: string
         submittedAt: string
       }>(`/submissions/${submissionId}/submit`, { note })
+      .then((r) => r.data),
+
+  // POST /api/v1/submissions/:id/cancel-submit
+  cancelSubmit: (submissionId: string) =>
+    apiClient
+      .post<{ status: string }>(`/submissions/${submissionId}/cancel-submit`)
       .then((r) => r.data),
 }
