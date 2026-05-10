@@ -380,6 +380,7 @@ export const systemAdminMockApi = {
         fullName: input.fullName,
         email: input.email,
         username: input.username,
+        password: input.password,
         orgId: input.unitId || null,
         roleIds: input.roleIds,
         isActive: input.status === 'active',
@@ -390,6 +391,7 @@ export const systemAdminMockApi = {
         fullName: input.fullName,
         email: input.email,
         username: input.username,
+        password: input.password,
         orgId: input.unitId || null,
         isActive: input.status === 'active',
       })

@@ -62,7 +62,9 @@ export type ReportPeriod = {
 export type CreateUserInput = Omit<
   SystemUser,
   'id' | 'lastLoginAt' | 'incompleteReports' | 'isDeleted'
->
+> & {
+  password: string
+}
 
 export type UpdateUserInput = Omit<CreateUserInput, 'userCode'>
 

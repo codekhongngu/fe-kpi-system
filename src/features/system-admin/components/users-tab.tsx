@@ -47,6 +47,7 @@ type UserFormState = {
   fullName: string
   email: string
   username: string
+  password: string
   unitId: string
   roleIds: string[]
   status: 'active' | 'inactive'
@@ -57,6 +58,7 @@ const defaultForm: UserFormState = {
   fullName: '',
   email: '',
   username: '',
+  password: '',
   unitId: '',
   roleIds: [],
   status: 'active',
@@ -103,9 +105,9 @@ export function UsersTab() {
 
   const createMutation = useMutation({
     mutationFn: systemAdminMockApi.createUser,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success(
-        'Đã tạo người dùng mới và gửi mật khẩu tạm qua email (mock).'
+        `Đã tạo người dùng mới thành công!\nUsername: ${variables.username}\nPassword: ${variables.password}`
       )
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
@@ -174,6 +176,7 @@ export function UsersTab() {
       fullName: user.fullName,
       email: user.email,
       username: user.username,
+      password: '',
       unitId: user.unitId,
       roleIds: user.roleIds,
       status: user.status,
@@ -182,6 +185,8 @@ export function UsersTab() {
   }
 
   const submitForm = () => {
+    const isCreating = !editingUser
+    
     if (
       !form.fullName.trim() ||
       !form.email.trim() ||
@@ -194,12 +199,23 @@ export function UsersTab() {
       return
     }
 
+    if (isCreating && !form.password.trim()) {
+      toast.error('Vui lòng nhập mật khẩu.')
+      return
+    }
+
+    if (isCreating && form.password.length < 6) {
+      toast.error('Mật khẩu phải có ít nhất 6 ký tự.')
+      return
+    }
+
     const payload: UserFormState = {
       ...form,
       userCode: form.userCode.trim(),
       fullName: form.fullName.trim(),
       email: form.email.trim(),
       username: form.username.trim(),
+      password: form.password,
     }
 
     if (editingUser) {
@@ -382,6 +398,23 @@ export function UsersTab() {
                   setForm((prev) => ({ ...prev, username: event.target.value }))
                 }
               />
+            </div>
+            <div className='space-y-2'>
+              <Label>Password</Label>
+              <Input
+                type='text'
+                value={form.password}
+                placeholder={editingUser ? 'Để trống nếu không đổi mật khẩu' : 'Tối thiểu 6 ký tự'}
+                disabled={Boolean(editingUser)}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, password: event.target.value }))
+                }
+              />
+              {editingUser && (
+                <p className='text-xs text-muted-foreground'>
+                  Mật khẩu chỉ có thể thay đổi khi tạo người dùng mới
+                </p>
+              )}
             </div>
             <div className='space-y-2'>
               <Label>Đơn vị</Label>
