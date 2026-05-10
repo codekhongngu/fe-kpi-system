@@ -1,14 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
-import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, FileUp, GripVertical, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
-import { toast } from 'sonner'
+import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Switch } from '@/components/ui/switch'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  ChevronDown,
+  ChevronRight,
+  FileUp,
+  GripVertical,
+  PlusCircle,
+  Save,
+  Trash2,
+  UserPen,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -25,14 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Form,
   FormControl,
@@ -41,13 +52,27 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { formManagementApi } from '../../api/template-management-api'
 import {
   fieldDataTypeOptions,
   type FieldDataType,
   type TemplateIndicator,
 } from '../../api/types'
-import { buildTree, flattenTree, reorderSameLevelItems, type TreeNode } from '../shared/template-tree-utils'
+import {
+  buildTree,
+  flattenTree,
+  reorderSameLevelItems,
+  type TreeNode,
+} from '../shared/template-tree-utils'
 
 type TemplateIndicatorsTabProps = {
   templateId: string
@@ -97,7 +122,15 @@ function IndicatorTreeNode({
   onDelete,
 }: IndicatorTreeNodeProps) {
   const hasChildren = node.children.length > 0
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: node.id,
     disabled: !canDrag,
   })
@@ -125,34 +158,66 @@ function IndicatorTreeNode({
             >
               <GripVertical size={14} />
             </button>
-            {depth > 0 && <span className='mt-3 h-px w-4 shrink-0 bg-border' aria-hidden='true' />}
+            {depth > 0 && (
+              <span
+                className='mt-3 h-px w-4 shrink-0 bg-border'
+                aria-hidden='true'
+              />
+            )}
             <button
               type='button'
               className='mt-0.5 rounded p-0.5 hover:bg-muted'
               onClick={() => {}}
             >
-              {hasChildren ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {hasChildren ? (
+                <ChevronDown size={14} />
+              ) : (
+                <ChevronRight size={14} />
+              )}
             </button>
 
-            <div className='min-w-0 border-s border-border/70 ps-3' style={{ marginInlineStart: `${depth * 10}px` }}>
+            <div
+              className='min-w-0 border-s border-border/70 ps-3'
+              style={{ marginInlineStart: `${depth * 10}px` }}
+            >
               <p className='text-xs text-muted-foreground'>
                 {node.code}
                 {(node.order ?? 0) > 1 ? ` (STT: ${node.order})` : ''}
               </p>
               <p className='text-sm font-medium'>{node.name}</p>
-              <p className='text-xs text-muted-foreground'>{node.unit || '---'}</p>
+              <p className='text-xs text-muted-foreground'>
+                {node.unit || '---'}
+              </p>
             </div>
           </div>
 
           <div className='flex flex-wrap gap-1'>
-            <Button size='icon' variant='outline' onClick={() => onAddChild(node.id)} disabled={!canEdit} title='Thêm con'>
+            <Button
+              size='icon'
+              variant='outline'
+              onClick={() => onAddChild(node.id)}
+              disabled={!canEdit}
+              title='Thêm con'
+            >
               <PlusCircle className='size-4' />
             </Button>
-            <Button size='icon' variant='outline' onClick={() => onEdit(node)} disabled={!canEdit} title='Chỉnh sửa'>
+            <Button
+              size='icon'
+              variant='outline'
+              onClick={() => onEdit(node)}
+              disabled={!canEdit}
+              title='Chỉnh sửa'
+            >
               <UserPen className='size-4' />
             </Button>
 
-            <Button size='icon' variant='destructive' onClick={() => onDelete(node)} disabled={!canEdit} title='Xóa'>
+            <Button
+              size='icon'
+              variant='destructive'
+              onClick={() => onDelete(node)}
+              disabled={!canEdit}
+              title='Xóa'
+            >
               <Trash2 className='size-4' />
             </Button>
           </div>
@@ -160,7 +225,10 @@ function IndicatorTreeNode({
       </div>
 
       {hasChildren && (
-        <SortableContext items={node.children.map((child) => child.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext
+          items={node.children.map((child) => child.id)}
+          strategy={verticalListSortingStrategy}
+        >
           <div className='space-y-2 border-s border-border/70 ps-3'>
             {node.children.map((child) => (
               <IndicatorTreeNode
@@ -181,11 +249,16 @@ function IndicatorTreeNode({
   )
 }
 
-export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps) {
+export function TemplateIndicatorsTab({
+  templateId,
+}: TemplateIndicatorsTabProps) {
   const queryClient = useQueryClient()
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
-  const [editingIndicator, setEditingIndicator] = useState<TemplateIndicator | null>(null)
-  const [draftIndicators, setDraftIndicators] = useState<TemplateIndicator[]>([])
+  const [editingIndicator, setEditingIndicator] =
+    useState<TemplateIndicator | null>(null)
+  const [draftIndicators, setDraftIndicators] = useState<TemplateIndicator[]>(
+    []
+  )
   const [hasPendingReorder, setHasPendingReorder] = useState(false)
 
   const templateQuery = useQuery({
@@ -200,10 +273,17 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   })
 
   const template = templateQuery.data ?? null
-  const canEdit = Boolean(template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT'))
+  const canEdit = Boolean(
+    template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT')
+  )
   const tree = useMemo(() => buildTree(draftIndicators), [draftIndicators])
-  const flatIndicators = useMemo(() => currentTreeItems(draftIndicators), [draftIndicators])
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const flatIndicators = useMemo(
+    () => currentTreeItems(draftIndicators),
+    [draftIndicators]
+  )
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  )
 
   useEffect(() => {
     setDraftIndicators(template?.indicators ?? [])
@@ -222,8 +302,12 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   )
 
   const refreshTemplate = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['form-management', 'template', templateId] })
-    await queryClient.invalidateQueries({ queryKey: ['form-management', 'template', templateId, 'indicators-tab'] })
+    await queryClient.invalidateQueries({
+      queryKey: ['form-management', 'template', templateId],
+    })
+    await queryClient.invalidateQueries({
+      queryKey: ['form-management', 'template', templateId, 'indicators-tab'],
+    })
   }
 
   const createMutation = useMutation({
@@ -241,7 +325,13 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ indicatorId, payload }: { indicatorId: string; payload: IndicatorFormValues }) =>
+    mutationFn: ({
+      indicatorId,
+      payload,
+    }: {
+      indicatorId: string
+      payload: IndicatorFormValues
+    }) =>
       formManagementApi.updateIndicator(templateId, indicatorId, {
         ...payload,
         unit: payload.unit ?? '',
@@ -255,7 +345,8 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (indicatorId: string) => formManagementApi.deleteIndicator(templateId, indicatorId),
+    mutationFn: (indicatorId: string) =>
+      formManagementApi.deleteIndicator(templateId, indicatorId),
     onSuccess: async () => {
       toast.success('Đã xóa chỉ tiêu.')
       await refreshTemplate()
@@ -267,7 +358,10 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     mutationFn: () =>
       formManagementApi.reorderIndicators(
         templateId,
-        flatIndicators.map((item) => ({ id: item.id, parentId: item.parentId ?? null })),
+        flatIndicators.map((item) => ({
+          id: item.id,
+          parentId: item.parentId ?? null,
+        }))
       ),
     onSuccess: async () => {
       await refreshTemplate()
@@ -311,8 +405,6 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     form.reset(defaultIndicatorForm)
   }
 
-
-
   function handleDragEnd(event: DragEndEvent) {
     const activeId = String(event.active.id)
     const overId = event.over?.id ? String(event.over.id) : null
@@ -334,7 +426,10 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
 
   function onSubmit(values: IndicatorFormValues) {
     if (editingIndicator) {
-      updateMutation.mutate({ indicatorId: editingIndicator.id, payload: values })
+      updateMutation.mutate({
+        indicatorId: editingIndicator.id,
+        payload: values,
+      })
     } else {
       createMutation.mutate(values)
     }
@@ -346,14 +441,19 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <div>
             <CardTitle>Chỉ tiêu</CardTitle>
-            <CardDescription>Cấu hình cây chỉ tiêu theo cấp, sắp xếp thứ tự hiển thị và loại dữ liệu.</CardDescription>
+            <CardDescription>
+              Cấu hình cây chỉ tiêu theo cấp, sắp xếp thứ tự hiển thị và loại dữ
+              liệu.
+            </CardDescription>
           </div>
           <div className='flex flex-wrap gap-2'>
             <Button
               size='sm'
               variant='outline'
               onClick={handleSaveOrder}
-              disabled={!canEdit || !hasPendingReorder || saveOrderMutation.isPending}
+              disabled={
+                !canEdit || !hasPendingReorder || saveOrderMutation.isPending
+              }
             >
               <Save className='size-4' />
               Cập nhật vị trí
@@ -367,7 +467,11 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
               <FileUp className='size-4' />
               Nhập Excel
             </Button>
-            <Button size='sm' onClick={() => openCreateDialog(null)} disabled={!canEdit}>
+            <Button
+              size='sm'
+              onClick={() => openCreateDialog(null)}
+              disabled={!canEdit}
+            >
               <PlusCircle className='size-4' />
               Thêm chỉ tiêu
             </Button>
@@ -385,8 +489,15 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
             Chưa có chỉ tiêu nào.
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={tree.map((node) => node.id)} strategy={verticalListSortingStrategy}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={tree.map((node) => node.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <div className='space-y-2'>
                 {tree.map((node) => (
                   <IndicatorTreeNode
@@ -398,9 +509,13 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                     onAddChild={(parentId) => openCreateDialog(parentId)}
                     onEdit={openEditDialog}
                     onDelete={(item) => {
-                      const hasChildren = draftIndicators.some((entry) => entry.parentId === item.id)
+                      const hasChildren = draftIndicators.some(
+                        (entry) => entry.parentId === item.id
+                      )
                       if (hasChildren) {
-                        toast.error('Không thể xóa chỉ tiêu này vì đang có chỉ tiêu con.')
+                        toast.error(
+                          'Không thể xóa chỉ tiêu này vì đang có chỉ tiêu con.'
+                        )
                         return
                       }
                       deleteMutation.mutate(item.id)
@@ -413,15 +528,28 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
         )}
       </CardContent>
 
-      <Dialog open={fieldDialogOpen} onOpenChange={(open) => (open ? setFieldDialogOpen(true) : closeDialog())}>
+      <Dialog
+        open={fieldDialogOpen}
+        onOpenChange={(open) =>
+          open ? setFieldDialogOpen(true) : closeDialog()
+        }
+      >
         <DialogContent className='sm:max-w-2xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingIndicator ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu'}</DialogTitle>
-            <DialogDescription>Nhập thông tin cơ bản của chỉ tiêu. Các thông tin nâng cao sẽ được tự động xử lý.</DialogDescription>
+            <DialogTitle>
+              {editingIndicator ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu'}
+            </DialogTitle>
+            <DialogDescription>
+              Nhập thông tin cơ bản của chỉ tiêu. Các thông tin nâng cao sẽ được
+              tự động xử lý.
+            </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as any)} className='space-y-4'>
+            <form
+              onSubmit={form.handleSubmit(onSubmit as any)}
+              className='space-y-4'
+            >
               <div className='grid gap-4 sm:grid-cols-2'>
                 <FormField
                   control={form.control as any}
@@ -430,7 +558,11 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                     <FormItem>
                       <FormLabel>Mã chỉ tiêu</FormLabel>
                       <FormControl>
-                        <Input placeholder='...' {...field} value={(field.value as any) ?? ''} />
+                        <Input
+                          placeholder='...'
+                          {...field}
+                          value={(field.value as any) ?? ''}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -443,7 +575,11 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                     <FormItem>
                       <FormLabel>Tên chỉ tiêu</FormLabel>
                       <FormControl>
-                        <Input placeholder='Nhập tên chỉ tiêu...' {...field} value={(field.value as string) ?? ''} />
+                        <Input
+                          placeholder='Nhập tên chỉ tiêu...'
+                          {...field}
+                          value={(field.value as string) ?? ''}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -456,7 +592,11 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                     <FormItem>
                       <FormLabel>Đơn vị tính</FormLabel>
                       <FormControl>
-                        <Input placeholder='Ví dụ: %, Người, VNĐ...' {...field} value={(field.value as string) ?? ''} />
+                        <Input
+                          placeholder='Ví dụ: %, Người, VNĐ...'
+                          {...field}
+                          value={(field.value as string) ?? ''}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -468,7 +608,10 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Loại dữ liệu</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value as string}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value as string}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder='Chọn loại dữ liệu' />
@@ -493,7 +636,9 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                     <FormItem>
                       <FormLabel>Nút cha</FormLabel>
                       <Select
-                        onValueChange={(val) => field.onChange(val === 'root' ? null : val)}
+                        onValueChange={(val) =>
+                          field.onChange(val === 'root' ? null : val)
+                        }
                         value={(field.value as any) ?? 'root'}
                       >
                         <FormControl>
@@ -521,7 +666,10 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Loại chỉ tiêu</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value as string}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value as string}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder='Chọn loại chỉ tiêu' />
@@ -529,7 +677,9 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                         </FormControl>
                         <SelectContent>
                           <SelectItem value='INPUT'>Nhập liệu</SelectItem>
-                          <SelectItem value='TITLE'>Chỉ hiển thị (Tiêu đề)</SelectItem>
+                          <SelectItem value='TITLE'>
+                            Chỉ hiển thị (Tiêu đề)
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -542,8 +692,13 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                 <Button type='button' variant='outline' onClick={closeDialog}>
                   Hủy
                 </Button>
-                <Button type='submit' disabled={createMutation.isPending || updateMutation.isPending}>
-                  <Save className='size-4 mr-2' />
+                <Button
+                  type='submit'
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
+                >
+                  <Save className='mr-2 size-4' />
                   {editingIndicator ? 'Lưu thay đổi' : 'Thêm chỉ tiêu'}
                 </Button>
               </DialogFooter>

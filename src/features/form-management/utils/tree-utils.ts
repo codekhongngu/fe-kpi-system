@@ -20,7 +20,7 @@ export type IndicatorRowNode = TemplateIndicator & {
  */
 export function buildTree<T extends { id: string; parentId?: string | null }>(
   items: T[],
-  parentId: string | null = null,
+  parentId: string | null = null
 ): TreeNode<T>[] {
   return items
     .filter((item) => (item.parentId || null) === parentId)
@@ -48,7 +48,7 @@ function getTreeMaxDepth<T>(nodes: TreeNode<T>[]): number {
  * Returns a 2D array representing rows of header cells.
  */
 export function buildHeaderMatrix(
-  fields: TemplateField[],
+  fields: TemplateField[]
 ): FieldHeaderNode[][] {
   const tree = buildTree(fields)
   const maxDepth = getTreeMaxDepth(tree)
@@ -56,7 +56,7 @@ export function buildHeaderMatrix(
 
   function traverse(
     node: TreeNode<TemplateField>,
-    depth: number,
+    depth: number
   ): FieldHeaderNode {
     const isLeaf = !node.children || node.children.length === 0
     let colSpan = 1
@@ -93,7 +93,7 @@ export function buildHeaderMatrix(
  */
 export function flattenIndicatorTree(
   tree: TreeNode<TemplateIndicator>[],
-  expandedIds: Set<string>,
+  expandedIds: Set<string>
 ): IndicatorRowNode[] {
   const result: IndicatorRowNode[] = []
 

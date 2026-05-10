@@ -1,6 +1,6 @@
-import { getRouteApi } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getRouteApi } from '@tanstack/react-router'
 import { Main } from '@/components/layout/main'
 import { rolesApi, usersApi } from './api/users-api'
 import { UsersDialogs } from './components/users-dialogs'
@@ -58,10 +58,9 @@ export function Users() {
   })
 
   const rolesById = useMemo(() => {
-    const entries = (rolesQuery.data?.data ?? []).map((role) => [
-      role.id,
-      role.name,
-    ] as const)
+    const entries = (rolesQuery.data?.data ?? []).map(
+      (role) => [role.id, role.name] as const
+    )
     return Object.fromEntries(entries)
   }, [rolesQuery.data])
 
@@ -73,7 +72,9 @@ export function Users() {
       <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
         <div className='flex flex-wrap items-end justify-between gap-2'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Danh sách người dùng</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              Danh sách người dùng
+            </h2>
             <p className='text-muted-foreground'>
               Quản lý người dùng và vai trò tại đây.
             </p>

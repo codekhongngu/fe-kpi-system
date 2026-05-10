@@ -1,10 +1,9 @@
-import { DotsHorizontalIcon } from '@radix-ui/react-icons'
-import { type Row } from '@tanstack/react-table'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Trash2, UserCheck, UserPen, UserX } from 'lucide-react'
 import { useState } from 'react'
+import { DotsHorizontalIcon } from '@radix-ui/react-icons'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { type Row } from '@tanstack/react-table'
+import { Trash2, UserCheck, UserPen, UserX } from 'lucide-react'
 import { toast } from 'sonner'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -14,6 +13,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { usersApi } from '../api/users-api'
 import { type User } from '../data/schema'
 import { useUsers } from './users-provider'
@@ -97,9 +97,15 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         desc={`Xác nhận ${isActive ? 'vô hiệu hóa' : 'kích hoạt'} người dùng ${row.original.username}.`}
         handleConfirm={() => {
           toast.promise(statusMutation.mutateAsync(), {
-            loading: isActive ? 'Đang vô hiệu hóa người dùng...' : 'Đang kích hoạt người dùng...',
-            success: isActive ? 'Đã vô hiệu hóa người dùng' : 'Đã kích hoạt người dùng',
-            error: isActive ? 'Không thể vô hiệu hóa người dùng' : 'Không thể kích hoạt người dùng',
+            loading: isActive
+              ? 'Đang vô hiệu hóa người dùng...'
+              : 'Đang kích hoạt người dùng...',
+            success: isActive
+              ? 'Đã vô hiệu hóa người dùng'
+              : 'Đã kích hoạt người dùng',
+            error: isActive
+              ? 'Không thể vô hiệu hóa người dùng'
+              : 'Không thể kích hoạt người dùng',
           })
         }}
         confirmText={isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}

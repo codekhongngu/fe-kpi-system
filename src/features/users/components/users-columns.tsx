@@ -48,7 +48,9 @@ export function createUsersColumns({
         <DataTableColumnHeader column={column} title='Tài khoản' />
       ),
       cell: ({ row }) => (
-        <LongText className='max-w-36 ps-3'>{row.getValue('username')}</LongText>
+        <LongText className='max-w-36 ps-3'>
+          {row.getValue('username')}
+        </LongText>
       ),
       meta: {
         className: cn(
@@ -70,7 +72,9 @@ export function createUsersColumns({
     },
     {
       accessorKey: 'email',
-      header: ({ column }) => <DataTableColumnHeader column={column} title='Email' />,
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Email' />
+      ),
       cell: ({ row }) => (
         <div className='w-fit ps-2 text-nowrap'>{row.getValue('email')}</div>
       ),
@@ -90,8 +94,8 @@ export function createUsersColumns({
               className={cn(
                 'capitalize',
                 isActive
-                  ? 'bg-teal-100/30 text-teal-900 dark:text-teal-200 border-teal-200'
-                  : 'bg-neutral-300/40 border-neutral-300'
+                  ? 'border-teal-200 bg-teal-100/30 text-teal-900 dark:text-teal-200'
+                  : 'border-neutral-300 bg-neutral-300/40'
               )}
             >
               {isActive ? 'Hoạt động' : 'Không hoạt động'}

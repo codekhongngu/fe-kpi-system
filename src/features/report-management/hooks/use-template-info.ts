@@ -1,13 +1,13 @@
-import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { getTemplateById } from '../utils/template-utils'
+import { useQuery } from '@tanstack/react-query'
 import type { ReportListItem } from '../api/types'
+import { getTemplateById } from '../utils/template-utils'
 
 export function useTemplateInfo(reports: ReportListItem[]) {
   // Lấy tất cả formId duy nhất
   const uniqueFormIds = useMemo(() => {
     const formIds = new Set<string>()
-    reports.forEach(report => {
+    reports.forEach((report) => {
       if (report.formId) {
         formIds.add(report.formId)
       }
@@ -20,7 +20,7 @@ export function useTemplateInfo(reports: ReportListItem[]) {
     queryKey: ['templates', 'batch', uniqueFormIds],
     queryFn: async () => {
       const templates = await Promise.all(
-        uniqueFormIds.map(formId => getTemplateById(formId))
+        uniqueFormIds.map((formId) => getTemplateById(formId))
       )
       return templates.filter(Boolean)
     },
@@ -30,7 +30,7 @@ export function useTemplateInfo(reports: ReportListItem[]) {
   // Tạo map để lookup nhanh
   const templateMap = useMemo(() => {
     const map = new Map<string, { code: string; name: string }>()
-    templateQueries.data?.forEach(template => {
+    templateQueries.data?.forEach((template) => {
       if (template) {
         map.set(template.id, {
           code: template.code,
@@ -43,7 +43,7 @@ export function useTemplateInfo(reports: ReportListItem[]) {
 
   // Kết hợp thông tin template vào reports
   const enrichedReports = useMemo(() => {
-    return reports.map(report => {
+    return reports.map((report) => {
       const template = templateMap.get(report.formId)
       return {
         ...report,

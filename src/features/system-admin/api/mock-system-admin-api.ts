@@ -1,3 +1,4 @@
+import { apiClient } from '@/lib/api-client'
 import {
   type CreatePeriodInput,
   type CreateRoleInput,
@@ -13,7 +14,6 @@ import {
   type UpdateUnitInput,
   type UpdateUserInput,
 } from './types'
-import { apiClient } from '@/lib/api-client'
 
 const DEFAULT_ROLE_NAMES = new Set([
   'System Admin',
@@ -28,7 +28,9 @@ function titleize(value: string) {
   if (!value) return ''
   return value
     .split(/\s+/g)
-    .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ''))
+    .map((word) =>
+      word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ''
+    )
     .join(' ')
     .trim()
 }
@@ -82,11 +84,14 @@ function humanizePermissionCode(code: string) {
   const resourceLabel =
     resources.length > 0
       ? resources
-          .map((item) => resourceMap[item] ?? titleize(item.replace(/[-_]/g, ' ')))
+          .map(
+            (item) => resourceMap[item] ?? titleize(item.replace(/[-_]/g, ' '))
+          )
           .join(' / ')
       : ''
 
-  const actionLabel = actionMap[action] ?? titleize(action.replace(/[-_]/g, ' '))
+  const actionLabel =
+    actionMap[action] ?? titleize(action.replace(/[-_]/g, ' '))
 
   if (resourceLabel) return `${resourceLabel} - ${actionLabel}`
   return actionLabel || normalized
@@ -266,14 +271,16 @@ function uniqueUserConstraint(input: {
 }) {
   const { id } = input
   const duplicatedCode = db.users.find(
-    (user) => user.id !== id && normalize(user.userCode) === normalize(input.userCode)
+    (user) =>
+      user.id !== id && normalize(user.userCode) === normalize(input.userCode)
   )
   if (duplicatedCode) {
     throw new Error('Mã người dùng đã tồn tại trong hệ thống.')
   }
 
   const duplicatedUsername = db.users.find(
-    (user) => user.id !== id && normalize(user.username) === normalize(input.username)
+    (user) =>
+      user.id !== id && normalize(user.username) === normalize(input.username)
   )
   if (duplicatedUsername) {
     throw new Error('Tên đăng nhập đã tồn tại trong hệ thống.')
@@ -296,7 +303,9 @@ function ensureUnitExists(unitId: string) {
 }
 
 function ensureRolesExist(roleIds: string[]) {
-  const missingRole = roleIds.find((roleId) => !db.roles.some((role) => role.id === roleId))
+  const missingRole = roleIds.find(
+    (roleId) => !db.roles.some((role) => role.id === roleId)
+  )
   if (missingRole) {
     throw new Error('Vai trò không hợp lệ.')
   }
@@ -336,11 +345,14 @@ export const systemAdminMockApi = {
       lastLoginAt?: string | null
     }
 
-    const response = await apiClient.get<{ items: BeUser[] } | BeUser[]>('/users', {
-      params: { page: 1, limit: 200 },
-    })
+    const response = await apiClient.get<{ items: BeUser[] } | BeUser[]>(
+      '/users',
+      {
+        params: { page: 1, limit: 200 },
+      }
+    )
     const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    const items = Array.isArray(payload) ? payload : (payload.items ?? [])
 
     return items.map<SystemUser>((user) => ({
       id: user.id,
@@ -350,7 +362,10 @@ export const systemAdminMockApi = {
       username: user.username ?? '',
       unitId: (user.orgId ?? user.unitId ?? '') || '',
       roleIds: user.roleIds ?? [],
-      status: user.isActive === false || user.status === 'inactive' ? 'inactive' : 'active',
+      status:
+        user.isActive === false || user.status === 'inactive'
+          ? 'inactive'
+          : 'active',
       lastLoginAt: user.lastLoginAt ?? null,
       incompleteReports: 0,
       isDeleted: false,
@@ -381,12 +396,19 @@ export const systemAdminMockApi = {
     }
 
     const created = response.data as { id?: string } | SystemUser | undefined
-    if (created && typeof created === 'object' && 'id' in created && typeof created.id === 'string') {
+    if (
+      created &&
+      typeof created === 'object' &&
+      'id' in created &&
+      typeof created.id === 'string'
+    ) {
       if (input.roleIds.length > 0) {
         await systemAdminMockApi.assignRolesToUser(created.id, input.roleIds)
       }
       const users = await systemAdminMockApi.listUsers()
-      return users.find((user) => user.id === created.id) ?? (created as SystemUser)
+      return (
+        users.find((user) => user.id === created.id) ?? (created as SystemUser)
+      )
     }
 
     const users = await systemAdminMockApi.listUsers()
@@ -434,10 +456,10 @@ export const systemAdminMockApi = {
     >(`/users/${userId}/permissions`)
 
     const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    const items = Array.isArray(payload) ? payload : (payload.items ?? [])
 
     return items
-      .map((item) => (typeof item === 'string' ? item : item.code ?? ''))
+      .map((item) => (typeof item === 'string' ? item : (item.code ?? '')))
       .filter((value) => Boolean(value))
   },
 
@@ -463,11 +485,15 @@ export const systemAdminMockApi = {
   },
 
   resetUserPassword: async (userId: string) => {
-    const response = await apiClient.post<unknown>(`/users/${userId}/reset-password`, {})
+    const response = await apiClient.post<unknown>(
+      `/users/${userId}/reset-password`,
+      {}
+    )
     const payload = response.data as any
     const tempPassword =
       (typeof payload?.tempPassword === 'string' && payload.tempPassword) ||
-      (typeof payload?.temporaryPassword === 'string' && payload.temporaryPassword) ||
+      (typeof payload?.temporaryPassword === 'string' &&
+        payload.temporaryPassword) ||
       ''
     const email = typeof payload?.email === 'string' ? payload.email : ''
     return { tempPassword, email }
@@ -489,28 +515,30 @@ export const systemAdminMockApi = {
 
     let response: { data: { items?: BePermission[] } | BePermission[] }
     try {
-      response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
-        '/permissions',
-        { params: { page: 1, limit: 200 } },
-      )
+      response = await apiClient.get<
+        { items: BePermission[] } | BePermission[]
+      >('/permissions', { params: { page: 1, limit: 200 } })
     } catch (error) {
-      response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
-        '/permissions',
-      )
+      response = await apiClient.get<
+        { items: BePermission[] } | BePermission[]
+      >('/permissions')
     }
     const payload = response.data
     const items = Array.isArray(payload)
       ? payload
       : Array.isArray((payload as { data?: unknown }).data)
         ? ((payload as { data: BePermission[] }).data ?? [])
-        : (payload as { items?: BePermission[] }).items ?? []
+        : ((payload as { items?: BePermission[] }).items ?? [])
 
     return items
-      .filter((permission) => Boolean(permission.id) && Boolean(permission.code))
+      .filter(
+        (permission) => Boolean(permission.id) && Boolean(permission.code)
+      )
       .map<Permission>((permission) => {
         const code = (permission.code ?? '').trim()
         const rawName = (permission.name ?? '').trim()
-        const name = !rawName || rawName === code ? humanizePermissionCode(code) : rawName
+        const name =
+          !rawName || rawName === code ? humanizePermissionCode(code) : rawName
         return {
           id: permission.id,
           code,
@@ -528,30 +556,41 @@ export const systemAdminMockApi = {
       description?: string | null
       permissions?:
         | string[]
-        | Array<{ id?: string; code?: string; permissionId?: string; permission?: { id?: string; code?: string } }>
+        | Array<{
+            id?: string
+            code?: string
+            permissionId?: string
+            permission?: { id?: string; code?: string }
+          }>
         | { items?: unknown[]; data?: unknown[] }
       permissionCodes?: string[]
       permissionIds?: string[]
-      rolePermissions?: Array<{ permissionId?: string; permission?: { id?: string; code?: string } }>
+      rolePermissions?: Array<{
+        permissionId?: string
+        permission?: { id?: string; code?: string }
+      }>
       isDefault?: boolean
       isSystem?: boolean
     }
 
-    const extractPermissions = (role: BeRole): { permissionIds: string[]; permissionCodes: string[] } => {
-      const collect = (raw: unknown): { permissionIds: string[]; permissionCodes: string[] } => {
+    const extractPermissions = (
+      role: BeRole
+    ): { permissionIds: string[]; permissionCodes: string[] } => {
+      const collect = (
+        raw: unknown
+      ): { permissionIds: string[]; permissionCodes: string[] } => {
         const ids: string[] = []
         const codes: string[] = []
 
-        const arr =
-          Array.isArray(raw)
-            ? raw
-            : raw && typeof raw === 'object'
-              ? (Array.isArray((raw as { items?: unknown }).items)
-                  ? (raw as { items: unknown[] }).items
-                  : Array.isArray((raw as { data?: unknown }).data)
-                    ? (raw as { data: unknown[] }).data
-                    : [])
-              : []
+        const arr = Array.isArray(raw)
+          ? raw
+          : raw && typeof raw === 'object'
+            ? Array.isArray((raw as { items?: unknown }).items)
+              ? (raw as { items: unknown[] }).items
+              : Array.isArray((raw as { data?: unknown }).data)
+                ? (raw as { data: unknown[] }).data
+                : []
+            : []
 
         arr.forEach((item) => {
           if (typeof item === 'string') {
@@ -570,10 +609,13 @@ export const systemAdminMockApi = {
 
           if (typeof asAny.id === 'string') ids.push(asAny.id)
           if (typeof asAny.code === 'string') codes.push(asAny.code)
-          if (typeof asAny.permissionId === 'string') ids.push(asAny.permissionId)
+          if (typeof asAny.permissionId === 'string')
+            ids.push(asAny.permissionId)
           if (asAny.permission && typeof asAny.permission === 'object') {
-            if (typeof asAny.permission.id === 'string') ids.push(asAny.permission.id)
-            if (typeof asAny.permission.code === 'string') codes.push(asAny.permission.code)
+            if (typeof asAny.permission.id === 'string')
+              ids.push(asAny.permission.id)
+            if (typeof asAny.permission.code === 'string')
+              codes.push(asAny.permission.code)
           }
         })
 
@@ -584,7 +626,10 @@ export const systemAdminMockApi = {
       }
 
       const fromPermissions = collect(role.permissions)
-      if (fromPermissions.permissionIds.length > 0 || fromPermissions.permissionCodes.length > 0) {
+      if (
+        fromPermissions.permissionIds.length > 0 ||
+        fromPermissions.permissionCodes.length > 0
+      ) {
         return fromPermissions
       }
 
@@ -599,26 +644,51 @@ export const systemAdminMockApi = {
       } catch (error) {
         try {
           const response = await apiClient.get<
-            | { permissionIds?: string[]; permissionCodes?: string[]; permissions?: unknown }
+            | {
+                permissionIds?: string[]
+                permissionCodes?: string[]
+                permissions?: unknown
+              }
             | unknown[]
             | { items?: unknown[]; data?: unknown[] }
           >(`/roles/${roleId}/permissions`)
 
           const payload = response.data
-          const collectedFromPayload = extractPermissions({ id: roleId, permissions: payload } as BeRole)
+          const collectedFromPayload = extractPermissions({
+            id: roleId,
+            permissions: payload,
+          } as BeRole)
 
-          if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-            const obj = payload as { permissionIds?: unknown; permissionCodes?: unknown; permissions?: unknown }
+          if (
+            payload &&
+            typeof payload === 'object' &&
+            !Array.isArray(payload)
+          ) {
+            const obj = payload as {
+              permissionIds?: unknown
+              permissionCodes?: unknown
+              permissions?: unknown
+            }
             const permissionIds = Array.isArray(obj.permissionIds)
-              ? obj.permissionIds.filter((item): item is string => typeof item === 'string')
+              ? obj.permissionIds.filter(
+                  (item): item is string => typeof item === 'string'
+                )
               : []
             const permissionCodes = Array.isArray(obj.permissionCodes)
-              ? obj.permissionCodes.filter((item): item is string => typeof item === 'string')
+              ? obj.permissionCodes.filter(
+                  (item): item is string => typeof item === 'string'
+                )
               : []
 
             return {
-              permissionIds: permissionIds.length > 0 ? permissionIds : collectedFromPayload.permissionIds,
-              permissionCodes: permissionCodes.length > 0 ? permissionCodes : collectedFromPayload.permissionCodes,
+              permissionIds:
+                permissionIds.length > 0
+                  ? permissionIds
+                  : collectedFromPayload.permissionIds,
+              permissionCodes:
+                permissionCodes.length > 0
+                  ? permissionCodes
+                  : collectedFromPayload.permissionCodes,
             }
           }
 
@@ -630,23 +700,24 @@ export const systemAdminMockApi = {
       return { permissionIds: [], permissionCodes: [] }
     }
 
-    let response: { data: { items?: BeRole[] } | { data?: BeRole[] } | BeRole[] }
+    let response: {
+      data: { items?: BeRole[] } | { data?: BeRole[] } | BeRole[]
+    }
     try {
-      response = await apiClient.get<{ items: BeRole[] } | { data?: BeRole[] } | BeRole[]>(
-        '/roles',
-        { params: { page: 1, limit: 500 } },
-      )
+      response = await apiClient.get<
+        { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
+      >('/roles', { params: { page: 1, limit: 500 } })
     } catch (error) {
-      response = await apiClient.get<{ items: BeRole[] } | { data?: BeRole[] } | BeRole[]>(
-        '/roles',
-      )
+      response = await apiClient.get<
+        { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
+      >('/roles')
     }
     const payload = response.data
     const items = Array.isArray(payload)
       ? payload
       : Array.isArray((payload as { data?: unknown }).data)
         ? ((payload as { data: BeRole[] }).data ?? [])
-        : (payload as { items?: BeRole[] }).items ?? []
+        : ((payload as { items?: BeRole[] }).items ?? [])
 
     const baseRoles = items.map<Role>((role) => {
       const extracted = extractPermissions(role)
@@ -667,19 +738,23 @@ export const systemAdminMockApi = {
         dataScope: 'own_unit',
         permissionIds,
         permissions: permissionCodes,
-        isDefault: role.isDefault ?? role.isSystem ?? DEFAULT_ROLE_NAMES.has(role.name ?? ''),
+        isDefault:
+          role.isDefault ??
+          role.isSystem ??
+          DEFAULT_ROLE_NAMES.has(role.name ?? ''),
       }
     })
 
     const needsEnrich = baseRoles.some(
-      (role) => role.permissionIds.length === 0 && role.permissions.length === 0,
+      (role) => role.permissionIds.length === 0 && role.permissions.length === 0
     )
 
     if (!needsEnrich) return baseRoles
 
     const enriched = await Promise.all(
       baseRoles.map(async (role) => {
-        if (role.permissionIds.length > 0 || role.permissions.length > 0) return role
+        if (role.permissionIds.length > 0 || role.permissions.length > 0)
+          return role
 
         const loaded = await loadRolePermissions(role.id)
         return {
@@ -687,7 +762,7 @@ export const systemAdminMockApi = {
           permissionIds: loaded.permissionIds,
           permissions: loaded.permissionCodes,
         }
-      }),
+      })
     )
 
     return enriched
@@ -696,22 +771,28 @@ export const systemAdminMockApi = {
   getRolePermissions: async (roleId: string) => {
     type RolePermissionsItem =
       | string
-      | { id?: unknown; code?: unknown; permissionId?: unknown; permission?: { id?: unknown; code?: unknown } }
+      | {
+          id?: unknown
+          code?: unknown
+          permissionId?: unknown
+          permission?: { id?: unknown; code?: unknown }
+        }
 
-    const collect = (raw: unknown): { permissionIds: string[]; permissionCodes: string[] } => {
+    const collect = (
+      raw: unknown
+    ): { permissionIds: string[]; permissionCodes: string[] } => {
       const ids: string[] = []
       const codes: string[] = []
 
-      const arr =
-        Array.isArray(raw)
-          ? raw
-          : raw && typeof raw === 'object'
-            ? (Array.isArray((raw as { items?: unknown }).items)
-                ? (raw as { items: unknown[] }).items
-                : Array.isArray((raw as { data?: unknown }).data)
-                  ? (raw as { data: unknown[] }).data
-                  : [])
-            : []
+      const arr = Array.isArray(raw)
+        ? raw
+        : raw && typeof raw === 'object'
+          ? Array.isArray((raw as { items?: unknown }).items)
+            ? (raw as { items: unknown[] }).items
+            : Array.isArray((raw as { data?: unknown }).data)
+              ? (raw as { data: unknown[] }).data
+              : []
+          : []
 
       ;(arr as RolePermissionsItem[]).forEach((item) => {
         if (typeof item === 'string') {
@@ -731,22 +812,35 @@ export const systemAdminMockApi = {
         if (typeof asAny.code === 'string') codes.push(asAny.code)
         if (typeof asAny.permissionId === 'string') ids.push(asAny.permissionId)
         if (asAny.permission && typeof asAny.permission === 'object') {
-          if (typeof asAny.permission.id === 'string') ids.push(asAny.permission.id)
-          if (typeof asAny.permission.code === 'string') codes.push(asAny.permission.code)
+          if (typeof asAny.permission.id === 'string')
+            ids.push(asAny.permission.id)
+          if (typeof asAny.permission.code === 'string')
+            codes.push(asAny.permission.code)
         }
       })
 
-      return { permissionIds: ids.filter(Boolean), permissionCodes: codes.filter(Boolean) }
+      return {
+        permissionIds: ids.filter(Boolean),
+        permissionCodes: codes.filter(Boolean),
+      }
     }
 
     const extract = (payload: unknown) => {
       if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-        const obj = payload as { permissionIds?: unknown; permissionCodes?: unknown; permissions?: unknown }
+        const obj = payload as {
+          permissionIds?: unknown
+          permissionCodes?: unknown
+          permissions?: unknown
+        }
         const permissionIds = Array.isArray(obj.permissionIds)
-          ? obj.permissionIds.filter((item): item is string => typeof item === 'string')
+          ? obj.permissionIds.filter(
+              (item): item is string => typeof item === 'string'
+            )
           : []
         const permissionCodes = Array.isArray(obj.permissionCodes)
-          ? obj.permissionCodes.filter((item): item is string => typeof item === 'string')
+          ? obj.permissionCodes.filter(
+              (item): item is string => typeof item === 'string'
+            )
           : []
 
         const fromPermissions = collect(obj.permissions)
@@ -797,7 +891,9 @@ export const systemAdminMockApi = {
     }
 
     const permissionIds =
-      input.permissionIds.length > 0 ? input.permissionIds : await mapCodesToIds(input.permissions)
+      input.permissionIds.length > 0
+        ? input.permissionIds
+        : await mapCodesToIds(input.permissions)
 
     const response = await apiClient.post('/roles', {
       code: input.code,
@@ -807,19 +903,23 @@ export const systemAdminMockApi = {
 
     const created = response.data as { id?: string } | undefined
     if (created?.id) {
-      await apiClient.patch(`/roles/${created.id}/permissions`, { permissionIds })
+      await apiClient.patch(`/roles/${created.id}/permissions`, {
+        permissionIds,
+      })
 
       const roles = await systemAdminMockApi.listRoles()
-      return roles.find((role) => role.id === created.id) ?? {
-        id: created.id,
-        code: input.code,
-        name: input.name,
-        description: input.description,
-        dataScope: input.dataScope,
-        permissionIds,
-        permissions: input.permissions,
-        isDefault: false,
-      }
+      return (
+        roles.find((role) => role.id === created.id) ?? {
+          id: created.id,
+          code: input.code,
+          name: input.name,
+          description: input.description,
+          dataScope: input.dataScope,
+          permissionIds,
+          permissions: input.permissions,
+          isDefault: false,
+        }
+      )
     }
 
     const roles = await systemAdminMockApi.listRoles()
@@ -836,7 +936,9 @@ export const systemAdminMockApi = {
     }
 
     const permissionIds =
-      input.permissionIds.length > 0 ? input.permissionIds : await mapCodesToIds(input.permissions)
+      input.permissionIds.length > 0
+        ? input.permissionIds
+        : await mapCodesToIds(input.permissions)
 
     await apiClient.patch(`/roles/${roleId}`, {
       name: input.name,
@@ -872,11 +974,14 @@ export const systemAdminMockApi = {
       description?: string | null
     }
 
-    const response = await apiClient.get<{ items: BeOrgNode[] } | BeOrgNode[]>('/orgs', {
-      params: { q: '', isActive: true },
-    })
+    const response = await apiClient.get<{ items: BeOrgNode[] } | BeOrgNode[]>(
+      '/orgs',
+      {
+        params: { q: '', isActive: true },
+      }
+    )
     const payload = response.data
-    const items = Array.isArray(payload) ? payload : payload.items ?? []
+    const items = Array.isArray(payload) ? payload : (payload.items ?? [])
 
     return items.map<OrganizationUnit>((org) => ({
       id: org.id,
@@ -885,8 +990,11 @@ export const systemAdminMockApi = {
       level: org.level ?? 2,
       parentId: org.parentId ?? null,
       description: org.description ?? null,
-      status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
-      canAssignReports: Boolean(org.canAssignReports ?? org.can_assign_reports ?? true),
+      status:
+        org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      canAssignReports: Boolean(
+        org.canAssignReports ?? org.can_assign_reports ?? true
+      ),
       memberCount: 0,
       activeAssignments: 0,
     }))
@@ -985,29 +1093,39 @@ export const systemAdminMockApi = {
       status?: 'open' | 'closed' | string
     }
 
-    let response: { data: { items?: BeReportPeriod[] } | { data?: BeReportPeriod[] } | BeReportPeriod[] }
+    let response: {
+      data:
+        | { items?: BeReportPeriod[] }
+        | { data?: BeReportPeriod[] }
+        | BeReportPeriod[]
+    }
     try {
-      response = await apiClient.get<{ items: BeReportPeriod[] } | { data?: BeReportPeriod[] } | BeReportPeriod[]>(
-        '/report-periods',
-        { params: { page: 1, limit: 200 } },
-      )
+      response = await apiClient.get<
+        | { items: BeReportPeriod[] }
+        | { data?: BeReportPeriod[] }
+        | BeReportPeriod[]
+      >('/report-periods', { params: { page: 1, limit: 200 } })
     } catch {
-      response = await apiClient.get<{ items: BeReportPeriod[] } | { data?: BeReportPeriod[] } | BeReportPeriod[]>(
-        '/report-periods',
-      )
+      response = await apiClient.get<
+        | { items: BeReportPeriod[] }
+        | { data?: BeReportPeriod[] }
+        | BeReportPeriod[]
+      >('/report-periods')
     }
     const payload = response.data
     const items = Array.isArray(payload)
       ? payload
       : Array.isArray((payload as { data?: unknown }).data)
         ? ((payload as { data: BeReportPeriod[] }).data ?? [])
-        : (payload as { items?: BeReportPeriod[] }).items ?? []
+        : ((payload as { items?: BeReportPeriod[] }).items ?? [])
 
     return items.map<ReportPeriod>((period) => ({
       id: period.id,
       code: period.code ?? '',
       name: period.name ?? '',
-      periodType: (period.periodType ?? period.type ?? 'THANG') as ReportPeriod['periodType'],
+      periodType: (period.periodType ??
+        period.type ??
+        'THANG') as ReportPeriod['periodType'],
       dateFrom: period.dateFrom ?? period.startDate ?? '',
       dateTo: period.dateTo ?? period.endDate ?? '',
       isActive:
@@ -1099,11 +1217,14 @@ export const organizationsApi = {
       requestParams.isActive = isActive
     }
 
-    const response = await apiClient.get<{ items: BeOrgNode[] } | BeOrgNode[]>('/orgs', {
-      params: requestParams,
-    })
+    const response = await apiClient.get<{ items: BeOrgNode[] } | BeOrgNode[]>(
+      '/orgs',
+      {
+        params: requestParams,
+      }
+    )
     const payload = response.data
-    const nodes = Array.isArray(payload) ? payload : payload.items ?? []
+    const nodes = Array.isArray(payload) ? payload : (payload.items ?? [])
 
     const flatten = (node: BeOrgNode): BeOrgNode[] => {
       const items: BeOrgNode[] = [node]
@@ -1121,8 +1242,11 @@ export const organizationsApi = {
       level: org.level ?? 2,
       parentId: org.parentId ?? null,
       description: org.description ?? null,
-      status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
-      canAssignReports: Boolean(org.canAssignReports ?? org.can_assign_reports ?? true),
+      status:
+        org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      canAssignReports: Boolean(
+        org.canAssignReports ?? org.can_assign_reports ?? true
+      ),
       memberCount: 0,
       activeAssignments: 0,
     }))
@@ -1151,8 +1275,11 @@ export const organizationsApi = {
       level: org.level ?? 2,
       parentId: org.parentId ?? null,
       description: org.description ?? null,
-      status: org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
-      canAssignReports: Boolean(org.canAssignReports ?? org.can_assign_reports ?? true),
+      status:
+        org.isActive === false || org.status === 'locked' ? 'locked' : 'active',
+      canAssignReports: Boolean(
+        org.canAssignReports ?? org.can_assign_reports ?? true
+      ),
       memberCount: 0,
       activeAssignments: 0,
     } satisfies OrganizationUnit
@@ -1160,7 +1287,8 @@ export const organizationsApi = {
 
   create: async (input: CreateUnitInput) => {
     const description =
-      typeof input.description === 'string' && input.description.trim().length > 0
+      typeof input.description === 'string' &&
+      input.description.trim().length > 0
         ? input.description.trim()
         : null
 
@@ -1183,7 +1311,8 @@ export const organizationsApi = {
 
   update: async (id: string, input: UpdateUnitInput) => {
     const description =
-      typeof input.description === 'string' && input.description.trim().length > 0
+      typeof input.description === 'string' &&
+      input.description.trim().length > 0
         ? input.description.trim()
         : null
 

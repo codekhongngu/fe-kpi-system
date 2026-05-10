@@ -6,10 +6,10 @@ export function FormManagement() {
   useFieldCategoriesCatalogQuery()
 
   return (
-      <Main fixed>
-        <div className='flex w-full flex-1 overflow-y-auto'>
-          <Outlet />
-        </div>
-      </Main>
+    <Main fixed>
+      <div className='flex w-full flex-1 overflow-y-auto'>
+        <Outlet />
+      </div>
+    </Main>
   )
 }

@@ -8,9 +8,16 @@ type ReportTabsProps = {
   onValueChange: (tab: ReportTab) => void
 }
 
-export function ReportTabs({ value, visibleTabs, onValueChange }: ReportTabsProps) {
+export function ReportTabs({
+  value,
+  visibleTabs,
+  onValueChange,
+}: ReportTabsProps) {
   return (
-    <Tabs value={value} onValueChange={(next) => onValueChange(next as ReportTab)}>
+    <Tabs
+      value={value}
+      onValueChange={(next) => onValueChange(next as ReportTab)}
+    >
       <TabsList className='h-auto flex-wrap justify-start gap-1 bg-muted/60 p-1'>
         {reportTabs
           .filter((tab) => visibleTabs.includes(tab.value))

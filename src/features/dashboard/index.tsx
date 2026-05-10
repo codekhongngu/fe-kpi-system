@@ -1,13 +1,8 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Main } from '@/components/layout/main'
 import { FileText, CheckCircle2, Clock, RefreshCcw } from 'lucide-react'
-import { HubLayout } from './components/hub-layout'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Main } from '@/components/layout/main'
 import dashboardBackground from './backgrounds/giaoan.lik-trong-dong.png'
+import { HubLayout } from './components/hub-layout'
 
 export function Dashboard() {
   return (
@@ -23,61 +18,69 @@ export function Dashboard() {
         <div className='relative z-10 flex h-full flex-col px-6 py-[10px] sm:px-8 sm:py-[10px]'>
           {/* Page Header */}
           <div className='mb-3 text-center'>
-            <h2 className='text-xl sm:text-2xl font-extrabold text-primary tracking-tight mb-1.5'>
+            <h2 className='mb-1.5 text-xl font-extrabold tracking-tight text-primary sm:text-2xl'>
               QUẢN LÝ DỮ LIỆU ĐIỀU HÀNH NỘI BỘ XÃ TUY PHƯỚC
             </h2>
           </div>
 
-          <div className='flex-1 flex flex-col overflow-hidden'>
+          <div className='flex flex-1 flex-col overflow-hidden'>
             {/* Radial Hub Section */}
-            <div className='flex-1 flex items-center justify-center min-h-0 mt-4'>
+            <div className='mt-4 flex min-h-0 flex-1 items-center justify-center'>
               <HubLayout />
             </div>
 
             {/* Quick Metrics Footer */}
-            <div className='grid grid-cols-1 md:grid-cols-4 gap-6 mt-8'>
-              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
-                <div className='w-8 h-8 bg-primary/5 rounded-full flex items-center justify-center text-primary shrink-0'>
+            <div className='mt-8 grid grid-cols-1 gap-6 md:grid-cols-4'>
+              <Card className='flex flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm'>
+                <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/5 text-primary'>
                   <FileText size={16} />
                 </div>
-                <div className='flex flex-col min-w-0'>
-                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                <div className='flex min-w-0 flex-col'>
+                  <p className='mb-0.5 truncate text-[9px] font-bold tracking-tight text-muted-foreground uppercase'>
                     Biểu mẫu
                   </p>
-                  <p className='text-lg font-black text-primary leading-none'>128</p>
+                  <p className='text-lg leading-none font-black text-primary'>
+                    128
+                  </p>
                 </div>
               </Card>
-              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
-                <div className='w-8 h-8 bg-green-500/5 rounded-full flex items-center justify-center text-green-600 shrink-0'>
+              <Card className='flex flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm'>
+                <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-500/5 text-green-600'>
                   <CheckCircle2 size={16} />
                 </div>
-                <div className='flex flex-col min-w-0'>
-                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                <div className='flex min-w-0 flex-col'>
+                  <p className='mb-0.5 truncate text-[9px] font-bold tracking-tight text-muted-foreground uppercase'>
                     Hoàn thành
                   </p>
-                  <p className='text-lg font-black text-green-600 leading-none'>94%</p>
+                  <p className='text-lg leading-none font-black text-green-600'>
+                    94%
+                  </p>
                 </div>
               </Card>
-              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
-                <div className='w-8 h-8 bg-orange-500/5 rounded-full flex items-center justify-center text-orange-600 shrink-0'>
+              <Card className='flex flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm'>
+                <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/5 text-orange-600'>
                   <Clock size={16} />
                 </div>
-                <div className='flex flex-col min-w-0'>
-                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                <div className='flex min-w-0 flex-col'>
+                  <p className='mb-0.5 truncate text-[9px] font-bold tracking-tight text-muted-foreground uppercase'>
                     Chờ duyệt
                   </p>
-                  <p className='text-lg font-black text-orange-600 leading-none'>15</p>
+                  <p className='text-lg leading-none font-black text-orange-600'>
+                    15
+                  </p>
                 </div>
               </Card>
-              <Card className='bg-card px-3 py-2 rounded-xl shadow-sm border border-border flex flex-row items-center gap-3'>
-                <div className='w-8 h-8 bg-blue-500/5 rounded-full flex items-center justify-center text-blue-600 shrink-0'>
+              <Card className='flex flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-sm'>
+                <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/5 text-blue-600'>
                   <RefreshCcw size={16} />
                 </div>
-                <div className='flex flex-col min-w-0'>
-                  <p className='text-[9px] font-bold text-muted-foreground uppercase tracking-tight mb-0.5 truncate'>
+                <div className='flex min-w-0 flex-col'>
+                  <p className='mb-0.5 truncate text-[9px] font-bold tracking-tight text-muted-foreground uppercase'>
                     Đang xử lý
                   </p>
-                  <p className='text-lg font-black text-blue-600 leading-none'>42</p>
+                  <p className='text-lg leading-none font-black text-blue-600'>
+                    42
+                  </p>
                 </div>
               </Card>
             </div>

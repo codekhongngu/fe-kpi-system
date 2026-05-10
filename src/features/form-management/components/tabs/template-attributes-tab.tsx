@@ -1,15 +1,41 @@
 import { useEffect, useMemo, useState } from 'react'
-import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight, FileUp, GripVertical, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
-import { toast } from 'sonner'
 import { z } from 'zod'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  ChevronDown,
+  ChevronRight,
+  FileUp,
+  GripVertical,
+  PlusCircle,
+  Save,
+  Trash2,
+  UserPen,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -18,14 +44,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Form,
   FormControl,
@@ -34,9 +52,22 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { formManagementApi } from '../../api/template-management-api'
 import { type TemplateField } from '../../api/types'
-import { buildTree, flattenTree, reorderSameLevelItems, type TreeNode } from '../shared/template-tree-utils'
+import {
+  buildTree,
+  flattenTree,
+  reorderSameLevelItems,
+  type TreeNode,
+} from '../shared/template-tree-utils'
 
 type TemplateAttributesTabProps = {
   templateId: string
@@ -90,7 +121,15 @@ function FieldTreeNode({
 }: FieldTreeNodeProps) {
   const hasChildren = node.children.length > 0
   const locked = node.isSystemDefault
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: node.id,
     disabled: locked || !canDrag,
   })
@@ -118,27 +157,59 @@ function FieldTreeNode({
             >
               <GripVertical size={14} />
             </button>
-            {depth > 0 && <span className='mt-3 h-px w-4 shrink-0 bg-border' aria-hidden='true' />}
-            <button type='button' className='mt-0.5 rounded p-0.5 hover:bg-muted'>
-              {hasChildren ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            {depth > 0 && (
+              <span
+                className='mt-3 h-px w-4 shrink-0 bg-border'
+                aria-hidden='true'
+              />
+            )}
+            <button
+              type='button'
+              className='mt-0.5 rounded p-0.5 hover:bg-muted'
+            >
+              {hasChildren ? (
+                <ChevronDown size={14} />
+              ) : (
+                <ChevronRight size={14} />
+              )}
             </button>
 
-            <div className='min-w-0 border-s border-border/70 ps-3' style={{ marginInlineStart: `${depth * 10}px` }}>
+            <div
+              className='min-w-0 border-s border-border/70 ps-3'
+              style={{ marginInlineStart: `${depth * 10}px` }}
+            >
               <p className='text-xs text-muted-foreground'>{node.key}</p>
               <p className='text-sm font-medium'>{node.label}</p>
-
             </div>
           </div>
 
           <div className='flex flex-wrap gap-1'>
-            <Button size='icon' variant='outline' onClick={() => onAddChild(node.id)} disabled={!canEdit} title='Thêm con'>
+            <Button
+              size='icon'
+              variant='outline'
+              onClick={() => onAddChild(node.id)}
+              disabled={!canEdit}
+              title='Thêm con'
+            >
               <PlusCircle className='size-4' />
             </Button>
-            <Button size='icon' variant='outline' onClick={() => onEdit(node)} disabled={!canEdit} title='Chỉnh sửa'>
+            <Button
+              size='icon'
+              variant='outline'
+              onClick={() => onEdit(node)}
+              disabled={!canEdit}
+              title='Chỉnh sửa'
+            >
               <UserPen className='size-4' />
             </Button>
 
-            <Button size='icon' variant='destructive' onClick={() => onDelete(node)} disabled={!canEdit} title='Xóa'>
+            <Button
+              size='icon'
+              variant='destructive'
+              onClick={() => onDelete(node)}
+              disabled={!canEdit}
+              title='Xóa'
+            >
               <Trash2 className='size-4' />
             </Button>
           </div>
@@ -146,7 +217,10 @@ function FieldTreeNode({
       </div>
 
       {hasChildren && (
-        <SortableContext items={node.children.map((child) => child.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext
+          items={node.children.map((child) => child.id)}
+          strategy={verticalListSortingStrategy}
+        >
           <div className='space-y-2 border-s border-border/70 ps-3'>
             {node.children.map((child) => (
               <FieldTreeNode
@@ -167,7 +241,9 @@ function FieldTreeNode({
   )
 }
 
-export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps) {
+export function TemplateAttributesTab({
+  templateId,
+}: TemplateAttributesTabProps) {
   const queryClient = useQueryClient()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingField, setEditingField] = useState<TemplateField | null>(null)
@@ -186,10 +262,14 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   })
 
   const template = templateQuery.data ?? null
-  const canEdit = Boolean(template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT'))
+  const canEdit = Boolean(
+    template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT')
+  )
   const tree = useMemo(() => buildTree(draftFields), [draftFields])
   const flatFields = useMemo(() => getFlatFields(draftFields), [draftFields])
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  )
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -206,12 +286,16 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
           id: item.id,
           label: `${'  '.repeat(item.depth)}${item.key} - ${item.label}`,
         })),
-    [editingField?.id, flatFields],
+    [editingField?.id, flatFields]
   )
 
   const refreshTemplate = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['form-management', 'template', templateId] })
-    await queryClient.invalidateQueries({ queryKey: ['form-management', 'template', templateId, 'attributes-tab'] })
+    await queryClient.invalidateQueries({
+      queryKey: ['form-management', 'template', templateId],
+    })
+    await queryClient.invalidateQueries({
+      queryKey: ['form-management', 'template', templateId, 'attributes-tab'],
+    })
   }
 
   const createMutation = useMutation({
@@ -232,7 +316,13 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ fieldId, payload }: { fieldId: string; payload: FieldFormValues }) => {
+    mutationFn: async ({
+      fieldId,
+      payload,
+    }: {
+      fieldId: string
+      payload: FieldFormValues
+    }) => {
       return formManagementApi.updateField(templateId, fieldId, {
         ...editingField!,
         label: payload.label,
@@ -248,7 +338,8 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (fieldId: string) => formManagementApi.deleteField(templateId, fieldId),
+    mutationFn: (fieldId: string) =>
+      formManagementApi.deleteField(templateId, fieldId),
     onSuccess: async () => {
       toast.success('Đã xóa thuộc tính.')
       await refreshTemplate()
@@ -262,7 +353,7 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
         templateId,
         flatFields
           .filter((item) => !item.isSystemDefault)
-          .map((item) => ({ id: item.id, parentId: item.parentId ?? null })),
+          .map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
       ),
     onSuccess: async () => {
       await refreshTemplate()
@@ -302,8 +393,6 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
     form.reset(defaultFieldForm)
   }
 
-
-
   function handleDragEnd(event: DragEndEvent) {
     const activeId = String(event.active.id)
     const overId = event.over?.id ? String(event.over.id) : null
@@ -338,14 +427,19 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <div>
             <CardTitle>Thuộc tính</CardTitle>
-            <CardDescription>Cấu hình cây thuộc tính theo cấp, lưu trữ thêm, sửa, xóa, nhập Excel và sắp xếp cùng cấp.</CardDescription>
+            <CardDescription>
+              Cấu hình cây thuộc tính theo cấp, lưu trữ thêm, sửa, xóa, nhập
+              Excel và sắp xếp cùng cấp.
+            </CardDescription>
           </div>
           <div className='flex flex-wrap gap-2'>
             <Button
               size='sm'
               variant='outline'
               onClick={handleSaveOrder}
-              disabled={!canEdit || !hasPendingReorder || saveOrderMutation.isPending}
+              disabled={
+                !canEdit || !hasPendingReorder || saveOrderMutation.isPending
+              }
             >
               <Save className='size-4' />
               Cập nhật vị trí
@@ -359,7 +453,11 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
               <FileUp className='size-4' />
               Nhập Excel
             </Button>
-            <Button size='sm' onClick={() => openCreateDialog(null)} disabled={!canEdit}>
+            <Button
+              size='sm'
+              onClick={() => openCreateDialog(null)}
+              disabled={!canEdit}
+            >
               <PlusCircle className='size-4' />
               Thêm thuộc tính
             </Button>
@@ -377,8 +475,15 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
             Chưa có thuộc tính nào.
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={tree.map((node) => node.id)} strategy={verticalListSortingStrategy}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={tree.map((node) => node.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <div className='space-y-2'>
                 {tree.map((node) => (
                   <FieldTreeNode
@@ -390,9 +495,13 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
                     onAddChild={(parentId) => openCreateDialog(parentId)}
                     onEdit={openEditDialog}
                     onDelete={(item) => {
-                      const hasChildren = draftFields.some((entry) => entry.parentId === item.id)
+                      const hasChildren = draftFields.some(
+                        (entry) => entry.parentId === item.id
+                      )
                       if (hasChildren) {
-                        toast.error('Không thể xóa thuộc tính này vì đang có thuộc tính con.')
+                        toast.error(
+                          'Không thể xóa thuộc tính này vì đang có thuộc tính con.'
+                        )
                         return
                       }
                       deleteMutation.mutate(item.id)
@@ -405,11 +514,18 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
         )}
       </CardContent>
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}
+      >
         <DialogContent className='sm:max-w-md'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingField ? 'Sửa thuộc tính' : 'Thêm thuộc tính'}</DialogTitle>
-            <DialogDescription>Chỉ định tên và nhóm của thuộc tính. Mã thuộc tính sẽ được tự tạo.</DialogDescription>
+            <DialogTitle>
+              {editingField ? 'Sửa thuộc tính' : 'Thêm thuộc tính'}
+            </DialogTitle>
+            <DialogDescription>
+              Chỉ định tên và nhóm của thuộc tính. Mã thuộc tính sẽ được tự tạo.
+            </DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
@@ -435,7 +551,9 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
                   <FormItem>
                     <FormLabel>Nút cha</FormLabel>
                     <Select
-                      onValueChange={(val) => field.onChange(val === 'root' ? null : val)}
+                      onValueChange={(val) =>
+                        field.onChange(val === 'root' ? null : val)
+                      }
                       value={field.value ?? 'root'}
                     >
                       <FormControl>
@@ -461,8 +579,13 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
                 <Button type='button' variant='outline' onClick={closeDialog}>
                   Hủy
                 </Button>
-                <Button type='submit' disabled={createMutation.isPending || updateMutation.isPending}>
-                  <Save className='size-4 mr-2' />
+                <Button
+                  type='submit'
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
+                >
+                  <Save className='mr-2 size-4' />
                   {editingField ? 'Lưu thay đổi' : 'Thêm thuộc tính'}
                 </Button>
               </DialogFooter>

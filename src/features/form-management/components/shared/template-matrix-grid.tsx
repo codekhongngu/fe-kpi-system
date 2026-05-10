@@ -1,10 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ChevronRight, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  type TemplateField,
-  type TemplateIndicator,
-} from '../../api/types'
+import { type TemplateField, type TemplateIndicator } from '../../api/types'
 import {
   buildTree,
   buildHeaderMatrix,
@@ -14,7 +11,10 @@ import {
 type TemplateMatrixGridProps = {
   indicators: TemplateIndicator[]
   fields: TemplateField[]
-  renderCell: (indicator: TemplateIndicator, field: TemplateField) => React.ReactNode
+  renderCell: (
+    indicator: TemplateIndicator,
+    field: TemplateField
+  ) => React.ReactNode
   emptyMessage?: string
 }
 
@@ -25,7 +25,7 @@ export function TemplateMatrixGrid({
   emptyMessage = 'Không có dữ liệu',
 }: TemplateMatrixGridProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
-  
+
   // By default, expand all indicators at level 1
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     const rootIds = new Set<string>()
@@ -71,14 +71,22 @@ export function TemplateMatrixGrid({
   const { headerMatrix, leafFields } = useMemo(() => {
     // Separate system fields (always flat, sticky on the left)
     const systemFields = fields.filter((f) => f.isSystemDefault)
-    const nameField = systemFields.find((f) => f.label === 'Tên chỉ tiêu') ?? systemFields[0]
-    const unitField = systemFields.find((f) => f.label === 'Đơn vị tính' && f.id !== nameField?.id)
-    const stickyFields = [nameField, unitField].filter(Boolean) as TemplateField[]
-    
-    const extraFields = fields.filter((f) => !f.isSystemDefault || (!stickyFields.map(sf => sf.id).includes(f.id)))
+    const nameField =
+      systemFields.find((f) => f.label === 'Tên chỉ tiêu') ?? systemFields[0]
+    const unitField = systemFields.find(
+      (f) => f.label === 'Đơn vị tính' && f.id !== nameField?.id
+    )
+    const stickyFields = [nameField, unitField].filter(
+      Boolean
+    ) as TemplateField[]
+
+    const extraFields = fields.filter(
+      (f) =>
+        !f.isSystemDefault || !stickyFields.map((sf) => sf.id).includes(f.id)
+    )
 
     const matrix = buildHeaderMatrix(extraFields)
-    
+
     // Get all leaf fields in order to render table body cells
     const leaves: TemplateField[] = []
     matrix.forEach((row) => {
@@ -130,14 +138,20 @@ export function TemplateMatrixGrid({
           onClick={() => setIsFullscreen(!isFullscreen)}
           title={isFullscreen ? 'Thu nhỏ' : 'Mở rộng toàn màn hình'}
         >
-          {isFullscreen ? <Minimize2 className='size-4' /> : <Maximize2 className='size-4' />}
+          {isFullscreen ? (
+            <Minimize2 className='size-4' />
+          ) : (
+            <Maximize2 className='size-4' />
+          )}
         </Button>
       </div>
 
       {/* Grid container */}
       <div className={contentClass}>
         {indicators.length === 0 || fields.length === 0 ? (
-          <div className='p-8 text-center text-muted-foreground'>{emptyMessage}</div>
+          <div className='p-8 text-center text-muted-foreground'>
+            {emptyMessage}
+          </div>
         ) : (
           <table className='w-full border-collapse text-sm'>
             <thead className='sticky top-0 z-20 shadow-sm'>
@@ -148,13 +162,13 @@ export function TemplateMatrixGrid({
                   {rowIndex === 0 && (
                     <>
                       <th
-                        className='sticky left-0 z-30 min-w-[280px] max-w-[400px] border-b border-r bg-muted/80 px-4 py-3 text-left font-semibold'
+                        className='sticky left-0 z-30 max-w-[400px] min-w-[280px] border-r border-b bg-muted/80 px-4 py-3 text-left font-semibold'
                         rowSpan={maxDepth}
                       >
                         Tên chỉ tiêu
                       </th>
                       <th
-                        className='sticky left-[280px] z-30 min-w-[100px] border-b border-r bg-muted/80 px-4 py-3 text-left font-semibold'
+                        className='sticky left-[280px] z-30 min-w-[100px] border-r border-b bg-muted/80 px-4 py-3 text-left font-semibold'
                         rowSpan={maxDepth}
                       >
                         ĐVT
@@ -165,7 +179,7 @@ export function TemplateMatrixGrid({
                   {row.map((node) => (
                     <th
                       key={node.id}
-                      className='border-b border-r px-4 py-2 text-center align-middle font-medium'
+                      className='border-r border-b px-4 py-2 text-center align-middle font-medium'
                       colSpan={node.colSpan}
                       rowSpan={node.rowSpan}
                     >
@@ -182,15 +196,17 @@ export function TemplateMatrixGrid({
                   className='group align-top hover:bg-muted/10'
                 >
                   {/* Sticky Left: Tên chỉ tiêu */}
-                  <td className='sticky left-0 z-10 min-w-[280px] max-w-[400px] border-b border-r bg-background group-hover:bg-muted/10 px-3 py-2'>
+                  <td className='sticky left-0 z-10 max-w-[400px] min-w-[280px] border-r border-b bg-background px-3 py-2 group-hover:bg-muted/10'>
                     <div
                       className='flex items-start gap-1'
-                      style={{ paddingLeft: `${((rowNode.level || 1) - 1) * 1.5}rem` }}
+                      style={{
+                        paddingLeft: `${((rowNode.level || 1) - 1) * 1.5}rem`,
+                      }}
                     >
                       {rowNode.hasChildren ? (
                         <button
                           type='button'
-                          className='mt-0.5 shrink-0 rounded-sm hover:bg-muted p-0.5'
+                          className='mt-0.5 shrink-0 rounded-sm p-0.5 hover:bg-muted'
                           onClick={(e) => {
                             e.stopPropagation()
                             toggleExpand(rowNode.id)
@@ -206,18 +222,23 @@ export function TemplateMatrixGrid({
                         <div className='w-5 shrink-0' />
                       )}
                       <div>
-                        <div className='text-xs text-muted-foreground'>{rowNode.code}</div>
+                        <div className='text-xs text-muted-foreground'>
+                          {rowNode.code}
+                        </div>
                         <div className='font-medium'>{rowNode.name}</div>
                       </div>
                     </div>
                   </td>
                   {/* Sticky Left: Đơn vị tính */}
-                  <td className='sticky left-[280px] z-10 min-w-[100px] border-b border-r bg-background group-hover:bg-muted/10 px-3 py-2 text-center align-middle'>
+                  <td className='sticky left-[280px] z-10 min-w-[100px] border-r border-b bg-background px-3 py-2 text-center align-middle group-hover:bg-muted/10'>
                     <span className='font-medium'>{rowNode.unit || '-'}</span>
                   </td>
                   {/* Dynamic Cells */}
                   {leafFields.map((field) => (
-                    <td key={`${rowNode.id}_${field.id}`} className='border-b border-r px-3 py-2 align-top'>
+                    <td
+                      key={`${rowNode.id}_${field.id}`}
+                      className='border-r border-b px-3 py-2 align-top'
+                    >
                       {renderCell(rowNode as TemplateIndicator, field)}
                     </td>
                   ))}

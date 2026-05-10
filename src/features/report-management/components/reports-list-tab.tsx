@@ -22,7 +22,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
-import type { FormTemplate, PeriodType } from '@/features/form-management/api/types'
+import type {
+  FormTemplate,
+  PeriodType,
+} from '@/features/form-management/api/types'
 import { reportCampaignApi } from '../api/report-management-api'
 import type { ReportListItem, ReportStatus } from '../api/types'
 
@@ -44,7 +47,9 @@ const statusLabel: Record<ReportStatus, string> = {
   OVERDUE: 'Quá hạn',
 }
 
-function statusVariant(status: ReportStatus): 'default' | 'destructive' | 'secondary' | 'outline' {
+function statusVariant(
+  status: ReportStatus
+): 'default' | 'destructive' | 'secondary' | 'outline' {
   if (status === 'APPROVED') {
     return 'default'
   }
@@ -77,7 +82,10 @@ export function ReportsListTab() {
   const [quickStatus, setQuickStatus] = useState<'all' | ReportStatus>('all')
 
   useEffect(() => {
-    const handle = window.setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    const handle = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      350
+    )
     return () => window.clearTimeout(handle)
   }, [search])
 
@@ -157,7 +165,9 @@ export function ReportsListTab() {
         <CardHeader className='gap-4'>
           <div>
             <CardTitle>Quản lý báo cáo</CardTitle>
-            <CardDescription>Giao báo cáo, theo dõi tiến độ nộp và hỗ trợ nhắc nhở các đơn vị.</CardDescription>
+            <CardDescription>
+              Giao báo cáo, theo dõi tiến độ nộp và hỗ trợ nhắc nhở các đơn vị.
+            </CardDescription>
           </div>
 
           <div className='grid grid-cols-1 gap-6 lg:grid-cols-12'>
@@ -165,13 +175,17 @@ export function ReportsListTab() {
               <div className='rounded-xl border bg-background p-4 text-sm'>
                 <p className='text-muted-foreground'>Tổng đơn vị</p>
                 <div className='mt-2 flex items-end justify-between'>
-                  <p className='text-3xl font-semibold tracking-tight'>{totalUnits}</p>
+                  <p className='text-3xl font-semibold tracking-tight'>
+                    {totalUnits}
+                  </p>
                 </div>
               </div>
               <div className='rounded-xl border bg-background p-4 text-sm'>
                 <p className='text-muted-foreground'>Approved</p>
                 <div className='mt-2 flex items-end justify-between'>
-                  <p className='text-3xl font-semibold tracking-tight text-primary'>{statusCounts.APPROVED}</p>
+                  <p className='text-3xl font-semibold tracking-tight text-primary'>
+                    {statusCounts.APPROVED}
+                  </p>
                   <span className='rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary'>
                     {percentOfTotal(statusCounts.APPROVED)}
                   </span>
@@ -180,7 +194,9 @@ export function ReportsListTab() {
               <div className='rounded-xl border bg-background p-4 text-sm'>
                 <p className='text-muted-foreground'>Pending</p>
                 <div className='mt-2 flex items-end justify-between'>
-                  <p className='text-3xl font-semibold tracking-tight'>{statusCounts.PENDING}</p>
+                  <p className='text-3xl font-semibold tracking-tight'>
+                    {statusCounts.PENDING}
+                  </p>
                   <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'>
                     {percentOfTotal(statusCounts.PENDING)}
                   </span>
@@ -189,7 +205,9 @@ export function ReportsListTab() {
               <div className='rounded-xl border bg-background p-4 text-sm'>
                 <p className='text-muted-foreground'>Draft</p>
                 <div className='mt-2 flex items-end justify-between'>
-                  <p className='text-3xl font-semibold tracking-tight text-muted-foreground'>{statusCounts.DRAFT}</p>
+                  <p className='text-3xl font-semibold tracking-tight text-muted-foreground'>
+                    {statusCounts.DRAFT}
+                  </p>
                   <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'>
                     {percentOfTotal(statusCounts.DRAFT)}
                   </span>
@@ -198,7 +216,9 @@ export function ReportsListTab() {
               <div className='rounded-xl border border-destructive/30 bg-background p-4 text-sm'>
                 <p className='text-destructive'>Overdue</p>
                 <div className='mt-2 flex items-end justify-between'>
-                  <p className='text-3xl font-semibold tracking-tight text-destructive'>{statusCounts.OVERDUE}</p>
+                  <p className='text-3xl font-semibold tracking-tight text-destructive'>
+                    {statusCounts.OVERDUE}
+                  </p>
                 </div>
               </div>
             </div>
@@ -208,22 +228,48 @@ export function ReportsListTab() {
                 <div className='text-sm font-semibold'>Bộ lọc nhanh</div>
               </div>
               <div className='flex flex-wrap gap-2'>
-                <Button size='sm' variant={quickStatus === 'all' ? 'default' : 'outline'} onClick={() => setQuickStatus('all')}>
+                <Button
+                  size='sm'
+                  variant={quickStatus === 'all' ? 'default' : 'outline'}
+                  onClick={() => setQuickStatus('all')}
+                >
                   Tất cả
                 </Button>
-                <Button size='sm' variant={quickStatus === 'APPROVED' ? 'default' : 'outline'} onClick={() => setQuickStatus('APPROVED')}>
+                <Button
+                  size='sm'
+                  variant={quickStatus === 'APPROVED' ? 'default' : 'outline'}
+                  onClick={() => setQuickStatus('APPROVED')}
+                >
                   Approved ({statusCounts.APPROVED})
                 </Button>
-                <Button size='sm' variant={quickStatus === 'PENDING' ? 'default' : 'outline'} onClick={() => setQuickStatus('PENDING')}>
+                <Button
+                  size='sm'
+                  variant={quickStatus === 'PENDING' ? 'default' : 'outline'}
+                  onClick={() => setQuickStatus('PENDING')}
+                >
                   Pending ({statusCounts.PENDING})
                 </Button>
-                <Button size='sm' variant={quickStatus === 'DRAFT' ? 'default' : 'outline'} onClick={() => setQuickStatus('DRAFT')}>
+                <Button
+                  size='sm'
+                  variant={quickStatus === 'DRAFT' ? 'default' : 'outline'}
+                  onClick={() => setQuickStatus('DRAFT')}
+                >
                   Draft ({statusCounts.DRAFT})
                 </Button>
-                <Button size='sm' variant={quickStatus === 'OVERDUE' ? 'destructive' : 'outline'} onClick={() => setQuickStatus('OVERDUE')}>
+                <Button
+                  size='sm'
+                  variant={
+                    quickStatus === 'OVERDUE' ? 'destructive' : 'outline'
+                  }
+                  onClick={() => setQuickStatus('OVERDUE')}
+                >
                   Overdue ({statusCounts.OVERDUE})
                 </Button>
-                <Button size='sm' variant={quickStatus === 'REJECTED' ? 'default' : 'outline'} onClick={() => setQuickStatus('REJECTED')}>
+                <Button
+                  size='sm'
+                  variant={quickStatus === 'REJECTED' ? 'default' : 'outline'}
+                  onClick={() => setQuickStatus('REJECTED')}
+                >
                   Rejected ({statusCounts.REJECTED})
                 </Button>
               </div>
@@ -236,7 +282,9 @@ export function ReportsListTab() {
         <CardHeader className='gap-3 sm:flex sm:flex-row sm:items-start sm:justify-between'>
           <div className='min-w-0'>
             <CardTitle className='text-base'>Danh sách báo cáo</CardTitle>
-            <CardDescription>Danh sách báo cáo phục vụ giao và theo dõi tiến độ.</CardDescription>
+            <CardDescription>
+              Danh sách báo cáo phục vụ giao và theo dõi tiến độ.
+            </CardDescription>
           </div>
           <div className='w-full sm:w-[320px] sm:shrink-0'>
             <Input
@@ -262,64 +310,94 @@ export function ReportsListTab() {
               <TableBody>
                 {templatesQuery.isLoading && (
                   <TableRow>
-                    <TableCell colSpan={6} className='h-20 text-center text-sm text-muted-foreground'>
+                    <TableCell
+                      colSpan={6}
+                      className='h-20 text-center text-sm text-muted-foreground'
+                    >
                       Đang tải danh sách biểu mẫu...
                     </TableCell>
                   </TableRow>
                 )}
                 {templatesQuery.isError && (
                   <TableRow>
-                    <TableCell colSpan={6} className='h-20 text-center text-sm text-destructive'>
+                    <TableCell
+                      colSpan={6}
+                      className='h-20 text-center text-sm text-destructive'
+                    >
                       Không tải được danh sách biểu mẫu.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {!templatesQuery.isLoading && !templatesQuery.isError && templates.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className='h-20 text-center text-sm text-muted-foreground'>
-                      Không có biểu mẫu phù hợp.
                     </TableCell>
                   </TableRow>
                 )}
                 {!templatesQuery.isLoading &&
                   !templatesQuery.isError &&
+                  templates.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className='h-20 text-center text-sm text-muted-foreground'
+                      >
+                        Không có biểu mẫu phù hợp.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                {!templatesQuery.isLoading &&
+                  !templatesQuery.isError &&
                   templates.map((template: FormTemplate) => (
                     <TableRow key={template.id}>
-                      <TableCell className='font-medium'>{template.code}</TableCell>
+                      <TableCell className='font-medium'>
+                        {template.code}
+                      </TableCell>
                       <TableCell>
                         <div>{template.name}</div>
-                        <div className='text-xs text-muted-foreground'>{template.description}</div>
+                        <div className='text-xs text-muted-foreground'>
+                          {template.description}
+                        </div>
                       </TableCell>
-                      <TableCell>{template.fieldCategoryName ?? template.fieldCategoryId}</TableCell>
-                      <TableCell>{periodTypeLabel[template.periodType ?? 'THANG']}</TableCell>
                       <TableCell>
-                        <Badge variant={template.isActive ? 'default' : 'secondary'}>
+                        {template.fieldCategoryName ?? template.fieldCategoryId}
+                      </TableCell>
+                      <TableCell>
+                        {periodTypeLabel[template.periodType ?? 'THANG']}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={template.isActive ? 'default' : 'secondary'}
+                        >
                           {template.isActive ? 'Hoạt động' : 'Ngừng hoạt động'}
                         </Badge>
                       </TableCell>
                       <TableCell className='text-right'>
                         <div className='flex justify-end gap-2'>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                          asChild
-                          >
-                          <Link to='/form-management/details/$templateId' params={{ templateId: template.id }}>
-                            <Settings2 />
-                            Cấu hình
-                          </Link>
+                          <Button size='sm' variant='outline' asChild>
+                            <Link
+                              to='/form-management/details/$templateId'
+                              params={{ templateId: template.id }}
+                            >
+                              <Settings2 />
+                              Cấu hình
+                            </Link>
                           </Button>
                           <Button size='sm' variant='outline' asChild>
-                          <Link to='/report-management' search={{ tab: 'assignment', templateId: template.id }}>
-                            Giao
-                          </Link>
+                            <Link
+                              to='/report-management'
+                              search={{
+                                tab: 'assignment',
+                                templateId: template.id,
+                              }}
+                            >
+                              Giao
+                            </Link>
                           </Button>
                           <Button
                             size='sm'
                             variant='outline'
-                          onClick={() => toast.message('Chức năng tổng hợp đang được phát triển.')}
+                            onClick={() =>
+                              toast.message(
+                                'Chức năng tổng hợp đang được phát triển.'
+                              )
+                            }
                           >
-                          Tổng hợp
+                            Tổng hợp
                           </Button>
                         </div>
                       </TableCell>
@@ -333,4 +411,3 @@ export function ReportsListTab() {
     </>
   )
 }
-

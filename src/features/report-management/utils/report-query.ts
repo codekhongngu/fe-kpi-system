@@ -1,10 +1,11 @@
-import type { ReportFilters } from '../api/types'
 import { AxiosError } from 'axios'
+import type { ReportFilters } from '../api/types'
 
 export const reportQueryKeys = {
   references: ['report-management', 'references'] as const,
   summary: ['report-management', 'summary'] as const,
-  list: (filters: ReportFilters) => ['report-management', 'list', filters] as const,
+  list: (filters: ReportFilters) =>
+    ['report-management', 'list', filters] as const,
   detail: (id: string | null) => ['report-management', 'detail', id] as const,
 }
 

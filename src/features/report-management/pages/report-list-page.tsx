@@ -1,11 +1,11 @@
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Download, FilePlus2, ShieldCheck } from 'lucide-react'
-import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { apiClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { apiClient } from '@/lib/api-client'
 import { reportCampaignApi } from '../api/report-management-api'
 import type {
   CreateReportInput,
@@ -29,9 +29,10 @@ import {
   reportQueryKeys,
 } from '../utils/report-query'
 
-type ConfirmState =
-  | { type: 'delete' | 'assign' | 'approve' | 'reject'; report: ReportListItem }
-  | null
+type ConfirmState = {
+  type: 'delete' | 'assign' | 'approve' | 'reject'
+  report: ReportListItem
+} | null
 
 function getInitialTab(href: string, defaultTab: ReportFilters['tab']) {
   const url = new URL(href, window.location.origin)
@@ -112,7 +113,9 @@ export function ReportListPage() {
   })
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
-  const [editingReport, setEditingReport] = useState<ReportListItem | null>(null)
+  const [editingReport, setEditingReport] = useState<ReportListItem | null>(
+    null
+  )
   const [confirmState, setConfirmState] = useState<ConfirmState>(null)
   const [roleVariantsOpen, setRoleVariantsOpen] = useState(false)
 
@@ -120,10 +123,20 @@ export function ReportListPage() {
     queryKey: reportQueryKeys.references,
     queryFn: async () => {
       // References come from template API now
-      const response = await apiClient.get<{ items?: Array<{ id: string; code: string; name: string }> }>('/forms', { params: { limit: 200 } })
-      const templates = Array.isArray(response.data) ? response.data : (response.data.items ?? [])
+      const response = await apiClient.get<{
+        items?: Array<{ id: string; code: string; name: string }>
+      }>('/forms', { params: { limit: 200 } })
+      const templates = Array.isArray(response.data)
+        ? response.data
+        : (response.data.items ?? [])
       return {
-        templates: templates.map((t: { id: string; code: string; name: string }) => ({ id: t.id, code: t.code, name: t.name })),
+        templates: templates.map(
+          (t: { id: string; code: string; name: string }) => ({
+            id: t.id,
+            code: t.code,
+            name: t.name,
+          })
+        ),
         units: [],
         periods: [],
       }
@@ -137,11 +150,17 @@ export function ReportListPage() {
       const items = response.items
       return {
         total: items.length,
-        unsubmitted: items.filter(i => ['DRAFT', 'NOT_STARTED', 'ASSIGNED', 'DRAFTING'].includes(i.status)).length,
-        pendingApproval: items.filter(i => ['SUBMITTED', 'UNDER_REVIEW'].includes(i.status)).length,
-        approved: items.filter(i => ['APPROVED', 'COMPLETED'].includes(i.status)).length,
-        rejected: items.filter(i => i.status === 'REJECTED').length,
-        overdue: items.filter(i => i.status === 'OVERDUE').length,
+        unsubmitted: items.filter((i) =>
+          ['DRAFT', 'NOT_STARTED', 'ASSIGNED', 'DRAFTING'].includes(i.status)
+        ).length,
+        pendingApproval: items.filter((i) =>
+          ['SUBMITTED', 'UNDER_REVIEW'].includes(i.status)
+        ).length,
+        approved: items.filter((i) =>
+          ['APPROVED', 'COMPLETED'].includes(i.status)
+        ).length,
+        rejected: items.filter((i) => i.status === 'REJECTED').length,
+        overdue: items.filter((i) => i.status === 'OVERDUE').length,
       }
     },
   })
@@ -149,26 +168,30 @@ export function ReportListPage() {
   const listQuery = useQuery({
     queryKey: reportQueryKeys.list(filters),
     queryFn: async () => {
-      const response = await apiClient.get<{ items: ReportListItem[]; total: number }>(
-        '/report-campaigns',
-        {
-          params: {
-            page: filters.page,
-            limit: filters.pageSize,
-            status: filters.status !== 'all' ? filters.status : undefined,
-            formId: filters.templateId || undefined,
-          },
-        }
-      )
+      const response = await apiClient.get<{
+        items: ReportListItem[]
+        total: number
+      }>('/report-campaigns', {
+        params: {
+          page: filters.page,
+          limit: filters.pageSize,
+          status: filters.status !== 'all' ? filters.status : undefined,
+          formId: filters.templateId || undefined,
+        },
+      })
       return response.data
     },
   })
 
   const invalidateReports = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['report-management', 'list'] }),
+      queryClient.invalidateQueries({
+        queryKey: ['report-management', 'list'],
+      }),
       queryClient.invalidateQueries({ queryKey: reportQueryKeys.summary }),
-      queryClient.invalidateQueries({ queryKey: ['report-management', 'detail'] }),
+      queryClient.invalidateQueries({
+        queryKey: ['report-management', 'detail'],
+      }),
     ])
   }
 
@@ -193,7 +216,13 @@ export function ReportListPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: UpdateReportInput }) => {
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string
+      input: UpdateReportInput
+    }) => {
       await apiClient.patch(`/report-campaigns/${id}`, input)
       return true
     },
@@ -212,15 +241,23 @@ export function ReportListPage() {
         throw new Error('Chưa chọn báo cáo.')
       }
       if (confirmState.type === 'delete') {
-        return await apiClient.delete(`/report-campaigns/${confirmState.report.id}`)
+        return await apiClient.delete(
+          `/report-campaigns/${confirmState.report.id}`
+        )
       }
       if (confirmState.type === 'assign') {
         return await reportCampaignApi.confirmDispatch(confirmState.report.id)
       }
       if (confirmState.type === 'approve') {
-        return await apiClient.post(`/report-campaigns/${confirmState.report.id}/approve`, { note: reason })
+        return await apiClient.post(
+          `/report-campaigns/${confirmState.report.id}/approve`,
+          { note: reason }
+        )
       }
-      return await apiClient.post(`/report-campaigns/${confirmState.report.id}/reject`, { reason })
+      return await apiClient.post(
+        `/report-campaigns/${confirmState.report.id}/reject`,
+        { reason }
+      )
     },
     onSuccess: async () => {
       toast.success('Đã xử lý báo cáo.')
@@ -238,16 +275,21 @@ export function ReportListPage() {
         format,
       }
     },
-    onSuccess: (result) => toast.success(`Đã chuẩn bị file ${result.fileName}.`),
+    onSuccess: (result) =>
+      toast.success(`Đã chuẩn bị file ${result.fileName}.`),
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 
-  const confirmCopy = useMemo(() => getConfirmCopy(confirmState), [confirmState])
+  const confirmCopy = useMemo(
+    () => getConfirmCopy(confirmState),
+    [confirmState]
+  )
   const listData = listQuery.data?.items ?? []
   const total = listQuery.data?.total ?? 0
 
   // Sử dụng hook để lấy thông tin template
-  const { enrichedReports, isLoading: templateLoading } = useTemplateInfo(listData)
+  const { enrichedReports, isLoading: templateLoading } =
+    useTemplateInfo(listData)
 
   const openCreateForm = () => {
     setFormMode('create')
@@ -268,14 +310,21 @@ export function ReportListPage() {
           <div className='inline-flex items-center rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700'>
             Quản lý báo cáo
           </div>
-          <h1 className='mt-3 text-2xl font-bold tracking-tight'>Danh sách báo cáo</h1>
+          <h1 className='mt-3 text-2xl font-bold tracking-tight'>
+            Danh sách báo cáo
+          </h1>
           <p className='mt-1 max-w-3xl text-sm text-muted-foreground'>
-            Theo dõi report instance được tạo từ template, giao đơn vị nhập liệu và xử lý phê duyệt.
+            Theo dõi report instance được tạo từ template, giao đơn vị nhập liệu
+            và xử lý phê duyệt.
           </p>
         </div>
         <div className='flex flex-wrap gap-2'>
           <PermissionGuard action='report:role-variants'>
-            <Button type='button' variant='outline' onClick={() => setRoleVariantsOpen(true)}>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setRoleVariantsOpen(true)}
+            >
               <ShieldCheck className='me-2 size-4' />
               Role/biến thể
             </Button>
@@ -298,7 +347,10 @@ export function ReportListPage() {
         </div>
       </div>
 
-      <ReportSummaryStrip summary={summaryQuery.data} isLoading={summaryQuery.isLoading} />
+      <ReportSummaryStrip
+        summary={summaryQuery.data}
+        isLoading={summaryQuery.isLoading}
+      />
 
       <Card>
         <CardHeader className='gap-4'>
@@ -307,7 +359,9 @@ export function ReportListPage() {
             <ReportTabs
               value={filters.tab}
               visibleTabs={permission.visibleTabs}
-              onValueChange={(tab) => setFilters((prev) => ({ ...prev, tab, page: 1 }))}
+              onValueChange={(tab) =>
+                setFilters((prev) => ({ ...prev, tab, page: 1 }))
+              }
             />
           </div>
         </CardHeader>
@@ -328,16 +382,23 @@ export function ReportListPage() {
               total={total}
               page={filters.page}
               pageSize={filters.pageSize}
-              isLoading={listQuery.isLoading || listQuery.isFetching || templateLoading}
+              isLoading={
+                listQuery.isLoading || listQuery.isFetching || templateLoading
+              }
               can={permission.can}
               onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
               onView={(report) =>
-                navigate({ to: '/report-management/details/$reportId', params: { reportId: report.id } })
+                navigate({
+                  to: '/report-management/details/$reportId',
+                  params: { reportId: report.id },
+                })
               }
               onEdit={openEditForm}
               onDelete={(report) => setConfirmState({ type: 'delete', report })}
               onAssign={(report) => setConfirmState({ type: 'assign', report })}
-              onApprove={(report) => setConfirmState({ type: 'approve', report })}
+              onApprove={(report) =>
+                setConfirmState({ type: 'approve', report })
+              }
               onReject={(report) => setConfirmState({ type: 'reject', report })}
             />
           )}

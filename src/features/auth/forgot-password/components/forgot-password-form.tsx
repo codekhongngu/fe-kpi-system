@@ -74,8 +74,7 @@ export function ForgotPasswordForm({
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
-          Continue
-          Gửi link đặt lại mật khẩu
+          Continue Gửi link đặt lại mật khẩu
         </Button>
       </form>
     </Form>

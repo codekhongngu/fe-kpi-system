@@ -58,27 +58,42 @@ export function getSiblingIds<T extends TreeItem>(items: T[], item: T) {
     .map((entry) => entry.id)
 }
 
-export function buildSameLevelReorderPayload<T extends TreeItem>(items: T[], activeId: string, overId: string) {
+export function buildSameLevelReorderPayload<T extends TreeItem>(
+  items: T[],
+  activeId: string,
+  overId: string
+) {
   const active = items.find((item) => item.id === activeId)
   const over = items.find((item) => item.id === overId)
-  if (!active || !over) return items.map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
+  if (!active || !over)
+    return items.map((item) => ({
+      id: item.id,
+      parentId: item.parentId ?? null,
+    }))
 
   const parentId = active.parentId ?? null
   if ((over.parentId ?? null) !== parentId) {
-    return items.map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
+    return items.map((item) => ({
+      id: item.id,
+      parentId: item.parentId ?? null,
+    }))
   }
 
   const siblings = items
     .filter((item) => (item.parentId ?? null) === parentId)
     .sort((a, b) => {
-      if ((a.order ?? 0) !== (b.order ?? 0)) return (a.order ?? 0) - (b.order ?? 0)
+      if ((a.order ?? 0) !== (b.order ?? 0))
+        return (a.order ?? 0) - (b.order ?? 0)
       return a.id.localeCompare(b.id)
     })
 
   const fromIndex = siblings.findIndex((item) => item.id === activeId)
   const toIndex = siblings.findIndex((item) => item.id === overId)
   if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
-    return siblings.map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
+    return siblings.map((item) => ({
+      id: item.id,
+      parentId: item.parentId ?? null,
+    }))
   }
 
   const next = [...siblings]
@@ -87,7 +102,11 @@ export function buildSameLevelReorderPayload<T extends TreeItem>(items: T[], act
   return next.map((item) => ({ id: item.id, parentId: item.parentId ?? null }))
 }
 
-export function reorderSameLevelItems<T extends TreeItem>(items: T[], activeId: string, overId: string) {
+export function reorderSameLevelItems<T extends TreeItem>(
+  items: T[],
+  activeId: string,
+  overId: string
+) {
   const active = items.find((item) => item.id === activeId)
   const over = items.find((item) => item.id === overId)
   if (!active || !over) return items
@@ -98,7 +117,8 @@ export function reorderSameLevelItems<T extends TreeItem>(items: T[], activeId: 
   const siblings = items
     .filter((item) => (item.parentId ?? null) === parentId)
     .sort((a, b) => {
-      if ((a.order ?? 0) !== (b.order ?? 0)) return (a.order ?? 0) - (b.order ?? 0)
+      if ((a.order ?? 0) !== (b.order ?? 0))
+        return (a.order ?? 0) - (b.order ?? 0)
       return a.id.localeCompare(b.id)
     })
 
@@ -115,8 +135,8 @@ export function reorderSameLevelItems<T extends TreeItem>(items: T[], activeId: 
     (item.parentId ?? null) === parentId
       ? {
           ...item,
-          order: nextOrder.get(item.id) ?? (item.order ?? 0),
+          order: nextOrder.get(item.id) ?? item.order ?? 0,
         }
-      : item,
+      : item
   )
 }

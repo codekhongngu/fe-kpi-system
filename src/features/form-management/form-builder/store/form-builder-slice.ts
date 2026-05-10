@@ -1,5 +1,12 @@
-import { createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { type TemplateField, type TemplateIndicator } from '@/features/form-management/api/types'
+import {
+  createSelector,
+  createSlice,
+  type PayloadAction,
+} from '@reduxjs/toolkit'
+import {
+  type TemplateField,
+  type TemplateIndicator,
+} from '@/features/form-management/api/types'
 
 type BuilderStatus = 'idle' | 'saving'
 
@@ -43,7 +50,11 @@ function withOrderDefaults<T extends TreeItem>(items: T[]): T[] {
   }))
 }
 
-function isDescendant<T extends TreeItem>(items: T[], rootId: string, targetId: string | null) {
+function isDescendant<T extends TreeItem>(
+  items: T[],
+  rootId: string,
+  targetId: string | null
+) {
   if (!targetId) return false
   if (targetId === rootId) return true
 
@@ -57,7 +68,10 @@ function isDescendant<T extends TreeItem>(items: T[], rootId: string, targetId: 
   return false
 }
 
-function normalizeSiblingOrders<T extends TreeItem>(items: T[], parentId: string | null) {
+function normalizeSiblingOrders<T extends TreeItem>(
+  items: T[],
+  parentId: string | null
+) {
   const siblings = items
     .filter((item) => (item.parentId ?? null) === parentId)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -85,7 +99,9 @@ function moveItemWithParentChange<T extends TreeItem>(
 
   const activeIndex = newSiblings.findIndex((item) => item.id === activeId)
   const targetIndex =
-    overId != null ? newSiblings.findIndex((item) => item.id === overId) : newSiblings.length - 1
+    overId != null
+      ? newSiblings.findIndex((item) => item.id === overId)
+      : newSiblings.length - 1
 
   if (activeIndex !== -1 && targetIndex !== -1 && activeIndex !== targetIndex) {
     const [moved] = newSiblings.splice(activeIndex, 1)
@@ -100,7 +116,11 @@ function moveItemWithParentChange<T extends TreeItem>(
   normalizeSiblingOrders(items, newParentId)
 }
 
-function reorderWithinSameParent<T extends TreeItem>(items: T[], activeId: string, overId: string) {
+function reorderWithinSameParent<T extends TreeItem>(
+  items: T[],
+  activeId: string,
+  overId: string
+) {
   const active = items.find((item) => item.id === activeId)
   const over = items.find((item) => item.id === overId)
   if (!active || !over) return
@@ -145,7 +165,9 @@ const formBuilderSlice = createSlice({
     toggleIndicatorExpanded: (state, action: PayloadAction<string>) => {
       const id = action.payload
       if (state.expandedIndicatorIds.includes(id)) {
-        state.expandedIndicatorIds = state.expandedIndicatorIds.filter((item) => item !== id)
+        state.expandedIndicatorIds = state.expandedIndicatorIds.filter(
+          (item) => item !== id
+        )
         return
       }
       state.expandedIndicatorIds.push(id)
@@ -153,7 +175,9 @@ const formBuilderSlice = createSlice({
     toggleAttributeExpanded: (state, action: PayloadAction<string>) => {
       const id = action.payload
       if (state.expandedAttributeIds.includes(id)) {
-        state.expandedAttributeIds = state.expandedAttributeIds.filter((item) => item !== id)
+        state.expandedAttributeIds = state.expandedAttributeIds.filter(
+          (item) => item !== id
+        )
         return
       }
       state.expandedAttributeIds.push(id)
@@ -162,12 +186,20 @@ const formBuilderSlice = createSlice({
       state,
       action: PayloadAction<{ activeId: string; overId: string }>
     ) => {
-      reorderWithinSameParent(state.indicators, action.payload.activeId, action.payload.overId)
+      reorderWithinSameParent(
+        state.indicators,
+        action.payload.activeId,
+        action.payload.overId
+      )
       state.isDirty = true
     },
     indicatorReparent: (
       state,
-      action: PayloadAction<{ activeId: string; newParentId: string | null; overId?: string }>
+      action: PayloadAction<{
+        activeId: string
+        newParentId: string | null
+        overId?: string
+      }>
     ) => {
       moveItemWithParentChange(
         state.indicators,
@@ -181,12 +213,20 @@ const formBuilderSlice = createSlice({
       state,
       action: PayloadAction<{ activeId: string; overId: string }>
     ) => {
-      reorderWithinSameParent(state.attributes, action.payload.activeId, action.payload.overId)
+      reorderWithinSameParent(
+        state.attributes,
+        action.payload.activeId,
+        action.payload.overId
+      )
       state.isDirty = true
     },
     attributeReparent: (
       state,
-      action: PayloadAction<{ activeId: string; newParentId: string | null; overId?: string }>
+      action: PayloadAction<{
+        activeId: string
+        newParentId: string | null
+        overId?: string
+      }>
     ) => {
       moveItemWithParentChange(
         state.attributes,
@@ -218,7 +258,9 @@ export type FormBuilderTreeNode<T extends TreeItem> = T & {
   children: Array<FormBuilderTreeNode<T>>
 }
 
-function buildTree<T extends TreeItem>(items: T[]): Array<FormBuilderTreeNode<T>> {
+function buildTree<T extends TreeItem>(
+  items: T[]
+): Array<FormBuilderTreeNode<T>> {
   const map = new Map(
     items.map((item) => [
       item.id,
@@ -260,17 +302,34 @@ function flattenTree<T extends TreeItem>(
   return rows
 }
 
-export const selectFormBuilderState = (state: { formBuilder: BuilderState }) => state.formBuilder
-export const selectBuilderStatus = (state: { formBuilder: BuilderState }) => state.formBuilder.status
-export const selectBuilderDirty = (state: { formBuilder: BuilderState }) => state.formBuilder.isDirty
-export const selectIndicators = (state: { formBuilder: BuilderState }) => state.formBuilder.indicators
-export const selectAttributes = (state: { formBuilder: BuilderState }) => state.formBuilder.attributes
-export const selectExpandedIndicatorIds = (state: { formBuilder: BuilderState }) =>
-  state.formBuilder.expandedIndicatorIds
-export const selectExpandedAttributeIds = (state: { formBuilder: BuilderState }) =>
-  state.formBuilder.expandedAttributeIds
+export const selectFormBuilderState = (state: { formBuilder: BuilderState }) =>
+  state.formBuilder
+export const selectBuilderStatus = (state: { formBuilder: BuilderState }) =>
+  state.formBuilder.status
+export const selectBuilderDirty = (state: { formBuilder: BuilderState }) =>
+  state.formBuilder.isDirty
+export const selectIndicators = (state: { formBuilder: BuilderState }) =>
+  state.formBuilder.indicators
+export const selectAttributes = (state: { formBuilder: BuilderState }) =>
+  state.formBuilder.attributes
+export const selectExpandedIndicatorIds = (state: {
+  formBuilder: BuilderState
+}) => state.formBuilder.expandedIndicatorIds
+export const selectExpandedAttributeIds = (state: {
+  formBuilder: BuilderState
+}) => state.formBuilder.expandedAttributeIds
 
-export const selectIndicatorTree = createSelector([selectIndicators], (items) => buildTree(items))
-export const selectAttributeTree = createSelector([selectAttributes], (items) => buildTree(items))
-export const selectIndicatorRows = createSelector([selectIndicatorTree], (tree) => flattenTree(tree))
-export const selectAttributeRows = createSelector([selectAttributeTree], (tree) => flattenTree(tree))
+export const selectIndicatorTree = createSelector([selectIndicators], (items) =>
+  buildTree(items)
+)
+export const selectAttributeTree = createSelector([selectAttributes], (items) =>
+  buildTree(items)
+)
+export const selectIndicatorRows = createSelector(
+  [selectIndicatorTree],
+  (tree) => flattenTree(tree)
+)
+export const selectAttributeRows = createSelector(
+  [selectAttributeTree],
+  (tree) => flattenTree(tree)
+)

@@ -1,4 +1,8 @@
-import axios, { AxiosError, type AxiosInstance, type AxiosResponse } from 'axios'
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type AxiosResponse,
+} from 'axios'
 import { useAuthStore } from '@/stores/auth-store'
 
 type ApiEnvelope<T> = {
@@ -18,7 +22,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function unwrapEnvelope<T>(response: AxiosResponse<T | ApiEnvelope<T>>): AxiosResponse<T> {
+function unwrapEnvelope<T>(
+  response: AxiosResponse<T | ApiEnvelope<T>>
+): AxiosResponse<T> {
   const payload = response.data
   if (isRecord(payload) && 'data' in payload && 'error' in payload) {
     return { ...response, data: (payload as ApiEnvelope<T>).data }
@@ -37,7 +43,8 @@ function normalizeAxiosErrorMessage(error: AxiosError) {
     message = rawMessage
   } else if (Array.isArray(rawMessage)) {
     const parts = rawMessage.filter(
-      (item): item is string => typeof item === 'string' && item.trim().length > 0,
+      (item): item is string =>
+        typeof item === 'string' && item.trim().length > 0
     )
     message = parts.join('\n')
   }
@@ -49,7 +56,9 @@ function normalizeAxiosErrorMessage(error: AxiosError) {
   ;(error as unknown as { message: string }).message = `${message}${suffix}`
 }
 
-const baseURL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:5000/api/v1'
+const baseURL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  'http://localhost:5000/api/v1'
 
 const refreshClient = axios.create({ baseURL })
 
@@ -66,9 +75,12 @@ async function refreshAccessToken(): Promise<AuthRefreshResponse> {
   }
 
   refreshPromise = refreshClient
-    .post<AuthRefreshResponse | ApiEnvelope<AuthRefreshResponse>>('/auth/refresh-token', {
-      refreshToken: auth.refreshToken,
-    })
+    .post<AuthRefreshResponse | ApiEnvelope<AuthRefreshResponse>>(
+      '/auth/refresh-token',
+      {
+        refreshToken: auth.refreshToken,
+      }
+    )
     .then((response) => unwrapEnvelope<AuthRefreshResponse>(response).data)
     .finally(() => {
       refreshPromise = null
@@ -87,7 +99,10 @@ export function createApiClient(): AxiosInstance {
     const token = auth.accessToken
     if (token) {
       config.headers = config.headers ?? {}
-      if (!('Authorization' in config.headers) || !config.headers.Authorization) {
+      if (
+        !('Authorization' in config.headers) ||
+        !config.headers.Authorization
+      ) {
         config.headers.Authorization = `Bearer ${token}`
       }
     }
@@ -104,7 +119,9 @@ export function createApiClient(): AxiosInstance {
       normalizeAxiosErrorMessage(error)
 
       const status = error.response?.status
-      const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined
+      const originalRequest = error.config as
+        | (typeof error.config & { _retry?: boolean })
+        | undefined
 
       if (status !== 401 || !originalRequest || originalRequest._retry) {
         return Promise.reject(error)
@@ -156,7 +173,7 @@ export function createApiClient(): AxiosInstance {
         }
         return Promise.reject(error)
       }
-    },
+    }
   )
 
   return client

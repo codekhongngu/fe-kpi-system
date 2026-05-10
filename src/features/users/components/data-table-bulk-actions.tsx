@@ -3,13 +3,13 @@ import { useQueryClient } from '@tanstack/react-query'
 import { type Table } from '@tanstack/react-table'
 import { Trash2, UserX, UserCheck, Mail } from 'lucide-react'
 import { toast } from 'sonner'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
 import { usersApi } from '../api/users-api'
 import { type User } from '../data/schema'
@@ -30,12 +30,17 @@ export function DataTableBulkActions<TData>({
   const queryClient = useQueryClient()
   const selectedRows = table.getFilteredSelectedRowModel().rows
 
-  const handleBulkStatusChange = (status: 'active' | 'inactive', selectedUsers: User[]) => {
+  const handleBulkStatusChange = (
+    status: 'active' | 'inactive',
+    selectedUsers: User[]
+  ) => {
     if (selectedUsers.length === 0) return
 
     const promise = Promise.all(
       selectedUsers.map((user) =>
-        status === 'active' ? usersApi.activate(user.id) : usersApi.deactivate(user.id)
+        status === 'active'
+          ? usersApi.activate(user.id)
+          : usersApi.deactivate(user.id)
       )
     )
 
@@ -53,7 +58,9 @@ export function DataTableBulkActions<TData>({
 
   const handleBulkInvite = () => {
     const selectedUsers = selectedRows.map((row) => row.original as User)
-    toast.message(`Đã chọn ${selectedUsers.length} người dùng. Chức năng mời chưa được kết nối API.`)
+    toast.message(
+      `Đã chọn ${selectedUsers.length} người dùng. Chức năng mời chưa được kết nối API.`
+    )
     table.resetRowSelection()
   }
 
@@ -175,7 +182,9 @@ export function DataTableBulkActions<TData>({
           handleBulkStatusChange(statusDialog.status, statusDialog.users)
           setStatusDialog(null)
         }}
-        confirmText={statusDialog?.status === 'inactive' ? 'Vô hiệu hóa' : 'Kích hoạt'}
+        confirmText={
+          statusDialog?.status === 'inactive' ? 'Vô hiệu hóa' : 'Kích hoạt'
+        }
         destructive={statusDialog?.status === 'inactive'}
       />
     </>

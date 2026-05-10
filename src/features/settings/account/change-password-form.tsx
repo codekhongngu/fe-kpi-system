@@ -34,7 +34,10 @@ type ChangePasswordFormValues = z.infer<typeof formSchema>
 
 type ChangePasswordFormProps = React.HTMLAttributes<HTMLFormElement>
 
-export function ChangePasswordForm({ className, ...props }: ChangePasswordFormProps) {
+export function ChangePasswordForm({
+  className,
+  ...props
+}: ChangePasswordFormProps) {
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<ChangePasswordFormValues>({
@@ -61,7 +64,9 @@ export function ChangePasswordForm({ className, ...props }: ChangePasswordFormPr
         return result.message
       },
       error: (error) => {
-        return error instanceof Error ? error.message : 'Không thể đổi mật khẩu.'
+        return error instanceof Error
+          ? error.message
+          : 'Không thể đổi mật khẩu.'
       },
     })
   }
@@ -119,4 +124,3 @@ export function ChangePasswordForm({ className, ...props }: ChangePasswordFormPr
     </Form>
   )
 }
-

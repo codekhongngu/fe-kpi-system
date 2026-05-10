@@ -1,5 +1,5 @@
-import { useLocation } from '@tanstack/react-router'
 import { useMemo } from 'react'
+import { useLocation } from '@tanstack/react-router'
 import { Main } from '@/components/layout/main'
 import { RolesTab } from './components/roles-tab'
 import { UnitsTab } from './components/units-tab'
@@ -17,10 +17,10 @@ export function SystemAdmin() {
   }, [href])
 
   return (
-      <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-        {activeTab === 'users' && <UsersTab />}
-        {activeTab === 'roles' && <RolesTab />}
-        {activeTab === 'units' && <UnitsTab />}
-      </Main>
+    <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
+      {activeTab === 'users' && <UsersTab />}
+      {activeTab === 'roles' && <RolesTab />}
+      {activeTab === 'units' && <UnitsTab />}
+    </Main>
   )
 }

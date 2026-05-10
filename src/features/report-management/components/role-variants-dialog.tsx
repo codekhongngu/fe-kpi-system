@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -5,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import type { RoleVariant } from '../api/types'
 import { reportTabs } from '../api/types'
 
@@ -26,7 +26,8 @@ export function RoleVariantsDialog({
         <DialogHeader>
           <DialogTitle>Role và biến thể báo cáo</DialogTitle>
           <DialogDescription>
-            Cấu hình đang hardcode cho admin, nhưng cấu trúc đã tách để mở rộng multi-role.
+            Cấu hình đang hardcode cho admin, nhưng cấu trúc đã tách để mở rộng
+            multi-role.
           </DialogDescription>
         </DialogHeader>
         <div className='grid gap-4 md:grid-cols-3'>
@@ -35,10 +36,15 @@ export function RoleVariantsDialog({
               <div className='flex items-center justify-between gap-2'>
                 <div>
                   <div className='font-semibold'>{variant.label}</div>
-                  <div className='text-xs text-muted-foreground'>{variant.role}</div>
+                  <div className='text-xs text-muted-foreground'>
+                    {variant.role}
+                  </div>
                 </div>
                 <Badge variant='outline'>
-                  {reportTabs.find((item) => item.value === variant.defaultTab)?.label}
+                  {
+                    reportTabs.find((item) => item.value === variant.defaultTab)
+                      ?.label
+                  }
                 </Badge>
               </div>
               <div className='mt-4'>
@@ -54,9 +60,14 @@ export function RoleVariantsDialog({
               <div className='mt-4 space-y-2'>
                 <div className='text-sm font-medium'>Actions</div>
                 {variant.actions.map((item) => (
-                  <div key={item.action} className='rounded-lg bg-muted/60 p-2 text-sm'>
+                  <div
+                    key={item.action}
+                    className='rounded-lg bg-muted/60 p-2 text-sm'
+                  >
                     <div className='font-medium'>{item.label}</div>
-                    <div className='text-xs text-muted-foreground'>{item.condition}</div>
+                    <div className='text-xs text-muted-foreground'>
+                      {item.condition}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -122,7 +122,7 @@
   }
 
   .hub-item-icon {
-    @apply w-14 h-14 mx-auto rounded-full bg-white shadow-md flex items-center justify-center border-2 transition-colors;
+    @apply mx-auto flex h-14 w-14 items-center justify-center rounded-full border-2 bg-white shadow-md transition-colors;
     border-color: #0c447c33;
   }
 
@@ -131,16 +131,28 @@
   }
 
   .hub-item-label {
-    @apply mt-1.5 text-[10px] font-bold leading-tight text-center;
+    @apply mt-1.5 text-center text-[10px] leading-tight font-bold;
     color: #0c447c;
   }
 
-  .hub-item-1 { --hub-item-transform: translate(0, -160px); }
-  .hub-item-2 { --hub-item-transform: translate(138px, -80px); }
-  .hub-item-3 { --hub-item-transform: translate(138px, 80px); }
-  .hub-item-4 { --hub-item-transform: translate(0, 160px); }
-  .hub-item-5 { --hub-item-transform: translate(-138px, 80px); }
-  .hub-item-6 { --hub-item-transform: translate(-138px, -80px); }
+  .hub-item-1 {
+    --hub-item-transform: translate(0, -160px);
+  }
+  .hub-item-2 {
+    --hub-item-transform: translate(138px, -80px);
+  }
+  .hub-item-3 {
+    --hub-item-transform: translate(138px, 80px);
+  }
+  .hub-item-4 {
+    --hub-item-transform: translate(0, 160px);
+  }
+  .hub-item-5 {
+    --hub-item-transform: translate(-138px, 80px);
+  }
+  .hub-item-6 {
+    --hub-item-transform: translate(-138px, -80px);
+  }
 
   @media screen and (max-width: 1024px) {
     .hub-container {
@@ -162,18 +174,38 @@
       font-size: 10px;
     }
 
-    .hub-item-1 { --hub-item-transform: translate(0, -142px); }
-    .hub-item-2 { --hub-item-transform: translate(122px, -70px); }
-    .hub-item-3 { --hub-item-transform: translate(122px, 70px); }
-    .hub-item-4 { --hub-item-transform: translate(0, 142px); }
-    .hub-item-5 { --hub-item-transform: translate(-122px, 70px); }
-    .hub-item-6 { --hub-item-transform: translate(-122px, -70px); }
+    .hub-item-1 {
+      --hub-item-transform: translate(0, -142px);
+    }
+    .hub-item-2 {
+      --hub-item-transform: translate(122px, -70px);
+    }
+    .hub-item-3 {
+      --hub-item-transform: translate(122px, 70px);
+    }
+    .hub-item-4 {
+      --hub-item-transform: translate(0, 142px);
+    }
+    .hub-item-5 {
+      --hub-item-transform: translate(-122px, 70px);
+    }
+    .hub-item-6 {
+      --hub-item-transform: translate(-122px, -70px);
+    }
   }
 
   @keyframes pulse-ring {
-    0% { transform: scale(0.9); opacity: 0.1; }
-    50% { opacity: 0.3; }
-    100% { transform: scale(1.5); opacity: 0; }
+    0% {
+      transform: scale(0.9);
+      opacity: 0.1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+    100% {
+      transform: scale(1.5);
+      opacity: 0;
+    }
   }
 
   .ring-animate {

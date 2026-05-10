@@ -1,4 +1,11 @@
-import { AlertTriangle, CheckCircle2, Clock3, FileText, RotateCcw, Send } from 'lucide-react'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  RotateCcw,
+  Send,
+} from 'lucide-react'
 import type { ReportSummary } from '../api/types'
 
 type ReportSummaryStripProps = {
@@ -6,7 +13,10 @@ type ReportSummaryStripProps = {
   isLoading: boolean
 }
 
-export function ReportSummaryStrip({ summary, isLoading }: ReportSummaryStripProps) {
+export function ReportSummaryStrip({
+  summary,
+  isLoading,
+}: ReportSummaryStripProps) {
   const items = [
     {
       label: 'Tất cả',
@@ -51,10 +61,15 @@ export function ReportSummaryStrip({ summary, isLoading }: ReportSummaryStripPro
       {items.map((item) => {
         const Icon = item.icon
         return (
-          <div key={item.label} className={`rounded-xl border p-4 ${item.className}`}>
+          <div
+            key={item.label}
+            className={`rounded-xl border p-4 ${item.className}`}
+          >
             <div className='flex items-center justify-between gap-3'>
               <div>
-                <div className='text-sm font-medium opacity-80'>{item.label}</div>
+                <div className='text-sm font-medium opacity-80'>
+                  {item.label}
+                </div>
                 <div className='mt-1 text-2xl font-semibold'>
                   {isLoading ? '...' : item.value}
                 </div>

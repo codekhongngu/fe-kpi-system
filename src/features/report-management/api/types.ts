@@ -211,7 +211,10 @@ export const reportTabs: Array<{ value: ReportTab; label: string }> = [
   { value: 'overdue', label: 'Quá hạn' },
 ]
 
-export const reportStatusOptions: Array<{ value: ReportStatus; label: string }> = [
+export const reportStatusOptions: Array<{
+  value: ReportStatus
+  label: string
+}> = [
   { value: 'DRAFT', label: 'Nháp' },
   { value: 'ASSIGNED', label: 'Đã giao' },
   { value: 'NOT_STARTED', label: 'Chưa nhập' },
@@ -225,7 +228,10 @@ export const reportStatusOptions: Array<{ value: ReportStatus; label: string }> 
   { value: 'CANCELLED', label: 'Đã hủy' },
 ]
 
-export const reportPriorityOptions: Array<{ value: ReportPriority; label: string }> = [
+export const reportPriorityOptions: Array<{
+  value: ReportPriority
+  label: string
+}> = [
   { value: 'low', label: 'Thấp' },
   { value: 'normal', label: 'Bình thường' },
   { value: 'high', label: 'Cao' },

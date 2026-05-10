@@ -113,13 +113,18 @@ const mapScope = (item: BeCampaignScope): CampaignScope => ({
   indicatorName: item.indicatorName,
 })
 
-const mapDefaultValue = (item: BeCampaignDefaultValue): CampaignDefaultValue => ({
+const mapDefaultValue = (
+  item: BeCampaignDefaultValue
+): CampaignDefaultValue => ({
   id: item.id,
   campaignId: item.campaignId,
   indicatorId: item.indicatorId,
   attributeId: item.attributeId,
   valueText: item.valueText ?? null,
-  valueNumber: (item.valueNumber === null || item.valueNumber === undefined) ? null : Number(item.valueNumber),
+  valueNumber:
+    item.valueNumber === null || item.valueNumber === undefined
+      ? null
+      : Number(item.valueNumber),
 })
 
 // ── API client ─────────────────────────────────────────────────────────────────
@@ -134,18 +139,23 @@ export const reportCampaignApi = {
     formId?: string
   }): Promise<{ items: ReportListItem[]; total: number }> => {
     const response = await apiClient.get<
-      BeCampaign[] | { items?: BeCampaign[]; total?: number; meta?: { total?: number } }
+      | BeCampaign[]
+      | { items?: BeCampaign[]; total?: number; meta?: { total?: number } }
     >('/report-campaigns', { params })
     const payload = response.data
     const list = Array.isArray(payload) ? payload : (payload.items ?? [])
     const total = Array.isArray(payload)
       ? list.length
-      : ((payload as { total?: number }).total ?? (payload as { meta?: { total?: number } }).meta?.total ?? list.length)
+      : ((payload as { total?: number }).total ??
+        (payload as { meta?: { total?: number } }).meta?.total ??
+        list.length)
     return { items: list.map(mapCampaign), total }
   },
 
   getCampaign: async (campaignId: string): Promise<ReportDetail> => {
-    const response = await apiClient.get<BeCampaign>(`/report-campaigns/${campaignId}`)
+    const response = await apiClient.get<BeCampaign>(
+      `/report-campaigns/${campaignId}`
+    )
     return mapCampaignDetail(response.data)
   },
 
@@ -184,21 +194,25 @@ export const reportCampaignApi = {
 
   upsertScopes: async (
     campaignId: string,
-    items: Array<{ orgId: string; indicatorId: string }>,
+    items: Array<{ orgId: string; indicatorId: string }>
   ): Promise<void> => {
     await apiClient.post(`/report-campaigns/${campaignId}/scopes`, { items })
   },
 
   deleteScopes: async (
     campaignId: string,
-    items: Array<{ orgId: string; indicatorId: string }>,
+    items: Array<{ orgId: string; indicatorId: string }>
   ): Promise<void> => {
-    await apiClient.delete(`/report-campaigns/${campaignId}/scopes`, { data: { items } })
+    await apiClient.delete(`/report-campaigns/${campaignId}/scopes`, {
+      data: { items },
+    })
   },
 
   // ── Campaign Default Values ──────────────────────────────────────────────
 
-  listDefaultValues: async (campaignId: string): Promise<CampaignDefaultValue[]> => {
+  listDefaultValues: async (
+    campaignId: string
+  ): Promise<CampaignDefaultValue[]> => {
     const response = await apiClient.get<
       BeCampaignDefaultValue[] | { items?: BeCampaignDefaultValue[] }
     >(`/report-campaigns/${campaignId}/default-values`)
@@ -214,16 +228,20 @@ export const reportCampaignApi = {
       attributeId: string
       valueText?: string | null
       valueNumber?: number | null
-    }>,
+    }>
   ): Promise<void> => {
-    await apiClient.post(`/report-campaigns/${campaignId}/default-values`, { items })
+    await apiClient.post(`/report-campaigns/${campaignId}/default-values`, {
+      items,
+    })
   },
 
   deleteDefaultValues: async (
     campaignId: string,
-    items: Array<{ indicatorId: string; attributeId: string }>,
+    items: Array<{ indicatorId: string; attributeId: string }>
   ): Promise<void> => {
-    await apiClient.delete(`/report-campaigns/${campaignId}/default-values`, { data: { items } })
+    await apiClient.delete(`/report-campaigns/${campaignId}/default-values`, {
+      data: { items },
+    })
   },
 }
 

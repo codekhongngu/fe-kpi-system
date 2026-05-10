@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { FormTemplateDetailsPage } from '@/features/form-management/pages/form-template-details-page'
 
-export const Route = createFileRoute('/_authenticated/form-management/details/$templateId')({
+export const Route = createFileRoute(
+  '/_authenticated/form-management/details/$templateId'
+)({
   component: RouteComponent,
 })
 

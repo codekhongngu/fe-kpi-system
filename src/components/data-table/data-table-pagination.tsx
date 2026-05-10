@@ -40,7 +40,7 @@ export function DataTablePagination({
       className={cn(
         'flex items-center justify-between overflow-clip rounded-md border bg-card px-2 py-3',
         '@max-2xl/content:flex-col-reverse @max-2xl/content:gap-4',
-        className,
+        className
       )}
       style={{ overflowClipMargin: 1 }}
     >
@@ -66,7 +66,9 @@ export function DataTablePagination({
               ))}
             </SelectContent>
           </Select>
-          <p className='hidden text-sm font-medium sm:block'>Số dòng mỗi trang</p>
+          <p className='hidden text-sm font-medium sm:block'>
+            Số dòng mỗi trang
+          </p>
         </div>
       </div>
 

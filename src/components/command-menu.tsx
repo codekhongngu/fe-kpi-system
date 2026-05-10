@@ -1,7 +1,9 @@
 import React from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, ChevronRight, Laptop, Moon, Sun } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/auth-store'
+import { apiClient } from '@/lib/api-client'
 import { useSearch } from '@/context/search-provider'
 import { useTheme } from '@/context/theme-provider'
 import {
@@ -15,8 +17,6 @@ import {
 } from '@/components/ui/command'
 import { getSidebarNavGroupsForUser } from './layout/data/sidebar-data'
 import { ScrollArea } from './ui/scroll-area'
-import { useAuthStore } from '@/stores/auth-store'
-import { apiClient } from '@/lib/api-client'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -44,7 +44,9 @@ async function fetchRolesById(): Promise<Record<string, string>> {
       params: { page: 1, limit: 200 },
     })
     const payload = response.data as any
-    const list = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+    const list = Array.isArray(payload)
+      ? payload
+      : (payload?.data ?? payload?.items ?? [])
     return Object.fromEntries(
       (Array.isArray(list) ? list : []).flatMap((item: any) => {
         const id = typeof item?.id === 'string' ? item.id : ''
@@ -62,7 +64,9 @@ async function fetchRolesById(): Promise<Record<string, string>> {
       params: { page: 1, limit: 200 },
     })
     const payload = response.data as any
-    const list = Array.isArray(payload) ? payload : payload?.data ?? payload?.items ?? []
+    const list = Array.isArray(payload)
+      ? payload
+      : (payload?.data ?? payload?.items ?? [])
     return Object.fromEntries(
       (Array.isArray(list) ? list : []).flatMap((item: any) => {
         const id = typeof item?.id === 'string' ? item.id : ''

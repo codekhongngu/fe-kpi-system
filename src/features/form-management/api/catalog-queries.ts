@@ -11,4 +11,3 @@ export function useFieldCategoriesCatalogQuery() {
     queryFn: () => formManagementApi.listFieldCategoriesCatalog('all', true),
   })
 }
-

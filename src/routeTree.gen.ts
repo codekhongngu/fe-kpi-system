@@ -46,8 +46,10 @@ import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedMyAssignmentsIndexRouteImport } from './routes/_authenticated/my/assignments/index'
 import { Route as AuthenticatedReportManagementDetailsReportIdRouteImport } from './routes/_authenticated/report-management/details.$reportId'
 import { Route as AuthenticatedFormManagementDetailsTemplateIdRouteImport } from './routes/_authenticated/form-management/details.$templateId'
+import { Route as AuthenticatedMyAssignmentsAssignmentIdInputRouteImport } from './routes/_authenticated/my/assignments/$assignmentId.input'
 
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
@@ -245,6 +247,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMyAssignmentsIndexRoute =
+  AuthenticatedMyAssignmentsIndexRouteImport.update({
+    id: '/my/assignments/',
+    path: '/my/assignments/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportManagementDetailsReportIdRoute =
   AuthenticatedReportManagementDetailsReportIdRouteImport.update({
     id: '/report-management/details/$reportId',
@@ -256,6 +264,12 @@ const AuthenticatedFormManagementDetailsTemplateIdRoute =
     id: '/details/$templateId',
     path: '/details/$templateId',
     getParentRoute: () => AuthenticatedFormManagementRouteRoute,
+  } as any)
+const AuthenticatedMyAssignmentsAssignmentIdInputRoute =
+  AuthenticatedMyAssignmentsAssignmentIdInputRouteImport.update({
+    id: '/my/assignments/$assignmentId/input',
+    path: '/my/assignments/$assignmentId/input',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -295,6 +309,8 @@ export interface FileRoutesByFullPath {
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
+  '/my/assignments/': typeof AuthenticatedMyAssignmentsIndexRoute
+  '/my/assignments/$assignmentId/input': typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -331,6 +347,8 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersIndexRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
+  '/my/assignments': typeof AuthenticatedMyAssignmentsIndexRoute
+  '/my/assignments/$assignmentId/input': typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -373,6 +391,8 @@ export interface FileRoutesById {
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/_authenticated/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
+  '/_authenticated/my/assignments/': typeof AuthenticatedMyAssignmentsIndexRoute
+  '/_authenticated/my/assignments/$assignmentId/input': typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -413,6 +433,8 @@ export interface FileRouteTypes {
     | '/users/'
     | '/form-management/details/$templateId'
     | '/report-management/details/$reportId'
+    | '/my/assignments/'
+    | '/my/assignments/$assignmentId/input'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -449,6 +471,8 @@ export interface FileRouteTypes {
     | '/users'
     | '/form-management/details/$templateId'
     | '/report-management/details/$reportId'
+    | '/my/assignments'
+    | '/my/assignments/$assignmentId/input'
   id:
     | '__root__'
     | '/_authenticated'
@@ -490,6 +514,8 @@ export interface FileRouteTypes {
     | '/_authenticated/users/'
     | '/_authenticated/form-management/details/$templateId'
     | '/_authenticated/report-management/details/$reportId'
+    | '/_authenticated/my/assignments/'
+    | '/_authenticated/my/assignments/$assignmentId/input'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -769,6 +795,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/my/assignments/': {
+      id: '/_authenticated/my/assignments/'
+      path: '/my/assignments'
+      fullPath: '/my/assignments/'
+      preLoaderRoute: typeof AuthenticatedMyAssignmentsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/report-management/details/$reportId': {
       id: '/_authenticated/report-management/details/$reportId'
       path: '/report-management/details/$reportId'
@@ -782,6 +815,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/form-management/details/$templateId'
       preLoaderRoute: typeof AuthenticatedFormManagementDetailsTemplateIdRouteImport
       parentRoute: typeof AuthenticatedFormManagementRouteRoute
+    }
+    '/_authenticated/my/assignments/$assignmentId/input': {
+      id: '/_authenticated/my/assignments/$assignmentId/input'
+      path: '/my/assignments/$assignmentId/input'
+      fullPath: '/my/assignments/$assignmentId/input'
+      preLoaderRoute: typeof AuthenticatedMyAssignmentsAssignmentIdInputRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
@@ -842,6 +882,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
   AuthenticatedReportManagementDetailsReportIdRoute: typeof AuthenticatedReportManagementDetailsReportIdRoute
+  AuthenticatedMyAssignmentsIndexRoute: typeof AuthenticatedMyAssignmentsIndexRoute
+  AuthenticatedMyAssignmentsAssignmentIdInputRoute: typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -863,6 +905,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedReportManagementDetailsReportIdRoute:
     AuthenticatedReportManagementDetailsReportIdRoute,
+  AuthenticatedMyAssignmentsIndexRoute: AuthenticatedMyAssignmentsIndexRoute,
+  AuthenticatedMyAssignmentsAssignmentIdInputRoute:
+    AuthenticatedMyAssignmentsAssignmentIdInputRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -36,7 +36,7 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
     >
       <div
         className={cn(
-          'xia-shell relative flex h-[3.25rem] items-center gap-2 px-3 sm:gap-3 sm:px-4',
+          'relative flex h-[3.25rem] items-center gap-2 xia-shell px-3 sm:gap-3 sm:px-4',
           offset > 10 &&
             fixed &&
             'after:absolute after:inset-0 after:-z-10 after:rounded-xl after:bg-card/95'
@@ -48,7 +48,7 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
         />
         <Separator orientation='vertical' className='h-5 bg-border/70' />
         {children}
-        <ThemeSwitch/>
+        <ThemeSwitch />
       </div>
     </header>
   )

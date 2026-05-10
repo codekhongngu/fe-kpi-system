@@ -47,8 +47,10 @@ export function ReportDetailDialog({
   onApprove,
   onReject,
 }: ReportDetailDialogProps) {
-  const canReview = report && ['SUBMITTED', 'UNDER_REVIEW'].includes(report.status)
-  const canEdit = report && !['APPROVED', 'COMPLETED', 'CANCELLED'].includes(report.status)
+  const canReview =
+    report && ['SUBMITTED', 'UNDER_REVIEW'].includes(report.status)
+  const canEdit =
+    report && !['APPROVED', 'COMPLETED', 'CANCELLED'].includes(report.status)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,7 +127,9 @@ export function ReportDetailDialog({
                     {report.cells.map((cell) => (
                       <TableRow key={cell.id}>
                         <TableCell>
-                          <div className='font-medium'>{cell.indicatorName}</div>
+                          <div className='font-medium'>
+                            {cell.indicatorName}
+                          </div>
                           <div className='text-xs text-muted-foreground'>
                             {cell.indicatorCode}
                           </div>
@@ -150,7 +154,9 @@ export function ReportDetailDialog({
                     <div key={item.id} className='relative ps-6'>
                       <span className='absolute start-0 top-1.5 size-2 rounded-full bg-teal-600' />
                       <div className='font-medium'>{item.action}</div>
-                      <div className='text-sm text-muted-foreground'>{item.note}</div>
+                      <div className='text-sm text-muted-foreground'>
+                        {item.note}
+                      </div>
                       <div className='mt-1 flex items-center gap-1 text-xs text-muted-foreground'>
                         <Clock3 className='size-3' />
                         {formatDateTime(item.createdAt)} bởi {item.actor}
@@ -173,7 +179,11 @@ export function ReportDetailDialog({
         )}
 
         <DialogFooter className='gap-2 sm:justify-between'>
-          <Button type='button' variant='outline' onClick={() => onOpenChange(false)}>
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => onOpenChange(false)}
+          >
             Đóng
           </Button>
           <div className='flex gap-2'>

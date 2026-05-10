@@ -2,10 +2,16 @@ import { useMemo, useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Save, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { formManagementApi } from '../../../form-management/api/template-management-api'
 import type {
   TemplateField,
@@ -30,9 +36,11 @@ export function CampaignDefaultValuesTab({
   templateId,
 }: CampaignDefaultValuesTabProps) {
   const queryClient = useQueryClient()
-  
+
   // Local state for edits
-  const [editedValues, setEditedValues] = useState<Record<string, { text: string; number: number | null }>>({})
+  const [editedValues, setEditedValues] = useState<
+    Record<string, { text: string; number: number | null }>
+  >({})
 
   const campaignQuery = useQuery({
     queryKey: ['report-management', 'campaign', campaignId],
@@ -47,7 +55,13 @@ export function CampaignDefaultValuesTab({
   })
 
   const effectiveCellConfigsQuery = useQuery({
-    queryKey: ['form-management', 'template', templateId, 'cell-configs', 'effective'],
+    queryKey: [
+      'form-management',
+      'template',
+      templateId,
+      'cell-configs',
+      'effective',
+    ],
     queryFn: () => formManagementApi.listEffectiveCellConfigs(templateId),
     enabled: Boolean(templateId),
   })
@@ -80,7 +94,8 @@ export function CampaignDefaultValuesTab({
 
   // Reset edits when query data changes
   useEffect(() => {
-    const nextState: Record<string, { text: string; number: number | null }> = {}
+    const nextState: Record<string, { text: string; number: number | null }> =
+      {}
     for (const item of defaultValuesQuery.data ?? []) {
       nextState[cellKey(item.indicatorId, item.attributeId)] = {
         text: item.valueText ?? '',
@@ -93,10 +108,10 @@ export function CampaignDefaultValuesTab({
   const hasChanges = useMemo(() => {
     const initialKeys = Array.from(initialValuesMap.keys())
     const editedKeys = Object.keys(editedValues)
-    
+
     // Check if new items added or removed
     if (initialKeys.length !== editedKeys.length) return true
-    
+
     // Check if any values changed
     for (const key of editedKeys) {
       const initial = initialValuesMap.get(key)
@@ -105,7 +120,7 @@ export function CampaignDefaultValuesTab({
       if ((initial.valueText ?? '') !== edited.text) return true
       if (initial.valueNumber !== edited.number) return true
     }
-    
+
     return false
   }, [initialValuesMap, editedValues])
 
@@ -119,22 +134,26 @@ export function CampaignDefaultValuesTab({
         valueText: string | null
         valueNumber: number | null
       }> = []
-      
-      const deleteItems: Array<{ indicatorId: string; attributeId: string }> = []
-      
-      const allKeys = new Set([...Array.from(initialValuesMap.keys()), ...Object.keys(editedValues)])
-      
+
+      const deleteItems: Array<{ indicatorId: string; attributeId: string }> =
+        []
+
+      const allKeys = new Set([
+        ...Array.from(initialValuesMap.keys()),
+        ...Object.keys(editedValues),
+      ])
+
       for (const key of allKeys) {
         const [indicatorId, attributeId] = key.split('__')
         const initial = initialValuesMap.get(key)
         const edited = editedValues[key]
-        
+
         // If it was removed (should not happen with our UI, but for completeness)
         if (!edited && initial) {
           deleteItems.push({ indicatorId, attributeId })
           continue
         }
-        
+
         // If it has empty values, we can just delete it instead of storing empty
         if (edited && !edited.text && edited.number === null) {
           if (initial) {
@@ -147,20 +166,23 @@ export function CampaignDefaultValuesTab({
         if (edited) {
           const cellConfig = effectiveMap.get(key)
           const dataType = cellConfig?.dataType ?? 'text'
-          
-          const isChanged = !initial || initial.valueText !== edited.text || initial.valueNumber !== edited.number
-          
+
+          const isChanged =
+            !initial ||
+            initial.valueText !== edited.text ||
+            initial.valueNumber !== edited.number
+
           if (isChanged) {
             upsertItems.push({
               indicatorId,
               attributeId,
-              valueText: dataType === 'text' ? (edited.text || null) : null,
+              valueText: dataType === 'text' ? edited.text || null : null,
               valueNumber: dataType === 'number' ? edited.number : null,
             })
           }
         }
       }
-      
+
       if (upsertItems.length > 0) {
         await reportCampaignApi.upsertDefaultValues(campaignId, upsertItems)
       }
@@ -170,12 +192,24 @@ export function CampaignDefaultValuesTab({
     },
     onSuccess: async () => {
       toast.success('Đã lưu giá trị mặc định.')
-      await queryClient.invalidateQueries({ queryKey: ['report-management', 'campaign', campaignId, 'default-values'] })
+      await queryClient.invalidateQueries({
+        queryKey: [
+          'report-management',
+          'campaign',
+          campaignId,
+          'default-values',
+        ],
+      })
     },
     onError: (error: Error) => toast.error(error.message),
   })
 
-  function handleValueChange(indicatorId: string, attributeId: string, value: string, dataType: 'number' | 'text') {
+  function handleValueChange(
+    indicatorId: string,
+    attributeId: string,
+    value: string,
+    dataType: 'number' | 'text'
+  ) {
     const key = cellKey(indicatorId, attributeId)
     setEditedValues((prev) => {
       const current = prev[key] || { text: '', number: null }
@@ -183,7 +217,12 @@ export function CampaignDefaultValuesTab({
         ...prev,
         [key]: {
           text: dataType === 'text' ? value : current.text,
-          number: dataType === 'number' ? (value === '' ? null : Number(value)) : current.number,
+          number:
+            dataType === 'number'
+              ? value === ''
+                ? null
+                : Number(value)
+              : current.number,
         },
       }
     })
@@ -193,7 +232,9 @@ export function CampaignDefaultValuesTab({
     if (indicator.type === 'TITLE') {
       return (
         <div className='flex w-full min-w-[120px] items-center justify-center rounded-md border border-dashed border-transparent bg-muted/5 px-2 py-1 opacity-50'>
-          <span className='text-[10px] uppercase text-muted-foreground'>Không áp dụng</span>
+          <span className='text-[10px] text-muted-foreground uppercase'>
+            Không áp dụng
+          </span>
         </div>
       )
     }
@@ -201,14 +242,22 @@ export function CampaignDefaultValuesTab({
     const cellConfig = effectiveMap.get(cellKey(indicator.id, field.id))
 
     if (!cellConfig) {
-      return <span className='text-xs text-muted-foreground block text-center'>-</span>
+      return (
+        <span className='block text-center text-xs text-muted-foreground'>
+          -
+        </span>
+      )
     }
 
     if (cellConfig.formula) {
       return (
         <div className='flex w-full min-w-[120px] items-center justify-between rounded-md border border-dashed border-transparent bg-muted/10 px-2 py-1'>
-          <span className='text-[10px] uppercase text-muted-foreground'>Công thức</span>
-          <Badge variant='outline' className='text-[9px] px-1 py-0'>{cellConfig.formula}</Badge>
+          <span className='text-[10px] text-muted-foreground uppercase'>
+            Công thức
+          </span>
+          <Badge variant='outline' className='px-1 py-0 text-[9px]'>
+            {cellConfig.formula}
+          </Badge>
         </div>
       )
     }
@@ -216,7 +265,9 @@ export function CampaignDefaultValuesTab({
     if (cellConfig.readOnly) {
       return (
         <div className='flex w-full min-w-[120px] items-center justify-center rounded-md border border-dashed border-transparent bg-muted/10 px-2 py-1'>
-          <span className='text-[10px] uppercase text-muted-foreground'>Chỉ đọc</span>
+          <span className='text-[10px] text-muted-foreground uppercase'>
+            Chỉ đọc
+          </span>
         </div>
       )
     }
@@ -236,7 +287,14 @@ export function CampaignDefaultValuesTab({
               ? (currentValue?.number ?? '')
               : (currentValue?.text ?? '')
           }
-          onChange={(e) => handleValueChange(indicator.id, field.id, e.target.value, cellConfig.dataType as 'number' | 'text')}
+          onChange={(e) =>
+            handleValueChange(
+              indicator.id,
+              field.id,
+              e.target.value,
+              cellConfig.dataType as 'number' | 'text'
+            )
+          }
         />
       </div>
     )
@@ -249,7 +307,8 @@ export function CampaignDefaultValuesTab({
           <div>
             <CardTitle>Giá trị mặc định</CardTitle>
             <CardDescription>
-              Thiết lập giá trị điền sẵn cho các ô dữ liệu trong báo cáo. Đơn vị báo cáo sẽ thấy giá trị này khi bắt đầu nhập liệu.
+              Thiết lập giá trị điền sẵn cho các ô dữ liệu trong báo cáo. Đơn vị
+              báo cáo sẽ thấy giá trị này khi bắt đầu nhập liệu.
             </CardDescription>
           </div>
           <div className='flex items-center gap-2'>
@@ -268,7 +327,9 @@ export function CampaignDefaultValuesTab({
 
       <CardContent>
         {templateQuery.isLoading ? (
-          <div className='py-12 text-center text-sm text-muted-foreground'>Đang tải dữ liệu cấu hình...</div>
+          <div className='py-12 text-center text-sm text-muted-foreground'>
+            Đang tải dữ liệu cấu hình...
+          </div>
         ) : templateQuery.isError || !template ? (
           <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
             Không thể tải cấu trúc biểu mẫu cho đợt báo cáo này.
@@ -276,9 +337,12 @@ export function CampaignDefaultValuesTab({
         ) : (
           <div className='space-y-4'>
             {!canEdit && (
-              <div className='flex items-center gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-600 border border-amber-500/20'>
+              <div className='flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-600'>
                 <AlertCircle className='size-4' />
-                <span>Không thể chỉnh sửa giá trị mặc định do đợt báo cáo đã chuyển trạng thái.</span>
+                <span>
+                  Không thể chỉnh sửa giá trị mặc định do đợt báo cáo đã chuyển
+                  trạng thái.
+                </span>
               </div>
             )}
             <TemplateMatrixGrid

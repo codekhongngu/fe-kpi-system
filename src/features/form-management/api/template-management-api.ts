@@ -1,3 +1,4 @@
+import { apiClient } from '@/lib/api-client'
 import {
   type CatalogOption,
   type CatalogStatusFilter,
@@ -23,7 +24,6 @@ import {
   type UpdateIndicatorInput,
   type UpdateTemplateInput,
 } from './types'
-import { apiClient } from '@/lib/api-client'
 
 function shouldFallbackToUnderscorePath(error: unknown) {
   const status = (error as { response?: { status?: number } })?.response?.status
@@ -130,7 +130,10 @@ const mapCellConfig = (item: BeCellConfig): TemplateCellConfig => {
     indicatorId: item.indicatorId,
     attributeId: item.attributeId,
     dataType: item.dataType === 'number' ? 'number' : 'text',
-    required: typeof item.required === 'boolean' ? item.required : Boolean(item.isRequired),
+    required:
+      typeof item.required === 'boolean'
+        ? item.required
+        : Boolean(item.isRequired),
     readOnly: formula ? true : readOnlyRaw,
     formula,
   }
@@ -171,10 +174,12 @@ const mapScope = (item: BeScope): TemplateScope => ({
 
 export const formManagementApi = {
   getOrgTree: async (): Promise<OrgTreeItem[]> => {
-    const response = await apiClient.get<{ items?: BeOrgTreeItem[] } | BeOrgTreeItem[]>('/orgs', { params: { tree: true } })
+    const response = await apiClient.get<
+      { items?: BeOrgTreeItem[] } | BeOrgTreeItem[]
+    >('/orgs', { params: { tree: true } })
     const payload = response.data
     const items = Array.isArray(payload) ? payload : (payload.items ?? [])
-    
+
     const mapTree = (nodes: BeOrgTreeItem[]): OrgTreeItem[] => {
       return nodes.map((node) => ({
         id: node.id,
@@ -182,11 +187,13 @@ export const formManagementApi = {
         name: node.name ?? '',
         level: node.level ?? 1,
         parentId: node.parentId ?? null,
-        canAssignReports: Boolean(node.canAssignReports ?? node.can_assign_reports ?? true),
+        canAssignReports: Boolean(
+          node.canAssignReports ?? node.can_assign_reports ?? true
+        ),
         children: mapTree(node.children ?? []),
       }))
     }
-    
+
     return mapTree(items)
   },
 
@@ -215,13 +222,14 @@ export const formManagementApi = {
         ? payload
         : Array.isArray((payload as { data?: unknown }).data)
           ? ((payload as { data: BeFieldCategory[] }).data ?? [])
-          : (payload as { items?: BeFieldCategory[] }).items ?? []
+          : ((payload as { items?: BeFieldCategory[] }).items ?? [])
 
       return items.map<FieldCategory>((item) => ({
         id: item.id,
         code: item.code ?? '',
         name: item.name ?? '',
-        description: typeof item.description === 'string' ? item.description : null,
+        description:
+          typeof item.description === 'string' ? item.description : null,
         sortOrder:
           typeof item.sortOrder === 'number'
             ? item.sortOrder
@@ -257,13 +265,19 @@ export const formManagementApi = {
     }
 
     try {
-      const response = await apiClient.post<FieldCategory>('/field-categories', payload)
+      const response = await apiClient.post<FieldCategory>(
+        '/field-categories',
+        payload
+      )
       return response.data
     } catch (error) {
       if (!shouldFallbackToUnderscorePath(error)) {
         throw error
       }
-      const response = await apiClient.post<FieldCategory>('/field_categories', payload)
+      const response = await apiClient.post<FieldCategory>(
+        '/field_categories',
+        payload
+      )
       return response.data
     }
   },
@@ -278,13 +292,19 @@ export const formManagementApi = {
     }
 
     try {
-      const response = await apiClient.patch<FieldCategory>(`/field-categories/${id}`, payload)
+      const response = await apiClient.patch<FieldCategory>(
+        `/field-categories/${id}`,
+        payload
+      )
       return response.data
     } catch (error) {
       if (!shouldFallbackToUnderscorePath(error)) {
         throw error
       }
-      const response = await apiClient.patch<FieldCategory>(`/field_categories/${id}`, payload)
+      const response = await apiClient.patch<FieldCategory>(
+        `/field_categories/${id}`,
+        payload
+      )
       return response.data
     }
   },
@@ -320,12 +340,23 @@ export const formManagementApi = {
     throw new Error(message)
   },
 
-  listTemplates: async (params?: FormTemplateListParams): Promise<FormTemplateListResult> => {
+  listTemplates: async (
+    params?: FormTemplateListParams
+  ): Promise<FormTemplateListResult> => {
     const rawParams = (params ?? {}) as Record<string, unknown>
     const readString = (...values: unknown[]) =>
-      values.find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim() ?? ''
+      values
+        .find(
+          (value): value is string =>
+            typeof value === 'string' && value.trim().length > 0
+        )
+        ?.trim() ?? ''
     const search = readString(rawParams.q, rawParams.search)
-    const category = readString(rawParams.fieldCategoryId, rawParams.category, rawParams.fieldCategory)
+    const category = readString(
+      rawParams.fieldCategoryId,
+      rawParams.category,
+      rawParams.fieldCategory
+    )
     const periodType = readString(rawParams.periodType, rawParams.period)
     const statusRaw = rawParams.status
     const statusValue =
@@ -372,7 +403,11 @@ export const formManagementApi = {
     }
 
     const response = await apiClient.get<
-      BeForm[] | { items?: BeForm[]; meta?: { page?: number; limit?: number; total?: number } }
+      | BeForm[]
+      | {
+          items?: BeForm[]
+          meta?: { page?: number; limit?: number; total?: number }
+        }
     >('/forms', {
       params: requestParams,
     })
@@ -385,11 +420,15 @@ export const formManagementApi = {
       description: item.description ?? '',
       fieldCategoryId:
         item.fieldCategoryId ??
-        (typeof item.fieldCategory === 'string' ? '' : item.fieldCategory?.id) ??
+        (typeof item.fieldCategory === 'string'
+          ? ''
+          : item.fieldCategory?.id) ??
         '',
       fieldCategoryName:
         item.fieldCategoryName ??
-        (typeof item.fieldCategory === 'string' ? item.fieldCategory : item.fieldCategory?.name),
+        (typeof item.fieldCategory === 'string'
+          ? item.fieldCategory
+          : item.fieldCategory?.name),
       periodType: item.periodType,
       templateType: item.templateType ?? 'AGGREGATE',
       templateStatus: item.templateStatus ?? 'DRAFT',
@@ -403,20 +442,30 @@ export const formManagementApi = {
     return {
       items,
       meta: {
-        page: Array.isArray(payload) ? params?.page ?? 1 : payload.meta?.page ?? (params?.page ?? 1),
-        limit: Array.isArray(payload) ? params?.limit ?? 20 : payload.meta?.limit ?? (params?.limit ?? 20),
-        total: Array.isArray(payload) ? items.length : payload.meta?.total ?? items.length,
+        page: Array.isArray(payload)
+          ? (params?.page ?? 1)
+          : (payload.meta?.page ?? params?.page ?? 1),
+        limit: Array.isArray(payload)
+          ? (params?.limit ?? 20)
+          : (payload.meta?.limit ?? params?.limit ?? 20),
+        total: Array.isArray(payload)
+          ? items.length
+          : (payload.meta?.total ?? items.length),
       },
     }
   },
 
-  listFieldCategoriesCatalog: async (status: CatalogStatusFilter = 'all', isGetAll = true) => {
+  listFieldCategoriesCatalog: async (
+    status: CatalogStatusFilter = 'all',
+    isGetAll = true
+  ) => {
     const params = status === 'all' ? { isGetAll } : { status, isGetAll }
-    const response = await apiClient.get<{ items?: BeCatalogItem[] } | BeCatalogItem[]>(
-      '/field-categories',
-      { params },
-    )
-    const items = Array.isArray(response.data) ? response.data : (response.data.items ?? [])
+    const response = await apiClient.get<
+      { items?: BeCatalogItem[] } | BeCatalogItem[]
+    >('/field-categories', { params })
+    const items = Array.isArray(response.data)
+      ? response.data
+      : (response.data.items ?? [])
     return items.map<CatalogOption>((item) => ({
       id: item.id,
       code: item.code ?? '',
@@ -434,10 +483,17 @@ export const formManagementApi = {
       code: form.code,
       name: form.name,
       description: form.description ?? '',
-      fieldCategoryId: form.fieldCategoryId ?? (typeof form.fieldCategory === 'string' ? '' : form.fieldCategory?.id) ?? '',
+      fieldCategoryId:
+        form.fieldCategoryId ??
+        (typeof form.fieldCategory === 'string'
+          ? ''
+          : form.fieldCategory?.id) ??
+        '',
       fieldCategoryName:
         form.fieldCategoryName ??
-        (typeof form.fieldCategory === 'string' ? form.fieldCategory : form.fieldCategory?.name),
+        (typeof form.fieldCategory === 'string'
+          ? form.fieldCategory
+          : form.fieldCategory?.name),
       periodType: form.periodType,
       templateType: form.templateType ?? 'AGGREGATE',
       templateStatus: form.templateStatus ?? 'DRAFT',
@@ -451,7 +507,10 @@ export const formManagementApi = {
   },
 
   createTemplate: async (input: CreateTemplateInput) => {
-    const response = await apiClient.post<BeForm | { id: string }>('/forms', input)
+    const response = await apiClient.post<BeForm | { id: string }>(
+      '/forms',
+      input
+    )
     const formId = (response.data as { id?: string }).id
     if (formId) {
       return await formManagementApi.getTemplate(formId)
@@ -473,7 +532,10 @@ export const formManagementApi = {
   },
 
   updateTemplate: async (templateId: string, input: UpdateTemplateInput) => {
-    await apiClient.patch<BeForm | { ok: boolean }>(`/forms/${templateId}`, input)
+    await apiClient.patch<BeForm | { ok: boolean }>(
+      `/forms/${templateId}`,
+      input
+    )
     return await formManagementApi.getTemplate(templateId)
   },
 
@@ -503,7 +565,10 @@ export const formManagementApi = {
   },
 
   copyTemplate: async (templateId: string, payload?: { name?: string }) => {
-    const response = await apiClient.post<BeForm | { id: string }>(`/forms/${templateId}/copy`, payload ?? {})
+    const response = await apiClient.post<BeForm | { id: string }>(
+      `/forms/${templateId}/copy`,
+      payload ?? {}
+    )
     const formId = (response.data as { id?: string }).id
     if (formId) {
       return await formManagementApi.getTemplate(formId)
@@ -516,16 +581,26 @@ export const formManagementApi = {
       parentId: input.parentId ?? null,
       name: input.label,
     }
-    const response = await apiClient.post<BeAttribute>(`/forms/${templateId}/attributes`, payload)
+    const response = await apiClient.post<BeAttribute>(
+      `/forms/${templateId}/attributes`,
+      payload
+    )
     return mapAttribute(response.data)
   },
 
-  updateField: async (templateId: string, fieldId: string, input: UpdateFieldInput) => {
+  updateField: async (
+    templateId: string,
+    fieldId: string,
+    input: UpdateFieldInput
+  ) => {
     const payload = {
       parentId: input.parentId ?? null,
       name: input.label,
     }
-    const response = await apiClient.patch<BeAttribute>(`/forms/${templateId}/attributes/${fieldId}`, payload)
+    const response = await apiClient.patch<BeAttribute>(
+      `/forms/${templateId}/attributes/${fieldId}`,
+      payload
+    )
     return mapAttribute(response.data)
   },
 
@@ -549,11 +624,18 @@ export const formManagementApi = {
       dataType: input.dataType ?? 'number',
       type: input.type ?? 'INPUT',
     }
-    const response = await apiClient.post<BeIndicator>(`/forms/${templateId}/indicators`, payload)
+    const response = await apiClient.post<BeIndicator>(
+      `/forms/${templateId}/indicators`,
+      payload
+    )
     return mapIndicator(response.data)
   },
 
-  updateIndicator: async (templateId: string, indicatorId: string, input: UpdateIndicatorInput) => {
+  updateIndicator: async (
+    templateId: string,
+    indicatorId: string,
+    input: UpdateIndicatorInput
+  ) => {
     const payload = {
       parentId: input.parentId ?? null,
       displayIndex: input.code,
@@ -563,7 +645,10 @@ export const formManagementApi = {
       dataType: input.dataType ?? 'number',
       type: input.type ?? 'INPUT',
     }
-    const response = await apiClient.patch<BeIndicator>(`/forms/${templateId}/indicators/${indicatorId}`, payload)
+    const response = await apiClient.patch<BeIndicator>(
+      `/forms/${templateId}/indicators/${indicatorId}`,
+      payload
+    )
     return mapIndicator(response.data)
   },
 
@@ -577,30 +662,44 @@ export const formManagementApi = {
     return true
   },
 
-  reorderFields: async (templateId: string, items: Array<{ id: string; parentId?: string | null }>) => {
+  reorderFields: async (
+    templateId: string,
+    items: Array<{ id: string; parentId?: string | null }>
+  ) => {
     await apiClient.post(`/forms/${templateId}/attributes/reorder`, { items })
     return true
   },
 
-  reorderIndicators: async (templateId: string, items: Array<{ id: string; parentId?: string | null }>) => {
+  reorderIndicators: async (
+    templateId: string,
+    items: Array<{ id: string; parentId?: string | null }>
+  ) => {
     await apiClient.post(`/forms/${templateId}/indicators/reorder`, { items })
     return true
   },
 
-
-
   listTemplateScopes: async (templateId: string) => {
-    const response = await apiClient.get<{ items?: BeScope[] }>(`/forms/${templateId}/template-scopes`)
+    const response = await apiClient.get<{ items?: BeScope[] }>(
+      `/forms/${templateId}/template-scopes`
+    )
     return (response.data.items ?? []).map(mapScope)
   },
 
-  upsertTemplateScopes: async (templateId: string, items: TemplateScopeInput[]) => {
+  upsertTemplateScopes: async (
+    templateId: string,
+    items: TemplateScopeInput[]
+  ) => {
     await apiClient.post(`/forms/${templateId}/template-scopes`, { items })
     return true
   },
 
-  deleteTemplateScopes: async (templateId: string, items: TemplateScopeInput[]) => {
-    await apiClient.delete(`/forms/${templateId}/template-scopes`, { data: { items } })
+  deleteTemplateScopes: async (
+    templateId: string,
+    items: TemplateScopeInput[]
+  ) => {
+    await apiClient.delete(`/forms/${templateId}/template-scopes`, {
+      data: { items },
+    })
     return true
   },
 
@@ -618,7 +717,10 @@ export const formManagementApi = {
     return (response.data.items ?? []).map((item) => mapCellConfig(item))
   },
 
-  upsertCellConfigs: async (templateId: string, items: TemplateCellConfig[]) => {
+  upsertCellConfigs: async (
+    templateId: string,
+    items: TemplateCellConfig[]
+  ) => {
     await apiClient.post(`/forms/${templateId}/cell-configs`, { items })
     return true
   },
@@ -627,7 +729,9 @@ export const formManagementApi = {
     templateId: string,
     items: Array<{ indicatorId: string; attributeId: string }>
   ) => {
-    await apiClient.delete(`/forms/${templateId}/cell-configs`, { data: { items } })
+    await apiClient.delete(`/forms/${templateId}/cell-configs`, {
+      data: { items },
+    })
     return true
   },
 }

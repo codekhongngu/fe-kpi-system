@@ -10,7 +10,8 @@ export function UnauthorisedError() {
         <h1 className='text-[7rem] leading-tight font-bold'>401</h1>
         <span className='font-medium'>Chưa xác thực</span>
         <p className='text-center text-muted-foreground'>
-          Vui lòng đăng nhập bằng tài khoản hợp lệ <br /> để truy cập nội dung này.
+          Vui lòng đăng nhập bằng tài khoản hợp lệ <br /> để truy cập nội dung
+          này.
         </p>
         <div className='mt-6 flex gap-4'>
           <Button variant='outline' onClick={() => history.go(-1)}>

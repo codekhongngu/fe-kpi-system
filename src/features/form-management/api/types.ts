@@ -159,38 +159,54 @@ export type TemplateScopeInput = {
   indicatorId: string
 }
 
-export const templateCycleOptions: Array<{ value: TemplateCycle; label: string }> = [
+export const templateCycleOptions: Array<{
+  value: TemplateCycle
+  label: string
+}> = [
   { value: 'week', label: 'Tuần' },
   { value: 'month', label: 'Tháng' },
   { value: 'quarter', label: 'Quý' },
   { value: 'year', label: 'Năm' },
 ]
 
-export const templateTypeOptions: Array<{ value: TemplateType; label: string }> = [
+export const templateTypeOptions: Array<{
+  value: TemplateType
+  label: string
+}> = [
   { value: 'AGGREGATE', label: 'Tổng hợp' },
   { value: 'UNIQUE', label: 'Đơn nhất' },
 ]
 
-export const templateLifecycleStatusOptions: Array<{ value: TemplateLifecycleStatus; label: string }> = [
+export const templateLifecycleStatusOptions: Array<{
+  value: TemplateLifecycleStatus
+  label: string
+}> = [
   { value: 'DRAFT', label: 'Nháp' },
   { value: 'READY', label: 'Sẵn sàng' },
   { value: 'IN_USE', label: 'Đang sử dụng' },
   { value: 'ARCHIVED', label: 'Đã lưu trữ' },
 ]
 
-export const templateActivationStatusOptions: Array<{ value: TemplateActivationStatus; label: string }> = [
+export const templateActivationStatusOptions: Array<{
+  value: TemplateActivationStatus
+  label: string
+}> = [
   { value: 'active', label: 'Hoạt động' },
   { value: 'inactive', label: 'Ngừng hoạt động' },
 ]
 
-export const fieldDataTypeOptions: Array<{ value: FieldDataType; label: string }> = [
+export const fieldDataTypeOptions: Array<{
+  value: FieldDataType
+  label: string
+}> = [
   { value: 'text', label: 'Văn bản' },
   { value: 'number', label: 'Số' },
 ]
 
-export const indicatorTypeOptions: Array<{ value: 'INPUT' | 'TITLE'; label: string }> = [
+export const indicatorTypeOptions: Array<{
+  value: 'INPUT' | 'TITLE'
+  label: string
+}> = [
   { value: 'INPUT', label: 'Nhập liệu' },
   { value: 'TITLE', label: 'Chỉ hiển thị (Tiêu đề)' },
 ]
-
-

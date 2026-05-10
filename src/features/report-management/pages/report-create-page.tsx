@@ -1,9 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { apiClient } from '@/lib/api-client'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import type { CreateReportInput, UpdateReportInput } from '../api/types'
 import { ReportForm } from '../components/report-form-dialog'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
@@ -26,9 +32,15 @@ export function ReportCreatePage() {
     },
     onSuccess: async () => {
       toast.success('Đã tạo báo cáo thành công.')
-      await queryClient.invalidateQueries({ queryKey: ['report-management', 'list'] })
+      await queryClient.invalidateQueries({
+        queryKey: ['report-management', 'list'],
+      })
       await queryClient.invalidateQueries({ queryKey: reportQueryKeys.summary })
-      navigate({ to: '/report-management', search: { tab: 'list' }, replace: true })
+      navigate({
+        to: '/report-management',
+        search: { tab: 'list' },
+        replace: true,
+      })
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })
@@ -39,12 +51,16 @@ export function ReportCreatePage() {
         <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
           <div className='min-w-0'>
             <CardTitle>Tạo báo cáo</CardTitle>
-            <CardDescription>Thiết lập biểu mẫu, kỳ báo cáo và thời hạn nhập liệu.</CardDescription>
+            <CardDescription>
+              Thiết lập biểu mẫu, kỳ báo cáo và thời hạn nhập liệu.
+            </CardDescription>
           </div>
           <Button
             type='button'
             variant='outline'
-            onClick={() => navigate({ to: '/report-management', search: { tab: 'list' } })}
+            onClick={() =>
+              navigate({ to: '/report-management', search: { tab: 'list' } })
+            }
             disabled={createMutation.isPending}
           >
             Quay lại
@@ -57,7 +73,9 @@ export function ReportCreatePage() {
           mode='create'
           references={undefined}
           isSubmitting={createMutation.isPending}
-          onCancel={() => navigate({ to: '/report-management', search: { tab: 'list' } })}
+          onCancel={() =>
+            navigate({ to: '/report-management', search: { tab: 'list' } })
+          }
           onCreate={(input) => createMutation.mutate(input)}
           onUpdate={(_id: string, _input: UpdateReportInput) => undefined}
         />

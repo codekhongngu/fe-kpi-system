@@ -138,9 +138,7 @@ export function TasksMutateDrawer({
                         <FormControl>
                           <RadioGroupItem value='documentation' />
                         </FormControl>
-                        <FormLabel className='font-normal'>
-                          Tài liệu
-                        </FormLabel>
+                        <FormLabel className='font-normal'>Tài liệu</FormLabel>
                       </FormItem>
                       <FormItem className='flex items-center'>
                         <FormControl>
@@ -182,7 +180,9 @@ export function TasksMutateDrawer({
                         <FormControl>
                           <RadioGroupItem value='medium' />
                         </FormControl>
-                        <FormLabel className='font-normal'>Trung bình</FormLabel>
+                        <FormLabel className='font-normal'>
+                          Trung bình
+                        </FormLabel>
                       </FormItem>
                       <FormItem className='flex items-center'>
                         <FormControl>

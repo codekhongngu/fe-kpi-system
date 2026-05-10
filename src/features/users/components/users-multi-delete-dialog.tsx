@@ -39,7 +39,9 @@ export function UsersMultiDeleteDialog<TData>({
     onOpenChange(false)
 
     const selectedUsers = selectedRows.map((row) => row.original as User)
-    const deletePromise = Promise.all(selectedUsers.map((user) => usersApi.remove(user.id)))
+    const deletePromise = Promise.all(
+      selectedUsers.map((user) => usersApi.remove(user.id))
+    )
 
     toast.promise(deletePromise, {
       loading: 'Đang xóa người dùng...',

@@ -49,17 +49,14 @@ export function TasksDialogs() {
               setTimeout(() => {
                 setCurrentRow(null)
               }, 100)
-              showSubmittedData(
-                currentRow,
-                'Công việc sau đã được xóa:'
-              )
+              showSubmittedData(currentRow, 'Công việc sau đã được xóa:')
             }}
             className='max-w-md'
             title={`Xóa công việc: ${currentRow.id} ?`}
             desc={
               <>
-                Bạn sắp xóa công việc có mã{' '}
-                <strong>{currentRow.id}</strong>. <br />
+                Bạn sắp xóa công việc có mã <strong>{currentRow.id}</strong>.{' '}
+                <br />
                 Thao tác này không thể hoàn tác.
               </>
             }
