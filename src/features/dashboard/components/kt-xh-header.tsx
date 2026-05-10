@@ -18,8 +18,10 @@ export function KtXhHeader({ title }: KtXhHeaderProps) {
 
   const ktXhPages = [
     { name: 'GRDP', path: '/grdp', description: 'Tổng sản phẩm nội địa' },
-    { name: 'Nông nghiệp', path: '/agriculture', description: 'Trồng trọt và cây cối' },
-    { name: 'CÁC LOẠI CÂY TRỒNG KHÁC', path: '/tree-planting-other', description: 'Các loại cây trồng khác' },
+    { name: 'Nông nghiệp: Trồng trọt', path: '/agriculture', description: 'Trồng trọt và cây cối' },
+    { name: 'Nông nghiệp: Các loại cây trồng khác', path: '/tree-planting-other', description: 'Các loại cây trồng khác' },
+    { name: 'Chăn nuôi', path: '/livestock', description: 'Chăn nuôi gia súc, gia cầm' },
+    { name: 'Lâm nghiệp, Thủy sản', path: '/forestry-fishery', description: 'Lâm nghiệp và khai thác thủy sản' },
   ]
 
   const currentPageIndex = ktXhPages.findIndex(page => window.location.pathname === page.path)
