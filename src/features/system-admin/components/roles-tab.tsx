@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle, Trash2, UserPen } from 'lucide-react'
-import axios from 'axios'
 import { toast } from 'sonner'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,13 +23,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -38,9 +30,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { systemAdminMockApi } from '../api/mock-system-admin-api'
 import {
-  dataScopes,
   rolePermissionCatalog,
   type DataScope,
   type Permission,
@@ -63,10 +55,12 @@ const getErrorMessage = (error: unknown) => {
       }
 
       const directMessage = record.message
-      if (typeof directMessage === 'string' && directMessage.trim()) return directMessage
+      if (typeof directMessage === 'string' && directMessage.trim())
+        return directMessage
       if (Array.isArray(directMessage)) {
         const parts = directMessage.filter(
-          (item): item is string => typeof item === 'string' && item.trim().length > 0,
+          (item): item is string =>
+            typeof item === 'string' && item.trim().length > 0
         )
         if (parts.length > 0) return parts.join('\n')
       }
@@ -75,10 +69,12 @@ const getErrorMessage = (error: unknown) => {
         record.error && typeof record.error === 'object'
           ? (record.error as { message?: unknown }).message
           : undefined
-      if (typeof nestedMessage === 'string' && nestedMessage.trim()) return nestedMessage
+      if (typeof nestedMessage === 'string' && nestedMessage.trim())
+        return nestedMessage
       if (Array.isArray(nestedMessage)) {
         const parts = nestedMessage.filter(
-          (item): item is string => typeof item === 'string' && item.trim().length > 0,
+          (item): item is string =>
+            typeof item === 'string' && item.trim().length > 0
         )
         if (parts.length > 0) return parts.join('\n')
       }
@@ -194,9 +190,16 @@ export function RolesTab() {
       return role.permissionIds
     }
 
-    if (Array.isArray(role.permissions) && role.permissions.length > 0 && permissions.length > 0) {
+    if (
+      Array.isArray(role.permissions) &&
+      role.permissions.length > 0 &&
+      permissions.length > 0
+    ) {
       return role.permissions
-        .map((code) => permissions.find((permission) => permission.code === code)?.id ?? '')
+        .map(
+          (code) =>
+            permissions.find((permission) => permission.code === code)?.id ?? ''
+        )
         .filter((id) => Boolean(id))
     }
 
@@ -223,7 +226,7 @@ export function RolesTab() {
       [permission.name, permission.code, permission.description ?? '']
         .join(' ')
         .toLowerCase()
-        .includes(keyword),
+        .includes(keyword)
     )
   }, [permissionOptions, permissionSearch])
 
@@ -234,7 +237,7 @@ export function RolesTab() {
       (role) =>
         !rolePermissionsLoadedRef.current.has(role.id) &&
         role.permissionIds.length === 0 &&
-        role.permissions.length === 0,
+        role.permissions.length === 0
     )
     if (targetRoles.length === 0) return
 
@@ -244,12 +247,15 @@ export function RolesTab() {
         .getRolePermissions(role.id)
         .then((permissionIds) => {
           if (permissionIds.length === 0) return
-          queryClient.setQueryData<Role[]>(['system-admin', 'roles'], (current) => {
-            const items = current ?? []
-            return items.map((item) =>
-              item.id === role.id ? { ...item, permissionIds } : item,
-            )
-          })
+          queryClient.setQueryData<Role[]>(
+            ['system-admin', 'roles'],
+            (current) => {
+              const items = current ?? []
+              return items.map((item) =>
+                item.id === role.id ? { ...item, permissionIds } : item
+              )
+            }
+          )
         })
         .catch((error: unknown) => toast.error(getErrorMessage(error)))
     })
@@ -280,7 +286,11 @@ export function RolesTab() {
   const createMutation = useMutation({
     mutationFn: (payload: RoleFormState) => {
       const permissionCodes = payload.permissionIds
-        .map((id) => permissionOptions.find((permission) => permission.id === id)?.code ?? '')
+        .map(
+          (id) =>
+            permissionOptions.find((permission) => permission.id === id)
+              ?.code ?? ''
+        )
         .filter((code) => Boolean(code))
 
       return systemAdminMockApi.createRole({
@@ -309,7 +319,10 @@ export function RolesTab() {
         dataScope: payload.dataScope,
         permissionIds: payload.permissionIds,
         permissions: payload.permissionIds
-          .map((permissionId) => permissionOptions.find((p) => p.id === permissionId)?.code ?? '')
+          .map(
+            (permissionId) =>
+              permissionOptions.find((p) => p.id === permissionId)?.code ?? ''
+          )
           .filter((code) => Boolean(code)),
       }),
     onSuccess: () => {
@@ -363,10 +376,15 @@ export function RolesTab() {
         .then((ids) => {
           if (ids.length === 0) return
           setForm((prev) => ({ ...prev, permissionIds: ids }))
-          queryClient.setQueryData<Role[]>(['system-admin', 'roles'], (current) => {
-            const items = current ?? []
-            return items.map((item) => (item.id === role.id ? { ...item, permissionIds: ids } : item))
-          })
+          queryClient.setQueryData<Role[]>(
+            ['system-admin', 'roles'],
+            (current) => {
+              const items = current ?? []
+              return items.map((item) =>
+                item.id === role.id ? { ...item, permissionIds: ids } : item
+              )
+            }
+          )
         })
         .catch((error: unknown) => toast.error(getErrorMessage(error)))
     }
@@ -376,7 +394,9 @@ export function RolesTab() {
     const rawCode = form.code.trim()
     const name = form.name.trim()
     const description = form.description.trim()
-    const permissionIds = Array.isArray(form.permissionIds) ? form.permissionIds : []
+    const permissionIds = Array.isArray(form.permissionIds)
+      ? form.permissionIds
+      : []
 
     if (!rawCode || !name || permissionIds.length === 0) {
       toast.error('Vui lòng nhập mã role, tên role và chọn ít nhất 1 quyền.')
@@ -405,9 +425,7 @@ export function RolesTab() {
       <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
           <CardTitle>Roles & Permissions (RBAC)</CardTitle>
-          <CardDescription>
-            Quản lý vai trò và quyền chi tiết.
-          </CardDescription>
+          <CardDescription>Quản lý vai trò và quyền chi tiết.</CardDescription>
         </div>
         <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
           <Input
@@ -444,18 +462,24 @@ export function RolesTab() {
               )}
               {filteredRoles.map((role) => (
                 <TableRow key={role.id}>
-                  <TableCell className='font-medium'>{role.code || '—'}</TableCell>
+                  <TableCell className='font-medium'>
+                    {role.code || '—'}
+                  </TableCell>
                   <TableCell>
                     <div className='flex items-center gap-2'>
                       <span className='font-medium'>{role.name}</span>
-                      {role.isDefault && <Badge variant='secondary'>Default</Badge>}
+                      {role.isDefault && (
+                        <Badge variant='secondary'>Default</Badge>
+                      )}
                     </div>
                     <div className='text-xs text-muted-foreground'>
                       {role.description}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {role.permissionIds.length > 0 ? role.permissionIds.length : role.permissions.length}
+                    {role.permissionIds.length > 0
+                      ? role.permissionIds.length
+                      : role.permissions.length}
                   </TableCell>
                   <TableCell>{memberByRole.get(role.id) ?? 0}</TableCell>
                   <TableCell className='text-right'>
@@ -522,7 +546,10 @@ export function RolesTab() {
             <Input
               value={form.description}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, description: event.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  description: event.target.value,
+                }))
               }
             />
           </div>
@@ -536,7 +563,8 @@ export function RolesTab() {
             <div className='grid max-h-48 grid-cols-2 gap-2 overflow-auto rounded-md border p-3'>
               {filteredPermissionOptions.map((permission) => {
                 const checked =
-                  Array.isArray(form.permissionIds) && form.permissionIds.includes(permission.id)
+                  Array.isArray(form.permissionIds) &&
+                  form.permissionIds.includes(permission.id)
                 return (
                   <label
                     key={permission.id}
@@ -547,7 +575,9 @@ export function RolesTab() {
                       type='checkbox'
                       checked={checked}
                       onChange={(event) => {
-                        const current = Array.isArray(form.permissionIds) ? form.permissionIds : []
+                        const current = Array.isArray(form.permissionIds)
+                          ? form.permissionIds
+                          : []
                         if (event.target.checked) {
                           setForm((prev) => ({
                             ...prev,
@@ -557,7 +587,9 @@ export function RolesTab() {
                         }
                         setForm((prev) => ({
                           ...prev,
-                          permissionIds: current.filter((item) => item !== permission.id),
+                          permissionIds: current.filter(
+                            (item) => item !== permission.id
+                          ),
                         }))
                       }}
                     />
@@ -605,7 +637,9 @@ export function RolesTab() {
             : ''
         }
         destructive
-        handleConfirm={() => deletingRole && deleteMutation.mutate(deletingRole.id)}
+        handleConfirm={() =>
+          deletingRole && deleteMutation.mutate(deletingRole.id)
+        }
         confirmText='Xóa vai trò'
         isLoading={deleteMutation.isPending}
       />

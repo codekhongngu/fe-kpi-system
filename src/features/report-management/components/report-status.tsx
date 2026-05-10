@@ -1,5 +1,5 @@
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import {
   type ReportPriority,
   type ReportStatus,
@@ -28,24 +28,39 @@ const priorityClassName: Record<ReportPriority, string> = {
 }
 
 export function getStatusLabel(status: ReportStatus) {
-  return reportStatusOptions.find((item) => item.value === status)?.label ?? status
+  return (
+    reportStatusOptions.find((item) => item.value === status)?.label ?? status
+  )
 }
 
 export function getPriorityLabel(priority: ReportPriority) {
-  return reportPriorityOptions.find((item) => item.value === priority)?.label ?? priority
+  return (
+    reportPriorityOptions.find((item) => item.value === priority)?.label ??
+    priority
+  )
 }
 
 export function ReportStatusBadge({ status }: { status: ReportStatus }) {
   return (
-    <Badge variant='outline' className={cn('font-medium', statusClassName[status])}>
+    <Badge
+      variant='outline'
+      className={cn('font-medium', statusClassName[status])}
+    >
       {getStatusLabel(status)}
     </Badge>
   )
 }
 
-export function ReportPriorityBadge({ priority }: { priority: ReportPriority }) {
+export function ReportPriorityBadge({
+  priority,
+}: {
+  priority: ReportPriority
+}) {
   return (
-    <Badge variant='outline' className={cn('font-medium', priorityClassName[priority])}>
+    <Badge
+      variant='outline'
+      className={cn('font-medium', priorityClassName[priority])}
+    >
       {getPriorityLabel(priority)}
     </Badge>
   )

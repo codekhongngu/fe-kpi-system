@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { z } from 'zod'
+import axios from 'axios'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
-import axios from 'axios'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
@@ -78,7 +78,8 @@ export function UserAuthForm({
             if (typeof message === 'string' && message.trim()) return message
             if (Array.isArray(message)) {
               const parts = message.filter(
-                (item): item is string => typeof item === 'string' && item.trim().length > 0,
+                (item): item is string =>
+                  typeof item === 'string' && item.trim().length > 0
               )
               if (parts.length > 0) return parts.join('\n')
             }
@@ -104,7 +105,11 @@ export function UserAuthForm({
             <FormItem>
               <FormLabel>Email hoặc username</FormLabel>
               <FormControl>
-                <Input placeholder='Email hoặc username' autoComplete='username' {...field} />
+                <Input
+                  placeholder='Email hoặc username'
+                  autoComplete='username'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -117,7 +122,11 @@ export function UserAuthForm({
             <FormItem className='relative'>
               <FormLabel>Mật khẩu</FormLabel>
               <FormControl>
-                <PasswordInput placeholder='********' autoComplete='current-password' {...field} />
+                <PasswordInput
+                  placeholder='********'
+                  autoComplete='current-password'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
               <Link

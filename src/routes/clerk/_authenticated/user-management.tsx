@@ -1,23 +1,23 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   createFileRoute,
   Link,
   useNavigate,
   useRouter,
 } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { SignedIn, useAuth } from '@clerk/clerk-react'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { ClerkLogo } from '@/assets/clerk-logo'
 import { Button } from '@/components/ui/button'
 import { Main } from '@/components/layout/main'
 import { LearnMore } from '@/components/learn-more'
+import { rolesApi, usersApi } from '@/features/users/api/users-api'
 import { UsersDialogs } from '@/features/users/components/users-dialogs'
 import { UsersPrimaryButtons } from '@/features/users/components/users-primary-buttons'
 import { UsersProvider } from '@/features/users/components/users-provider'
 import { UsersTable } from '@/features/users/components/users-table'
-import { rolesApi, usersApi } from '@/features/users/api/users-api'
 
 export const Route = createFileRoute('/clerk/_authenticated/user-management')({
   component: UserManagement,

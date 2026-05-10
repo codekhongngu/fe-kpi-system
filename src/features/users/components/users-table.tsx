@@ -132,7 +132,10 @@ export function UsersTable({
           {
             columnId: 'role',
             title: 'Vai trò',
-            options: roles.map((role) => ({ label: role.name, value: role.id })),
+            options: roles.map((role) => ({
+              label: role.name,
+              value: role.id,
+            })),
           },
         ]}
       />

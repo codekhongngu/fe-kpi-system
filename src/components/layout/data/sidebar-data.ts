@@ -12,7 +12,11 @@ import {
 } from 'lucide-react'
 import { type NavGroup, type SidebarData } from '../types'
 
-export type AppRole = 'SYSTEM_ADMIN' | 'DATA_MANAGER' | 'DATA_ENTRY' | 'APPROVER'
+export type AppRole =
+  | 'SYSTEM_ADMIN'
+  | 'DATA_MANAGER'
+  | 'DATA_ENTRY'
+  | 'APPROVER'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -47,7 +51,9 @@ export function getRoleCodesForUser(
   if (rolesById) {
     const codes = roleIds
       .map((id) => rolesById[id])
-      .filter((code): code is string => typeof code === 'string' && code.length > 0)
+      .filter(
+        (code): code is string => typeof code === 'string' && code.length > 0
+      )
     if (codes.length > 0) {
       return codes.map(normalizeToken)
     }
@@ -64,9 +70,16 @@ export function getAppRoleForUser(
   rolesById?: Record<string, string>
 ): AppRole {
   if (isRecord(user)) {
-    const username = typeof user.username === 'string' ? user.username.trim().toLowerCase() : ''
-    const email = typeof user.email === 'string' ? user.email.trim().toLowerCase() : ''
-    if (username.includes('system_admin') || email.startsWith('system_admin@')) {
+    const username =
+      typeof user.username === 'string'
+        ? user.username.trim().toLowerCase()
+        : ''
+    const email =
+      typeof user.email === 'string' ? user.email.trim().toLowerCase() : ''
+    if (
+      username.includes('system_admin') ||
+      email.startsWith('system_admin@')
+    ) {
       return 'SYSTEM_ADMIN'
     }
   }
@@ -92,157 +105,68 @@ export function getAppRoleForUser(
   return 'DATA_ENTRY'
 }
 
-function buildNavGroups(role: AppRole): NavGroup[] {
-  const utilities: NavGroup = {
-    title: 'Tiện ích',
-    items: [
-      ...(role === 'SYSTEM_ADMIN' || role === 'DATA_MANAGER' || role === 'APPROVER'
-        ? [
-            {
-              title: 'Thống kê & Phân tích',
-              url: '/report-management?tab=analytics',
-              icon: ChartColumnBig,
-            },
-          ]
-        : []),
-      {
-        title: 'Thông báo',
-        url: '/settings/notifications',
-        icon: Bell,
-      },
-    ],
-  }
-
-  const overview: NavGroup = {
-    title: 'Tổng quan',
-    items: [
-      {
-        title: 'Dashboard',
-        url: '/',
-        icon: LayoutDashboard,
-      },
-    ],
-  }
-
-  if (role === 'SYSTEM_ADMIN') {
-    return [
-      overview,
-      {
-        title: 'Quản trị hệ thống',
-        items: [
-          {
-            title: 'Quản lý đơn vị',
-            url: '/system-admin?tab=units',
-            icon: Building2,
-          },
-          {
-            title: 'Lĩnh vực biểu mẫu',
-            url: '/form-category-management',
-            icon: FileSpreadsheet,
-          },
-          {
-            title: 'Tài khoản',
-            url: '/system-admin?tab=users',
-            icon: Users,
-          },
-          {
-            title: 'Vai trò',
-            url: '/system-admin?tab=roles',
-            icon: ShieldCheck,
-          },
-        ],
-      },
-      {
-        title: 'Nghiệp vụ',
-        items: [
-          {
-            title: 'Quản lí biểu mẫu',
-            url: '/form-management',
-            icon: FileSpreadsheet,
-          },
-          {
-            title: 'Tổng hợp',
-            url: '/report-management?tab=analytics',
-            icon: ChartColumnBig,
-          },
-          {
-            title: 'Quản lý báo cáo',
-            url: '/report-management?tab=list',
-            icon: SearchCheck,
-          },
-        ],
-      },
-      utilities,
-    ]
-  }
-
-  if (role === 'DATA_MANAGER') {
-    return [
-      overview,
-      {
-        title: 'Nghiệp vụ',
-        items: [
-          {
-            title: 'Quản lí biểu mẫu',
-            url: '/form-management',
-            icon: FileSpreadsheet,
-          },
-          {
-            title: 'Tổng hợp',
-            url: '/report-management?tab=analytics',
-            icon: ChartColumnBig,
-          },
-          {
-            title: 'Quản lý báo cáo',
-            url: '/report-management?tab=list',
-            icon: SearchCheck,
-          },
-        ],
-      },
-      utilities,
-    ]
-  }
-
-  if (role === 'APPROVER') {
-    return [
-      overview,
-      {
-        title: 'Công việc của tôi',
-        items: [
-          {
-            title: 'Phê duyệt',
-            url: '/report-management?tab=editing',
-            icon: FileCheck2,
-          },
-          {
-            title: 'Xem báo cáo đã duyệt',
-            url: '/report-management?tab=list',
-            icon: ChartColumnBig,
-          },
-        ],
-      },
-      utilities,
-    ]
-  }
-
+function buildNavGroups(): NavGroup[] {
   return [
-    overview,
     {
-      title: 'Công việc của tôi',
+      title: 'Tổng quan',
       items: [
         {
-          title: 'Nhập liệu báo cáo',
-          url: '/report-management?tab=editing',
-          icon: FileSpreadsheet,
-        },
-        {
-          title: 'Xem báo cáo đã gửi',
-          url: '/report-management?tab=list',
-          icon: ChartColumnBig,
+          title: 'Dashboard',
+          url: '/',
+          icon: LayoutDashboard,
         },
       ],
     },
-    utilities,
+    {
+      title: 'Quản trị hệ thống',
+      items: [
+        {
+          title: 'Quản lý đơn vị',
+          url: '/system-admin?tab=units',
+          icon: Building2,
+        },
+        {
+          title: 'Lĩnh vực biểu mẫu',
+          url: '/form-category-management',
+          icon: FileSpreadsheet,
+        },
+        {
+          title: 'Tài khoản',
+          url: '/system-admin?tab=users',
+          icon: Users,
+        },
+        {
+          title: 'Vai trò',
+          url: '/system-admin?tab=roles',
+          icon: ShieldCheck,
+        },
+      ],
+    },
+    {
+      title: 'Quản trị Báo cáo',
+      items: [
+        {
+          title: 'Quản lý biểu mẫu',
+          url: '/form-management',
+          icon: FileSpreadsheet,
+        },
+        {
+          title: 'Quản lý đợt báo cáo',
+          url: '/report-management?tab=list',
+          icon: SearchCheck,
+        },
+        {
+          title: 'Tổng hợp báo cáo',
+          url: '/report-management?tab=analytics',
+          icon: ChartColumnBig,
+        },
+        {
+          title: 'Báo cáo được giao',
+          url: '/my/assignments',
+          icon: SendToBack,
+        },
+      ],
+    },
   ]
 }
 
@@ -252,7 +176,7 @@ export const sidebarData: SidebarData = {
     email: 'satnaingdev@gmail.com',
     avatar: '/avatars/shadcn.jpg',
   },
-  navGroups: buildNavGroups('SYSTEM_ADMIN'),
+  navGroups: buildNavGroups(),
 }
 
 export function getSidebarNavGroupsForUser(
@@ -261,5 +185,5 @@ export function getSidebarNavGroupsForUser(
 ) {
   void user
   void rolesById
-  return buildNavGroups('SYSTEM_ADMIN')
+  return buildNavGroups()
 }

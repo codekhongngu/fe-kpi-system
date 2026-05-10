@@ -1,9 +1,32 @@
 import { useEffect, useMemo, useState } from 'react'
-import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { z } from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileUp, GripVertical, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  ChevronDown,
+  ChevronRight,
+  FileUp,
+  GripVertical,
+  PlusCircle,
+  Save,
+  Trash2,
+  UserPen,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,8 +44,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -30,47 +60,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { formManagementApi } from '../../api/template-management-api'
 import {
   fieldDataTypeOptions,
-  indicatorTypeOptions,
   type FieldDataType,
-  type IndicatorType,
   type TemplateIndicator,
 } from '../../api/types'
-import { buildTree, flattenTree, reorderSameLevelItems, type TreeNode } from '../shared/template-tree-utils'
+import {
+  buildTree,
+  flattenTree,
+  reorderSameLevelItems,
+  type TreeNode,
+} from '../shared/template-tree-utils'
 
 type TemplateIndicatorsTabProps = {
   templateId: string
 }
 
-type IndicatorFormState = {
-  code: string
-  name: string
-  unit: string
-  dataType: FieldDataType
-  required: boolean
-  readonly: boolean
-  type: IndicatorType
-  group: string
-  formula: string
-  parentId: string | null
-  validationText: string
-}
+const indicatorSchema = z.object({
+  code: z.string().min(1, 'Mã chỉ tiêu là bắt buộc').trim().toUpperCase(),
+  name: z.string().min(1, 'Tên chỉ tiêu là bắt buộc').trim(),
+  unit: z.string().default(''),
+  dataType: z.enum(['text', 'number']),
+  type: z.enum(['INPUT', 'TITLE']).default('INPUT'),
+  parentId: z.string().nullable(),
+})
 
-const defaultIndicatorForm: IndicatorFormState = {
+type IndicatorFormValues = z.infer<typeof indicatorSchema>
+
+const defaultIndicatorForm: IndicatorFormValues = {
   code: '',
   name: '',
   unit: '',
   dataType: 'number',
-  required: true,
-  readonly: false,
-  type: 'input',
-  group: '',
-  formula: '',
+  type: 'INPUT',
   parentId: null,
-  validationText: '',
 }
 
 function currentTreeItems(indicators: TemplateIndicator[]) {
@@ -85,8 +110,6 @@ type IndicatorTreeNodeProps = {
   onAddChild: (parentId: string) => void
   onEdit: (item: TemplateIndicator) => void
   onDelete: (item: TemplateIndicator) => void
-  onMoveUp: (item: TemplateIndicator) => void
-  onMoveDown: (item: TemplateIndicator) => void
 }
 
 function IndicatorTreeNode({
@@ -97,11 +120,17 @@ function IndicatorTreeNode({
   onAddChild,
   onEdit,
   onDelete,
-  onMoveUp,
-  onMoveDown,
 }: IndicatorTreeNodeProps) {
   const hasChildren = node.children.length > 0
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: node.id,
     disabled: !canDrag,
   })
@@ -129,41 +158,66 @@ function IndicatorTreeNode({
             >
               <GripVertical size={14} />
             </button>
-            {depth > 0 && <span className='mt-3 h-px w-4 shrink-0 bg-border' aria-hidden='true' />}
+            {depth > 0 && (
+              <span
+                className='mt-3 h-px w-4 shrink-0 bg-border'
+                aria-hidden='true'
+              />
+            )}
             <button
               type='button'
               className='mt-0.5 rounded p-0.5 hover:bg-muted'
-              onClick={() => {
-                // Cố định để giữ cảm giác đầy đủ, không cần collapse trong phiên bản đầu.
-              }}
+              onClick={() => {}}
             >
-              {hasChildren ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {hasChildren ? (
+                <ChevronDown size={14} />
+              ) : (
+                <ChevronRight size={14} />
+              )}
             </button>
 
-            <div className='min-w-0 border-s border-border/70 ps-3' style={{ marginInlineStart: `${depth * 10}px` }}>
+            <div
+              className='min-w-0 border-s border-border/70 ps-3'
+              style={{ marginInlineStart: `${depth * 10}px` }}
+            >
               <p className='text-xs text-muted-foreground'>
                 {node.code}
                 {(node.order ?? 0) > 1 ? ` (STT: ${node.order})` : ''}
               </p>
               <p className='text-sm font-medium'>{node.name}</p>
-              <p className='text-xs text-muted-foreground'>{node.unit}</p>
+              <p className='text-xs text-muted-foreground'>
+                {node.unit || '---'}
+              </p>
             </div>
           </div>
 
           <div className='flex flex-wrap gap-1'>
-            <Button size='icon' variant='outline' onClick={() => onAddChild(node.id)} disabled={!canEdit} title='Thêm con'>
+            <Button
+              size='icon'
+              variant='outline'
+              onClick={() => onAddChild(node.id)}
+              disabled={!canEdit}
+              title='Thêm con'
+            >
               <PlusCircle className='size-4' />
             </Button>
-            <Button size='icon' variant='outline' onClick={() => onEdit(node)} disabled={!canEdit} title='Chỉnh sửa'>
+            <Button
+              size='icon'
+              variant='outline'
+              onClick={() => onEdit(node)}
+              disabled={!canEdit}
+              title='Chỉnh sửa'
+            >
               <UserPen className='size-4' />
             </Button>
-            <Button size='icon' variant='outline' onClick={() => onMoveUp(node)} disabled={!canEdit} title='L�n tr�n'>
-              <ArrowUp className='size-4' />
-            </Button>
-            <Button size='icon' variant='outline' onClick={() => onMoveDown(node)} disabled={!canEdit} title='Xu?ng du?i'>
-              <ArrowDown className='size-4' />
-            </Button>
-            <Button size='icon' variant='destructive' onClick={() => onDelete(node)} disabled={!canEdit} title='X�a'>
+
+            <Button
+              size='icon'
+              variant='destructive'
+              onClick={() => onDelete(node)}
+              disabled={!canEdit}
+              title='Xóa'
+            >
               <Trash2 className='size-4' />
             </Button>
           </div>
@@ -171,7 +225,10 @@ function IndicatorTreeNode({
       </div>
 
       {hasChildren && (
-        <SortableContext items={node.children.map((child) => child.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext
+          items={node.children.map((child) => child.id)}
+          strategy={verticalListSortingStrategy}
+        >
           <div className='space-y-2 border-s border-border/70 ps-3'>
             {node.children.map((child) => (
               <IndicatorTreeNode
@@ -183,8 +240,6 @@ function IndicatorTreeNode({
                 onAddChild={onAddChild}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                onMoveUp={onMoveUp}
-                onMoveDown={onMoveDown}
               />
             ))}
           </div>
@@ -194,13 +249,16 @@ function IndicatorTreeNode({
   )
 }
 
-export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps) {
+export function TemplateIndicatorsTab({
+  templateId,
+}: TemplateIndicatorsTabProps) {
   const queryClient = useQueryClient()
   const [fieldDialogOpen, setFieldDialogOpen] = useState(false)
-  const [editingIndicator, setEditingIndicator] = useState<TemplateIndicator | null>(null)
-  const [indicatorForm, setIndicatorForm] = useState<IndicatorFormState>(defaultIndicatorForm)
-  const [formulaPreview, setFormulaPreview] = useState<{ valid: boolean; errors: string[]; warnings: string[] } | null>(null)
-  const [draftIndicators, setDraftIndicators] = useState<TemplateIndicator[]>([])
+  const [editingIndicator, setEditingIndicator] =
+    useState<TemplateIndicator | null>(null)
+  const [draftIndicators, setDraftIndicators] = useState<TemplateIndicator[]>(
+    []
+  )
   const [hasPendingReorder, setHasPendingReorder] = useState(false)
 
   const templateQuery = useQuery({
@@ -209,18 +267,28 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     enabled: Boolean(templateId),
   })
 
-  const template = templateQuery.data ?? null
-  const canEdit = Boolean(template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT'))
-  const tree = useMemo(() => buildTree(draftIndicators), [draftIndicators])
-  const flatIndicators = useMemo(() => currentTreeItems(draftIndicators), [draftIndicators])
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const form = useForm<IndicatorFormValues>({
+    resolver: zodResolver(indicatorSchema) as any,
+    defaultValues: defaultIndicatorForm,
+  })
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+  const template = templateQuery.data ?? null
+  const canEdit = Boolean(
+    template && ['DRAFT', 'READY'].includes(template.templateStatus ?? 'DRAFT')
+  )
+  const tree = useMemo(() => buildTree(draftIndicators), [draftIndicators])
+  const flatIndicators = useMemo(
+    () => currentTreeItems(draftIndicators),
+    [draftIndicators]
+  )
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  )
+
   useEffect(() => {
     setDraftIndicators(template?.indicators ?? [])
     setHasPendingReorder(false)
   }, [template?.indicators])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const parentOptions = useMemo(
     () =>
@@ -234,16 +302,19 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   )
 
   const refreshTemplate = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['form-management', 'template', templateId] })
-    await queryClient.invalidateQueries({ queryKey: ['form-management', 'template', templateId, 'indicators-tab'] })
+    await queryClient.invalidateQueries({
+      queryKey: ['form-management', 'template', templateId],
+    })
+    await queryClient.invalidateQueries({
+      queryKey: ['form-management', 'template', templateId, 'indicators-tab'],
+    })
   }
 
   const createMutation = useMutation({
-    mutationFn: (payload: IndicatorFormState) =>
+    mutationFn: (payload: IndicatorFormValues) =>
       formManagementApi.createIndicator(templateId, {
         ...payload,
-        formula: payload.formula.trim() ? payload.formula.trim() : null,
-        validationRule: payload.validationText.trim() ? JSON.parse(payload.validationText) : null,
+        unit: payload.unit ?? '',
       }),
     onSuccess: async () => {
       toast.success('Đã thêm chỉ tiêu mới.')
@@ -254,11 +325,16 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ indicatorId, payload }: { indicatorId: string; payload: IndicatorFormState }) =>
+    mutationFn: ({
+      indicatorId,
+      payload,
+    }: {
+      indicatorId: string
+      payload: IndicatorFormValues
+    }) =>
       formManagementApi.updateIndicator(templateId, indicatorId, {
         ...payload,
-        formula: payload.formula.trim() ? payload.formula.trim() : null,
-        validationRule: payload.validationText.trim() ? JSON.parse(payload.validationText) : null,
+        unit: payload.unit ?? '',
       }),
     onSuccess: async () => {
       toast.success('Đã cập nhật chỉ tiêu.')
@@ -269,7 +345,8 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (indicatorId: string) => formManagementApi.deleteIndicator(templateId, indicatorId),
+    mutationFn: (indicatorId: string) =>
+      formManagementApi.deleteIndicator(templateId, indicatorId),
     onSuccess: async () => {
       toast.success('Đã xóa chỉ tiêu.')
       await refreshTemplate()
@@ -281,12 +358,15 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     mutationFn: () =>
       formManagementApi.reorderIndicators(
         templateId,
-        flatIndicators.map((item) => ({ id: item.id, parentId: item.parentId ?? null })),
+        flatIndicators.map((item) => ({
+          id: item.id,
+          parentId: item.parentId ?? null,
+        }))
       ),
     onSuccess: async () => {
       await refreshTemplate()
       setHasPendingReorder(false)
-      toast.success('Order saved.')
+      toast.success('Đã cập nhật vị trí.')
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -300,77 +380,29 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     onError: (error: Error) => toast.error(error.message),
   })
 
-  const validateFormulaMutation = useMutation({
-    mutationFn: () =>
-      formManagementApi.validateIndicatorFormula(templateId, {
-        formula: indicatorForm.formula.trim(),
-        code: indicatorForm.code.trim() || undefined,
-        indicatorId: editingIndicator?.id,
-      }),
-    onSuccess: (result) => {
-      setFormulaPreview(result)
-      toast.success(result.valid ? 'Công thức hợp lệ.' : 'Công thức chưa hợp lệ.')
-    },
-    onError: (error: Error) => toast.error(error.message),
-  })
-
   function openCreateDialog(parentId: string | null = null) {
     setEditingIndicator(null)
-    setIndicatorForm({ ...defaultIndicatorForm, parentId })
-    setFormulaPreview(null)
+    form.reset({ ...defaultIndicatorForm, parentId })
     setFieldDialogOpen(true)
   }
 
   function openEditDialog(item: TemplateIndicator) {
     setEditingIndicator(item)
-    setIndicatorForm({
+    form.reset({
       code: item.code,
       name: item.name,
-      unit: item.unit,
-      dataType: (item.dataType ?? 'number') as FieldDataType,
-      required: item.required ?? true,
-      readonly: item.readonly ?? false,
-      type: item.type,
-      group: item.group,
-      formula: item.formula ?? '',
+      unit: item.unit ?? '',
+      dataType: (item.dataType ?? 'number') as 'text' | 'number',
+      type: item.type ?? 'INPUT',
       parentId: item.parentId ?? null,
-      validationText: item.validationRule ? JSON.stringify(item.validationRule, null, 2) : '',
     })
-    setFormulaPreview(null)
     setFieldDialogOpen(true)
   }
 
   function closeDialog() {
     setFieldDialogOpen(false)
     setEditingIndicator(null)
-    setIndicatorForm(defaultIndicatorForm)
-    setFormulaPreview(null)
-  }
-
-  function handleMoveUp(item: TemplateIndicator) {
-    const current = draftIndicators.find((entry) => entry.id === item.id)
-    if (!current) return
-    const siblings = flatIndicators.filter((entry) => (entry.parentId ?? null) === (current.parentId ?? null))
-    const index = siblings.findIndex((entry) => entry.id === item.id)
-    if (index <= 0) return
-    const target = siblings[index - 1]
-    const next = reorderSameLevelItems(draftIndicators, item.id, target.id)
-    if (next === draftIndicators) return
-    setDraftIndicators(next)
-    setHasPendingReorder(true)
-  }
-
-  function handleMoveDown(item: TemplateIndicator) {
-    const current = draftIndicators.find((entry) => entry.id === item.id)
-    if (!current) return
-    const siblings = flatIndicators.filter((entry) => (entry.parentId ?? null) === (current.parentId ?? null))
-    const index = siblings.findIndex((entry) => entry.id === item.id)
-    if (index === -1 || index >= siblings.length - 1) return
-    const target = siblings[index + 1]
-    const next = reorderSameLevelItems(draftIndicators, item.id, target.id)
-    if (next === draftIndicators) return
-    setDraftIndicators(next)
-    setHasPendingReorder(true)
+    form.reset(defaultIndicatorForm)
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -392,28 +424,14 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
     saveOrderMutation.mutate()
   }
 
-  function submitIndicatorForm() {
-    if (!indicatorForm.code.trim() || !indicatorForm.name.trim()) {
-      toast.error('Mã chỉ tiêu và tên chỉ tiêu là bắt buộc.')
-      return
-    }
-
-    let validationRule: Record<string, unknown> | null = null
-    if (indicatorForm.validationText.trim()) {
-      try {
-        validationRule = JSON.parse(indicatorForm.validationText)
-      } catch {
-        toast.error('JSON kiểm tra dữ liệu không hợp lệ.')
-        return
-      }
-    }
-
-    const payload = { ...indicatorForm, validationText: validationRule ? JSON.stringify(validationRule) : '' }
-
+  function onSubmit(values: IndicatorFormValues) {
     if (editingIndicator) {
-      updateMutation.mutate({ indicatorId: editingIndicator.id, payload })
+      updateMutation.mutate({
+        indicatorId: editingIndicator.id,
+        payload: values,
+      })
     } else {
-      createMutation.mutate(payload)
+      createMutation.mutate(values)
     }
   }
 
@@ -423,17 +441,22 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <div>
             <CardTitle>Chỉ tiêu</CardTitle>
-            <CardDescription>Cấu hình cây chỉ tiêu theo cấp, lưu trữ thêm, sửa, xóa, nhập Excel và sắp xếp cùng cấp.</CardDescription>
+            <CardDescription>
+              Cấu hình cây chỉ tiêu theo cấp, sắp xếp thứ tự hiển thị và loại dữ
+              liệu.
+            </CardDescription>
           </div>
           <div className='flex flex-wrap gap-2'>
             <Button
               size='sm'
               variant='outline'
               onClick={handleSaveOrder}
-              disabled={!canEdit || !hasPendingReorder || saveOrderMutation.isPending}
+              disabled={
+                !canEdit || !hasPendingReorder || saveOrderMutation.isPending
+              }
             >
               <Save className='size-4' />
-              Save order
+              Cập nhật vị trí
             </Button>
             <Button
               size='sm'
@@ -444,7 +467,11 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
               <FileUp className='size-4' />
               Nhập Excel
             </Button>
-            <Button size='sm' onClick={() => openCreateDialog(null)} disabled={!canEdit}>
+            <Button
+              size='sm'
+              onClick={() => openCreateDialog(null)}
+              disabled={!canEdit}
+            >
               <PlusCircle className='size-4' />
               Thêm chỉ tiêu
             </Button>
@@ -462,8 +489,15 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
             Chưa có chỉ tiêu nào.
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={tree.map((node) => node.id)} strategy={verticalListSortingStrategy}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={tree.map((node) => node.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <div className='space-y-2'>
                 {tree.map((node) => (
                   <IndicatorTreeNode
@@ -474,9 +508,18 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
                     canDrag={canEdit}
                     onAddChild={(parentId) => openCreateDialog(parentId)}
                     onEdit={openEditDialog}
-                    onDelete={(item) => deleteMutation.mutate(item.id)}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
+                    onDelete={(item) => {
+                      const hasChildren = draftIndicators.some(
+                        (entry) => entry.parentId === item.id
+                      )
+                      if (hasChildren) {
+                        toast.error(
+                          'Không thể xóa chỉ tiêu này vì đang có chỉ tiêu con.'
+                        )
+                        return
+                      }
+                      deleteMutation.mutate(item.id)
+                    }}
                   />
                 ))}
               </div>
@@ -485,184 +528,182 @@ export function TemplateIndicatorsTab({ templateId }: TemplateIndicatorsTabProps
         )}
       </CardContent>
 
-      <Dialog open={fieldDialogOpen} onOpenChange={(open) => (open ? setFieldDialogOpen(true) : closeDialog())}>
+      <Dialog
+        open={fieldDialogOpen}
+        onOpenChange={(open) =>
+          open ? setFieldDialogOpen(true) : closeDialog()
+        }
+      >
         <DialogContent className='sm:max-w-2xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingIndicator ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu'}</DialogTitle>
-            <DialogDescription>Quản lý cây chỉ tiêu theo cấp, lưu trữ thêm, sửa, xóa, nhập Excel và sắp xếp cùng cấp.</DialogDescription>
+            <DialogTitle>
+              {editingIndicator ? 'Sửa chỉ tiêu' : 'Thêm chỉ tiêu'}
+            </DialogTitle>
+            <DialogDescription>
+              Nhập thông tin cơ bản của chỉ tiêu. Các thông tin nâng cao sẽ được
+              tự động xử lý.
+            </DialogDescription>
           </DialogHeader>
 
-          <div className='grid gap-4 sm:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label>Mã chỉ tiêu</Label>
-              <Input
-                value={indicatorForm.code}
-                onChange={(event) =>
-                  setIndicatorForm((prev) => ({ ...prev, code: event.target.value.toUpperCase() }))
-                }
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Tên chỉ tiêu</Label>
-              <Input
-                value={indicatorForm.name}
-                onChange={(event) => setIndicatorForm((prev) => ({ ...prev, name: event.target.value }))}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Đơn vị tính</Label>
-              <Input
-                value={indicatorForm.unit}
-                onChange={(event) => setIndicatorForm((prev) => ({ ...prev, unit: event.target.value }))}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Loại dữ liệu</Label>
-              <Select
-                value={indicatorForm.dataType}
-                onValueChange={(value) => setIndicatorForm((prev) => ({ ...prev, dataType: value as FieldDataType }))}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {fieldDataTypeOptions.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2'>
-              <Label>Nhóm chỉ tiêu</Label>
-              <Input
-                value={indicatorForm.group}
-                onChange={(event) => setIndicatorForm((prev) => ({ ...prev, group: event.target.value }))}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Nút cha</Label>
-              <Select
-                value={indicatorForm.parentId ?? 'root'}
-                onValueChange={(value) =>
-                  setIndicatorForm((prev) => ({ ...prev, parentId: value === 'root' ? null : value }))
-                }
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='G?c' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='root'>G?c</SelectItem>
-                  {parentOptions.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2 sm:col-span-2'>
-              <Label>Loại chỉ tiêu</Label>
-              <Select
-                value={indicatorForm.type}
-                onValueChange={(value) => setIndicatorForm((prev) => ({ ...prev, type: value as IndicatorType }))}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {indicatorTypeOptions.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='grid gap-4 sm:col-span-2 sm:grid-cols-2'>
-              <label className='inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  checked={indicatorForm.required}
-                  onChange={(event) =>
-                    setIndicatorForm((prev) => ({ ...prev, required: event.target.checked }))
-                  }
-                />
-                Bắt buộc
-              </label>
-              <label className='inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  checked={indicatorForm.readonly}
-                  onChange={(event) =>
-                    setIndicatorForm((prev) => ({ ...prev, readonly: event.target.checked }))
-                  }
-                />
-                Chỉ đọc
-              </label>
-            </div>
-            <div className='space-y-2 sm:col-span-2'>
-              <Label>Công thức</Label>
-              <Textarea
-                rows={3}
-                placeholder='Ví dụ: (CT_A + CT_B) / CT_C'
-                value={indicatorForm.formula}
-                onChange={(event) => {
-                  setFormulaPreview(null)
-                  setIndicatorForm((prev) => ({ ...prev, formula: event.target.value }))
-                }}
-              />
-              <div className='flex items-center justify-between gap-2'>
-                <p className='text-xs text-muted-foreground'>Công thức chỉ chấp nhận các toán tử + - * / và dấu ngoặc ().</p>
-                <Button
-                  type='button'
-                  size='sm'
-                  variant='outline'
-                  onClick={() => validateFormulaMutation.mutate()}
-                  disabled={validateFormulaMutation.isPending || !indicatorForm.formula.trim()}
-                >
-                  Kiểm tra công thức
-                </Button>
-              </div>
-              {formulaPreview && (
-                <div className='rounded-md border p-2 text-xs'>
-                  <p className={formulaPreview.valid ? 'text-emerald-600' : 'text-destructive'}>
-                    {formulaPreview.valid ? 'Công thức hợp lệ' : 'Công thức không hợp lệ'}
-                  </p>
-                  {formulaPreview.errors.length > 0 && (
-                    <p className='mt-1 text-destructive'>Lỗi: {formulaPreview.errors.join(', ')}</p>
-                  )}
-                  {formulaPreview.warnings.length > 0 && (
-                    <p className='mt-1 text-amber-600'>Cảnh báo: {formulaPreview.warnings.join(', ')}</p>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className='space-y-2 sm:col-span-2'>
-              <Label>JSON kiểm tra dữ liệu</Label>
-              <Textarea
-                rows={3}
-                value={indicatorForm.validationText}
-                onChange={(event) =>
-                  setIndicatorForm((prev) => ({ ...prev, validationText: event.target.value }))
-                }
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant='outline' onClick={closeDialog}>
-              Hủy
-            </Button>
-            <Button
-              onClick={submitIndicatorForm}
-              disabled={createMutation.isPending || updateMutation.isPending}
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit as any)}
+              className='space-y-4'
             >
-              <Save className='size-4' />
-              {editingIndicator ? 'Lưu thay đổi' : 'Thêm chỉ tiêu'}
-            </Button>
-          </DialogFooter>
+              <div className='grid gap-4 sm:grid-cols-2'>
+                <FormField
+                  control={form.control as any}
+                  name='code'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mã chỉ tiêu</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='...'
+                          {...field}
+                          value={(field.value as any) ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField<IndicatorFormValues>
+                  control={form.control as any}
+                  name='name'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tên chỉ tiêu</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='Nhập tên chỉ tiêu...'
+                          {...field}
+                          value={(field.value as string) ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField<IndicatorFormValues>
+                  control={form.control as any}
+                  name='unit'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Đơn vị tính</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder='Ví dụ: %, Người, VNĐ...'
+                          {...field}
+                          value={(field.value as string) ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField<IndicatorFormValues>
+                  control={form.control as any}
+                  name='dataType'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Loại dữ liệu</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value as string}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder='Chọn loại dữ liệu' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {fieldDataTypeOptions.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField<IndicatorFormValues>
+                  control={form.control as any}
+                  name='parentId'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nút cha</FormLabel>
+                      <Select
+                        onValueChange={(val) =>
+                          field.onChange(val === 'root' ? null : val)
+                        }
+                        value={(field.value as any) ?? 'root'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder='Gốc' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value='root'>Gốc</SelectItem>
+                          {parentOptions.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField<IndicatorFormValues>
+                  control={form.control as any}
+                  name='type'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Loại chỉ tiêu</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value as string}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder='Chọn loại chỉ tiêu' />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value='INPUT'>Nhập liệu</SelectItem>
+                          <SelectItem value='TITLE'>
+                            Chỉ hiển thị (Tiêu đề)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type='button' variant='outline' onClick={closeDialog}>
+                  Hủy
+                </Button>
+                <Button
+                  type='submit'
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
+                >
+                  <Save className='mr-2 size-4' />
+                  {editingIndicator ? 'Lưu thay đổi' : 'Thêm chỉ tiêu'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </Card>

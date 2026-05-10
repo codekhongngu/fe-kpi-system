@@ -60,7 +60,9 @@ export const authApi = {
     return response.data
   },
   refreshToken: async (refreshToken: string) => {
-    const response = await apiClient.post<AuthResponse>('/auth/refresh-token', { refreshToken })
+    const response = await apiClient.post<AuthResponse>('/auth/refresh-token', {
+      refreshToken,
+    })
     return response.data
   },
   me: async () => {
@@ -68,15 +70,24 @@ export const authApi = {
     return response.data
   },
   changePassword: async (input: ChangePasswordInput) => {
-    const response = await apiClient.post<{ message: string }>('/auth/change-password', input)
+    const response = await apiClient.post<{ message: string }>(
+      '/auth/change-password',
+      input
+    )
     return response.data
   },
   forgotPassword: async (input: ForgotPasswordInput) => {
-    const response = await apiClient.post<{ message: string }>('/auth/forgot-password', input)
+    const response = await apiClient.post<{ message: string }>(
+      '/auth/forgot-password',
+      input
+    )
     return response.data
   },
   resetPassword: async (input: ResetPasswordInput) => {
-    const response = await apiClient.post<{ message: string }>('/auth/reset-password', input)
+    const response = await apiClient.post<{ message: string }>(
+      '/auth/reset-password',
+      input
+    )
     return response.data
   },
   logout: async (refreshToken?: string) => {

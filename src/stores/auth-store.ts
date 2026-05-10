@@ -24,7 +24,9 @@ export const useAuthStore = create<AuthState>()((set) => {
   const accessTokenCookie = getCookie(ACCESS_TOKEN_COOKIE)
   const refreshTokenCookie = getCookie(REFRESH_TOKEN_COOKIE)
   const initAccessToken = accessTokenCookie ? JSON.parse(accessTokenCookie) : ''
-  const initRefreshToken = refreshTokenCookie ? JSON.parse(refreshTokenCookie) : ''
+  const initRefreshToken = refreshTokenCookie
+    ? JSON.parse(refreshTokenCookie)
+    : ''
   return {
     auth: {
       user: null,
@@ -58,7 +60,12 @@ export const useAuthStore = create<AuthState>()((set) => {
           removeCookie(REFRESH_TOKEN_COOKIE)
           return {
             ...state,
-            auth: { ...state.auth, user: null, accessToken: '', refreshToken: '' },
+            auth: {
+              ...state.auth,
+              user: null,
+              accessToken: '',
+              refreshToken: '',
+            },
           }
         }),
     },

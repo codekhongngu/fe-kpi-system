@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   type ColumnDef,
   flexRender,
@@ -13,7 +14,6 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react'
-import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { canRunReportAction } from '../api/mock-report-management-api'
+import { canRunReportAction } from '../api/report-management-api'
 import type { ReportAction, ReportListItem } from '../api/types'
 import { ReportStatusBadge } from './report-status'
 
@@ -87,7 +87,7 @@ export function ReportTable({
                 onClick={() => onView(report)}
               >
                 <div className='flex flex-col gap-0.5'>
-                  <span className='text-xs font-bold text-teal-700 uppercase tracking-wider'>
+                  <span className='text-xs font-bold tracking-wider text-teal-700 uppercase'>
                     {report.templateCode}
                   </span>
                   <span className='line-clamp-2'>{report.templateName}</span>
@@ -116,7 +116,9 @@ export function ReportTable({
         header: 'Ngày mở',
         cell: ({ row }) => (
           <div className='min-w-[120px]'>
-            {formatDate(row.original.deadlineFrom || row.original.openDate || null)}
+            {formatDate(
+              row.original.deadlineFrom || row.original.openDate || null
+            )}
           </div>
         ),
       },
@@ -125,7 +127,12 @@ export function ReportTable({
         header: 'Ngày đóng',
         cell: ({ row }) => (
           <div className='min-w-[120px]'>
-            {formatDate(row.original.deadlineTo || row.original.closeDate || row.original.deadline || null)}
+            {formatDate(
+              row.original.deadlineTo ||
+                row.original.closeDate ||
+                row.original.deadline ||
+                null
+            )}
           </div>
         ),
       },
@@ -147,7 +154,11 @@ export function ReportTable({
             <div className='flex justify-end'>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant='ghost' size='icon' aria-label='Mở thao tác báo cáo'>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    aria-label='Mở thao tác báo cáo'
+                  >
                     <MoreHorizontal className='size-4' />
                   </Button>
                 </DropdownMenuTrigger>
@@ -157,44 +168,51 @@ export function ReportTable({
                     <Eye className='me-2 size-4' />
                     Xem chi tiết
                   </DropdownMenuItem>
-                  {can('report:update') && canRunReportAction(report, 'report:update') && (
-                    <DropdownMenuItem onClick={() => onEdit(report)}>
-                      <Edit className='me-2 size-4' />
-                      Chỉnh sửa
-                    </DropdownMenuItem>
-                  )}
-                  {can('report:assign') && canRunReportAction(report, 'report:assign') && (
-                    <DropdownMenuItem onClick={() => onAssign(report)}>
-                      <Send className='me-2 size-4' />
-                      Giao báo cáo
-                    </DropdownMenuItem>
-                  )}
-                  {(can('report:approve') || can('report:reject')) &&
-                    canRunReportAction(report, 'report:approve') && <DropdownMenuSeparator />}
-                  {can('report:approve') && canRunReportAction(report, 'report:approve') && (
-                    <DropdownMenuItem onClick={() => onApprove(report)}>
-                      <CheckCircle2 className='me-2 size-4' />
-                      Phê duyệt
-                    </DropdownMenuItem>
-                  )}
-                  {can('report:reject') && canRunReportAction(report, 'report:reject') && (
-                    <DropdownMenuItem onClick={() => onReject(report)}>
-                      <XCircle className='me-2 size-4' />
-                      Trả lại
-                    </DropdownMenuItem>
-                  )}
-                  {can('report:delete') && canRunReportAction(report, 'report:delete') && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className='text-destructive focus:text-destructive'
-                        onClick={() => onDelete(report)}
-                      >
-                        <Trash2 className='me-2 size-4' />
-                        Xóa
+                  {can('report:update') &&
+                    canRunReportAction(report, 'report:update') && (
+                      <DropdownMenuItem onClick={() => onEdit(report)}>
+                        <Edit className='me-2 size-4' />
+                        Chỉnh sửa
                       </DropdownMenuItem>
-                    </>
-                  )}
+                    )}
+                  {can('report:assign') &&
+                    canRunReportAction(report, 'report:assign') && (
+                      <DropdownMenuItem onClick={() => onAssign(report)}>
+                        <Send className='me-2 size-4' />
+                        Giao báo cáo
+                      </DropdownMenuItem>
+                    )}
+                  {(can('report:approve') || can('report:reject')) &&
+                    canRunReportAction(report, 'report:approve') && (
+                      <DropdownMenuSeparator />
+                    )}
+                  {can('report:approve') &&
+                    canRunReportAction(report, 'report:approve') && (
+                      <DropdownMenuItem onClick={() => onApprove(report)}>
+                        <CheckCircle2 className='me-2 size-4' />
+                        Phê duyệt
+                      </DropdownMenuItem>
+                    )}
+                  {can('report:reject') &&
+                    canRunReportAction(report, 'report:reject') && (
+                      <DropdownMenuItem onClick={() => onReject(report)}>
+                        <XCircle className='me-2 size-4' />
+                        Trả lại
+                      </DropdownMenuItem>
+                    )}
+                  {can('report:delete') &&
+                    canRunReportAction(report, 'report:delete') && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className='text-destructive focus:text-destructive'
+                          onClick={() => onDelete(report)}
+                        >
+                          <Trash2 className='me-2 size-4' />
+                          Xóa
+                        </DropdownMenuItem>
+                      </>
+                    )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -222,7 +240,10 @@ export function ReportTable({
                 <TableHead key={header.id}>
                   {header.isPlaceholder
                     ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                 </TableHead>
               ))}
             </TableRow>
@@ -251,9 +272,12 @@ export function ReportTable({
             <TableRow>
               <TableCell colSpan={columns.length} className='h-44 text-center'>
                 <div className='mx-auto max-w-sm'>
-                  <div className='text-base font-medium'>Không có báo cáo phù hợp</div>
+                  <div className='text-base font-medium'>
+                    Không có báo cáo phù hợp
+                  </div>
                   <div className='mt-1 text-sm text-muted-foreground'>
-                    Thử thay đổi bộ lọc hoặc tạo báo cáo mới từ template đang hiệu lực.
+                    Thử thay đổi bộ lọc hoặc tạo báo cáo mới từ template đang
+                    hiệu lực.
                   </div>
                 </div>
               </TableCell>

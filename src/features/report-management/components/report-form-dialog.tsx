@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { apiClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,7 +13,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { PeriodType } from '@/features/form-management/api/types'
 import {
   Select,
   SelectContent,
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { apiClient } from '@/lib/api-client'
+import type { PeriodType } from '@/features/form-management/api/types'
 import type {
   CreateReportInput,
   ReportListItem,
@@ -84,7 +84,9 @@ function toPeriodKind(value: PeriodType): PeriodKind {
 }
 
 function getISOWeekNumber(date: Date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  )
   const dayNum = d.getUTCDay() || 7
   d.setUTCDate(d.getUTCDate() + 4 - dayNum)
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
@@ -115,13 +117,19 @@ function periodOptions(kind: PeriodKind, date: Date) {
   if (kind === 'week') {
     return Array.from({ length: 52 }, (_, index) => {
       const week = index + 1
-      return { code: `W-${year}-${pad2(week)}`, label: `Tuần ${pad2(week)}/${year}` }
+      return {
+        code: `W-${year}-${pad2(week)}`,
+        label: `Tuần ${pad2(week)}/${year}`,
+      }
     })
   }
   if (kind === 'month') {
     return Array.from({ length: 12 }, (_, index) => {
       const month = index + 1
-      return { code: `M-${year}-${pad2(month)}`, label: `Tháng ${pad2(month)}/${year}` }
+      return {
+        code: `M-${year}-${pad2(month)}`,
+        label: `Tháng ${pad2(month)}/${year}`,
+      }
     })
   }
   if (kind === 'quarter') {
@@ -148,7 +156,9 @@ function buildAssignmentPeriod(periodType: PeriodType, periodCode: string) {
     return { periodCode: `KBCW${ww}`, periodName: `Kỳ báo cáo tuần ${ww}` }
   }
   if (periodType === 'QUY') {
-    const q = periodCode.startsWith('Q') ? periodCode.slice(1).split('-')[0] : ''
+    const q = periodCode.startsWith('Q')
+      ? periodCode.slice(1).split('-')[0]
+      : ''
     return { periodCode: `KBCQ${q}`, periodName: `Kỳ báo cáo quý ${q}` }
   }
   const year = periodCode.split('-').slice(-1)[0] ?? ''
@@ -173,7 +183,8 @@ export function ReportFormDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Tạo report instance từ template đã khóa hoặc cập nhật thông tin báo cáo chưa chốt.
+            Tạo report instance từ template đã khóa hoặc cập nhật thông tin báo
+            cáo chưa chốt.
           </DialogDescription>
         </DialogHeader>
 
@@ -214,11 +225,14 @@ export function ReportForm({
   const formsQuery = useQuery({
     queryKey: ['report-management', 'forms', 'list'],
     queryFn: async () => {
-      const response = await apiClient.get<{ items: FormItem[] } | FormItem[]>('/forms', {
-        params: { page: 1, limit: 200 },
-      })
+      const response = await apiClient.get<{ items: FormItem[] } | FormItem[]>(
+        '/forms',
+        {
+          params: { page: 1, limit: 200 },
+        }
+      )
       const payload = response.data
-      return Array.isArray(payload) ? payload : payload.items ?? []
+      return Array.isArray(payload) ? payload : (payload.items ?? [])
     },
     retry: false,
     enabled: active,
@@ -268,7 +282,10 @@ export function ReportForm({
   }, [active, mode, report])
 
   const periodKind = useMemo(() => toPeriodKind(periodType), [periodType])
-  const timeOptions = useMemo(() => periodOptions(periodKind, new Date()), [periodKind])
+  const timeOptions = useMemo(
+    () => periodOptions(periodKind, new Date()),
+    [periodKind]
+  )
 
   useEffect(() => {
     if (!active) return
@@ -283,7 +300,9 @@ export function ReportForm({
     if (mode !== 'create') return
     if (!selectedForm) return
     const nextName = (selectedForm.name ?? '').trim()
-    setForm((prev) => (prev.name === nextName ? prev : { ...prev, name: nextName }))
+    setForm((prev) =>
+      prev.name === nextName ? prev : { ...prev, name: nextName }
+    )
   }, [active, mode, selectedForm])
 
   useEffect(() => {
@@ -327,7 +346,8 @@ export function ReportForm({
         toast.error('Ngày mở không được lớn hơn ngày đóng.')
         return
       }
-      const { periodCode: assignmentPeriodCode, periodName } = buildAssignmentPeriod(periodType, periodCode)
+      const { periodCode: assignmentPeriodCode, periodName } =
+        buildAssignmentPeriod(periodType, periodCode)
       onCreate({
         name: reportName,
         templateId: form.templateId,
@@ -365,7 +385,9 @@ export function ReportForm({
             <div className='flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary'>
               1
             </div>
-            <div className='text-sm font-semibold'>Cấu hình Biểu mẫu &amp; Kỳ</div>
+            <div className='text-sm font-semibold'>
+              Cấu hình Biểu mẫu &amp; Kỳ
+            </div>
           </div>
 
           <div className='mt-4 grid gap-5'>
@@ -373,19 +395,27 @@ export function ReportForm({
               <Label>Biểu mẫu</Label>
               <Select
                 value={form.templateId}
-                  disabled={mode === 'edit'}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, templateId: value }))}
+                disabled={mode === 'edit'}
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, templateId: value }))
+                }
               >
                 <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Chọn biểu mẫu' />
                 </SelectTrigger>
                 <SelectContent>
                   {formsQuery.isLoading ? (
-                    <div className='px-2 py-1.5 text-sm text-muted-foreground'>Đang tải biểu mẫu...</div>
+                    <div className='px-2 py-1.5 text-sm text-muted-foreground'>
+                      Đang tải biểu mẫu...
+                    </div>
                   ) : formsQuery.isError ? (
-                    <div className='px-2 py-1.5 text-sm text-destructive'>Không tải được biểu mẫu.</div>
+                    <div className='px-2 py-1.5 text-sm text-destructive'>
+                      Không tải được biểu mẫu.
+                    </div>
                   ) : forms.length === 0 ? (
-                    <div className='px-2 py-1.5 text-sm text-muted-foreground'>Chưa có biểu mẫu.</div>
+                    <div className='px-2 py-1.5 text-sm text-muted-foreground'>
+                      Chưa có biểu mẫu.
+                    </div>
                   ) : (
                     forms.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
@@ -452,26 +482,41 @@ export function ReportForm({
             <div className='flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary'>
               2
             </div>
-            <div className='text-sm font-semibold'>Thiết lập Thời hạn &amp; Tự động</div>
+            <div className='text-sm font-semibold'>
+              Thiết lập Thời hạn &amp; Tự động
+            </div>
           </div>
 
           <div className='mt-4 grid gap-4 sm:grid-cols-3'>
             <div className='space-y-2'>
               <Label>Ngày mở</Label>
-              <Input type='date' value={openDate} onChange={(event) => setOpenDate(event.target.value)} />
+              <Input
+                type='date'
+                value={openDate}
+                onChange={(event) => setOpenDate(event.target.value)}
+              />
             </div>
 
             <div className='space-y-2'>
               <Label>Ngày đóng</Label>
-              <Input type='date' value={closeDate} onChange={(event) => setCloseDate(event.target.value)} />
+              <Input
+                type='date'
+                value={closeDate}
+                onChange={(event) => setCloseDate(event.target.value)}
+              />
             </div>
 
             <div className='rounded-lg border bg-muted/30 p-4'>
               <div className='flex items-center justify-between gap-3'>
                 <Label className='text-sm'>Tự động giao kỳ sau</Label>
-                <Switch checked={autoAssignNextPeriod} onCheckedChange={setAutoAssignNextPeriod} />
+                <Switch
+                  checked={autoAssignNextPeriod}
+                  onCheckedChange={setAutoAssignNextPeriod}
+                />
               </div>
-              <p className='mt-2 text-xs text-muted-foreground'>Tự động giao báo cáo kỳ sau</p>
+              <p className='mt-2 text-xs text-muted-foreground'>
+                Tự động giao báo cáo kỳ sau
+              </p>
             </div>
           </div>
         </div>
@@ -482,7 +527,11 @@ export function ReportForm({
           Hủy
         </Button>
         <Button type='button' onClick={submit} disabled={isSubmitting}>
-          {isSubmitting ? 'Đang lưu...' : mode === 'create' ? 'Tạo báo cáo' : 'Lưu thay đổi'}
+          {isSubmitting
+            ? 'Đang lưu...'
+            : mode === 'create'
+              ? 'Tạo báo cáo'
+              : 'Lưu thay đổi'}
         </Button>
       </DialogFooter>
     </>

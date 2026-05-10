@@ -1,8 +1,17 @@
 import { RotateCcw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { ReportFilters as ReportFiltersType, ReportReferences } from '../api/types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type {
+  ReportFilters as ReportFiltersType,
+  ReportReferences,
+} from '../api/types'
 import { reportStatusOptions } from '../api/types'
 
 type ReportFiltersProps = {
@@ -11,7 +20,11 @@ type ReportFiltersProps = {
   onChange: (filters: ReportFiltersType) => void
 }
 
-export function ReportFilters({ filters, references, onChange }: ReportFiltersProps) {
+export function ReportFilters({
+  filters,
+  references,
+  onChange,
+}: ReportFiltersProps) {
   const patchFilters = (patch: Partial<ReportFiltersType>) => {
     onChange({ ...filters, ...patch, page: 1 })
   }
@@ -43,7 +56,9 @@ export function ReportFilters({ filters, references, onChange }: ReportFiltersPr
 
         <Select
           value={filters.templateId || 'all'}
-          onValueChange={(value) => patchFilters({ templateId: value === 'all' ? '' : value })}
+          onValueChange={(value) =>
+            patchFilters({ templateId: value === 'all' ? '' : value })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder='Template' />
@@ -60,7 +75,9 @@ export function ReportFilters({ filters, references, onChange }: ReportFiltersPr
 
         <Select
           value={filters.unitId || 'all'}
-          onValueChange={(value) => patchFilters({ unitId: value === 'all' ? '' : value })}
+          onValueChange={(value) =>
+            patchFilters({ unitId: value === 'all' ? '' : value })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder='Đơn vị' />
@@ -79,7 +96,9 @@ export function ReportFilters({ filters, references, onChange }: ReportFiltersPr
           value={filters.period || 'all'}
           onValueChange={(value) => {
             const period = references?.periods.find((item) => item.id === value)
-            patchFilters({ period: value === 'all' ? '' : period?.name ?? '' })
+            patchFilters({
+              period: value === 'all' ? '' : (period?.name ?? ''),
+            })
           }}
         >
           <SelectTrigger>

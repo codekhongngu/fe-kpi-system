@@ -64,7 +64,9 @@ export type RolesListResponse = {
 
 export const usersApi = {
   list: async (query: UsersListQuery) => {
-    const response = await apiClient.get<UsersListResponse>('/users', { params: query })
+    const response = await apiClient.get<UsersListResponse>('/users', {
+      params: query,
+    })
     return response.data
   },
   create: async (input: CreateUserInput) => {
@@ -80,18 +82,24 @@ export const usersApi = {
     return response.data
   },
   activate: async (id: string) => {
-    const response = await apiClient.patch<{ ok: true }>(`/users/${id}/activate`)
+    const response = await apiClient.patch<{ ok: true }>(
+      `/users/${id}/activate`
+    )
     return response.data
   },
   deactivate: async (id: string) => {
-    const response = await apiClient.patch<{ ok: true }>(`/users/${id}/deactivate`)
+    const response = await apiClient.patch<{ ok: true }>(
+      `/users/${id}/deactivate`
+    )
     return response.data
   },
 }
 
 export const rolesApi = {
   list: async (query?: { page?: number; limit?: number; search?: string }) => {
-    const response = await apiClient.get<RolesListResponse>('/roles', { params: query })
+    const response = await apiClient.get<RolesListResponse>('/roles', {
+      params: query,
+    })
     return response.data
   },
 }

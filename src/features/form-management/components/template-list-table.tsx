@@ -1,5 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { Archive, Eye, MoreHorizontal, PencilLine, Copy, Trash2, FilePlus2 } from 'lucide-react'
+import {
+  Archive,
+  Eye,
+  MoreHorizontal,
+  PencilLine,
+  Copy,
+  Trash2,
+  FilePlus2,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,7 +26,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { FormTemplate, PeriodType, TemplateLifecycleStatus, TemplateType } from '../api/types'
+import type {
+  FormTemplate,
+  PeriodType,
+  TemplateLifecycleStatus,
+  TemplateType,
+} from '../api/types'
 import { TemplateStatusBadge } from './shared/template-status-badge'
 
 const periodTypeLabel: Record<PeriodType, string> = {
@@ -85,16 +98,29 @@ export function TemplateListTable({
               <TableCell className='font-medium'>{template.code}</TableCell>
               <TableCell>
                 <div>{template.name}</div>
-                <div className='text-xs text-muted-foreground'>{template.description}</div>
-              </TableCell>
-              <TableCell>{template.fieldCategoryName ?? template.fieldCategoryId}</TableCell>
-              <TableCell>{templateTypeLabel[template.templateType ?? 'AGGREGATE']}</TableCell>
-              <TableCell>{periodTypeLabel[template.periodType ?? 'THANG']}</TableCell>
-              <TableCell>
-                <Badge variant='outline'>{lifecycleLabel[template.templateStatus ?? 'DRAFT']}</Badge>
+                <div className='text-xs text-muted-foreground'>
+                  {template.description}
+                </div>
               </TableCell>
               <TableCell>
-                <TemplateStatusBadge templateStatus={template.templateStatus} isActive={template.isActive} />
+                {template.fieldCategoryName ?? template.fieldCategoryId}
+              </TableCell>
+              <TableCell>
+                {templateTypeLabel[template.templateType ?? 'AGGREGATE']}
+              </TableCell>
+              <TableCell>
+                {periodTypeLabel[template.periodType ?? 'THANG']}
+              </TableCell>
+              <TableCell>
+                <Badge variant='outline'>
+                  {lifecycleLabel[template.templateStatus ?? 'DRAFT']}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <TemplateStatusBadge
+                  templateStatus={template.templateStatus}
+                  isActive={template.isActive}
+                />
               </TableCell>
               <TableCell className='text-right'>
                 <DropdownMenu modal={false}>
@@ -107,52 +133,78 @@ export function TemplateListTable({
                   <DropdownMenuContent align='end' className='w-52'>
                     <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                     <DropdownMenuItem asChild className='cursor-pointer'>
-                      <Link to='/form-management/details/$templateId' params={{ templateId: template.id }}>
+                      <Link
+                        to='/form-management/details/$templateId'
+                        params={{ templateId: template.id }}
+                      >
                         <Eye className='size-4' />
                         Xem chi tiết
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEditGeneral(template)} className='cursor-pointer'>
+                    <DropdownMenuItem
+                      onClick={() => onEditGeneral(template)}
+                      className='cursor-pointer'
+                    >
                       <span className='flex items-center gap-2'>
                         <PencilLine className='size-4' />
                         Chỉnh sửa thông tin
                       </span>
                     </DropdownMenuItem>
-                    {onMarkReady && (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
-                      <DropdownMenuItem onClick={() => onMarkReady(template)} className='cursor-pointer'>
-                        <span className='flex items-center gap-2'>
-                          <FilePlus2 className='size-4' />
-                          Chuyển sẵn sàng
-                        </span>
-                      </DropdownMenuItem>
-                    )}
-                    {onArchive && ['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') && (
-                      <DropdownMenuItem onClick={() => onArchive(template)} className='cursor-pointer'>
-                        <span className='flex items-center gap-2'>
-                          <Archive className='size-4' />
-                          Lưu trữ
-                        </span>
-                      </DropdownMenuItem>
-                    )}
-                    {onClone && ['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') && (
-                      <DropdownMenuItem onClick={() => onClone(template)} className='cursor-pointer'>
-                        <span className='flex items-center gap-2'>
-                          <Copy className='size-4' />
-                          Sao chép
-                        </span>
-                      </DropdownMenuItem>
-                    )}
-                    {onDelete && (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onDelete(template)} className='cursor-pointer text-destructive'>
+                    {onMarkReady &&
+                      (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
+                        <DropdownMenuItem
+                          onClick={() => onMarkReady(template)}
+                          className='cursor-pointer'
+                        >
                           <span className='flex items-center gap-2'>
-                            <Trash2 className='size-4' />
-                            Xóa
+                            <FilePlus2 className='size-4' />
+                            Chuyển sẵn sàng
                           </span>
                         </DropdownMenuItem>
-                      </>
-                    )}
+                      )}
+                    {onArchive &&
+                      ['READY', 'IN_USE'].includes(
+                        template.templateStatus ?? 'DRAFT'
+                      ) && (
+                        <DropdownMenuItem
+                          onClick={() => onArchive(template)}
+                          className='cursor-pointer'
+                        >
+                          <span className='flex items-center gap-2'>
+                            <Archive className='size-4' />
+                            Lưu trữ
+                          </span>
+                        </DropdownMenuItem>
+                      )}
+                    {onClone &&
+                      ['IN_USE', 'ARCHIVED'].includes(
+                        template.templateStatus ?? 'DRAFT'
+                      ) && (
+                        <DropdownMenuItem
+                          onClick={() => onClone(template)}
+                          className='cursor-pointer'
+                        >
+                          <span className='flex items-center gap-2'>
+                            <Copy className='size-4' />
+                            Sao chép
+                          </span>
+                        </DropdownMenuItem>
+                      )}
+                    {onDelete &&
+                      (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onDelete(template)}
+                            className='cursor-pointer text-destructive'
+                          >
+                            <span className='flex items-center gap-2'>
+                              <Trash2 className='size-4' />
+                              Xóa
+                            </span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

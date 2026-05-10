@@ -1,3 +1,5 @@
+import { useAuthStore } from '@/stores/auth-store'
+import { cn } from '@/lib/utils'
 import { useLayout } from '@/context/layout-provider'
 import {
   Sidebar,
@@ -11,8 +13,6 @@ import { getSidebarNavGroupsForUser, sidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
 import { TeamSwitcher } from './team-switcher'
-import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/stores/auth-store'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -20,9 +20,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function getDisplayName(user: unknown): string {
   if (isRecord(user)) {
-    const fullName = typeof user.fullName === 'string' ? user.fullName.trim() : ''
+    const fullName =
+      typeof user.fullName === 'string' ? user.fullName.trim() : ''
     if (fullName) return fullName
-    const username = typeof user.username === 'string' ? user.username.trim() : ''
+    const username =
+      typeof user.username === 'string' ? user.username.trim() : ''
     if (username) return username
     const email = typeof user.email === 'string' ? user.email.trim() : ''
     if (email) return email
@@ -40,7 +42,8 @@ function getDisplayEmail(user: unknown): string {
 
 function getDisplayAvatar(user: unknown): string {
   if (isRecord(user)) {
-    const avatarUrl = typeof user.avatarUrl === 'string' ? user.avatarUrl.trim() : ''
+    const avatarUrl =
+      typeof user.avatarUrl === 'string' ? user.avatarUrl.trim() : ''
     if (avatarUrl) return avatarUrl
   }
   return sidebarData.user.avatar
@@ -62,7 +65,7 @@ export function AppSidebar() {
       variant={variant}
       className={cn(
         '[&_[data-slot=sidebar-container]]:p-2 [&_[data-slot=sidebar-inner]]:h-[calc(100svh-1rem)] [&_[data-slot=sidebar-inner]]:rounded-2xl [&_[data-slot=sidebar-inner]]:border [&_[data-slot=sidebar-inner]]:border-sidebar-border',
-        'bg-background',
+        'bg-background'
       )}
     >
       <SidebarHeader className='sticky top-0 z-10'>

@@ -7,7 +7,8 @@ export function TemplatesLifecycleTab() {
         <CardTitle>Quản lý vòng đời biểu mẫu</CardTitle>
       </CardHeader>
       <CardContent className='text-sm text-muted-foreground'>
-        Luồng thêm/sửa biểu mẫu đã được chuyển sang modal tại trang danh sách theo yêu cầu nghiệp vụ mới.
+        Luồng thêm/sửa biểu mẫu đã được chuyển sang modal tại trang danh sách
+        theo yêu cầu nghiệp vụ mới.
       </CardContent>
     </Card>
   )

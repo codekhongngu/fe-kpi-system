@@ -1,40 +1,38 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState, useEffect } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   ArrowLeft,
   ArrowRight,
   Building2,
-  ChartNoAxesColumn,
   CheckCircle2,
   Download,
   Filter,
   Eye,
   Info,
-  List,
   Lock,
   MoreVertical,
   PencilLine,
   Rocket,
-  ShieldCheck,
   Settings2,
   Workflow,
-  Search,
 } from 'lucide-react'
+import { toast } from 'sonner'
+import { apiClient } from '@/lib/api-client'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Card } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { cn } from '@/lib/utils'
 import {
   Table,
   TableBody,
@@ -44,12 +42,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { apiClient } from '@/lib/api-client'
-import { reportManagementApi } from '../api/mock-report-management-api'
-import { reportScopesApi, type ReportScope } from '../api/report-scopes-api'
+import { TemplatePreviewMatrix } from '@/features/form-management/components/shared/template-preview-matrix'
+import { reportCampaignApi } from '../api/report-management-api'
 import type { ReportDetail } from '../api/types'
+import { ReportConfirmDialog } from '../components/report-confirm-dialog'
+import { ReportStatusBadge } from '../components/report-status'
+import { CampaignDefaultValuesTab } from '../components/tabs/campaign-default-values-tab'
+import { CampaignScopesTab } from '../components/tabs/campaign-scopes-tab'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
-import { ReportPriorityBadge, ReportStatusBadge } from '../components/report-status'
 
 type OrganizationTreeNode = {
   id: string
@@ -57,17 +57,17 @@ type OrganizationTreeNode = {
   canAssignReports?: boolean
   can_assign_reports?: boolean
   children?: OrganizationTreeNode[]
- }
- 
- type IndicatorItem = {
-   id: string
-   code: string
-   name: string
-   parentId: string | null
-   hasChildren?: boolean
- }
- 
- type ReportDetailsPageProps = {
+}
+
+type IndicatorItem = {
+  id: string
+  code: string
+  name: string
+  parentId: string | null
+  hasChildren?: boolean
+}
+
+type ReportDetailsPageProps = {
   reportId: string
 }
 
@@ -81,200 +81,122 @@ function formatDateTime(value: string | null) {
 
 function formatDate(value: string | null | undefined) {
   if (!value) return '--'
-  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(new Date(value))
+  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(
+    new Date(value)
+  )
 }
 
 function formatTimeDashDate(value: string | null) {
   if (!value) return '--'
   const date = new Date(value)
-  const time = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(date)
-  const day = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)
+  const time = new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+  const day = new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
   return `${time} - ${day}`
 }
 
 export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
-   const [unitSearch, setUnitSearch] = useState('')
-   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
-   const [indicatorSearch, setIndicatorSearch] = useState('')
-   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set())
-   const [scopeSearch, setScopeSearch] = useState('')
-   const [sortBy, setSortBy] = useState<'code' | 'name' | 'sortOrder'>('sortOrder')
+  const [unitSearch, setUnitSearch] = useState('')
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
+  const [indicatorSearch, setIndicatorSearch] = useState('')
 
   const detailQuery = useQuery({
     queryKey: reportQueryKeys.detail(reportId),
     queryFn: async () => {
-      const response = await apiClient.get<ReportDetail>(`/report-campaigns/${reportId}`)
+      const response = await apiClient.get<ReportDetail>(
+        `/report-campaigns/${reportId}`
+      )
       return response.data
     },
   })
- 
-   const orgTreeQuery = useQuery({
-     queryKey: ['report-details', 'orgs', { q: unitSearch.trim() }],
-     queryFn: async () => {
-       const q = unitSearch.trim()
-       const response = await apiClient.get<OrganizationTreeNode[] | { items?: OrganizationTreeNode[] }>(
-         '/orgs',
-         { params: { tree: true, q: q.length > 0 ? q : undefined } },
-       )
-       const payload = response.data
-       return Array.isArray(payload) ? payload : payload.items ?? []
-     },
-     retry: false,
-   })
- 
-   const report = detailQuery.data
- 
-   const indicatorsQuery = useQuery({
-     queryKey: ['report-details', 'indicators', report?.templateId, indicatorSearch],
-     queryFn: async () => {
-       if (!report?.templateId) return []
-       const response = await apiClient.get<IndicatorItem[] | { items: IndicatorItem[] }>(
-         `/forms/${report.templateId}/indicators`,
-         { params: { q: indicatorSearch.trim() || undefined } },
-       )
-       const payload = response.data
-       return Array.isArray(payload) ? payload : payload.items ?? []
-     },
-     enabled: !!report?.templateId,
-     retry: false,
-   })
 
-   const scopesQuery = useQuery({
-     queryKey: ['report-details', 'scopes', reportId],
-     queryFn: async () => {
-       if (!reportId) return []
-       console.log('Fetching scopes for reportId:', reportId)
-       try {
-         const result = await reportScopesApi.getReportScopes(reportId)
-         console.log('Scopes API result:', result)
-         return result
-       } catch (error) {
-         console.error('Scopes API error:', error)
-         throw error
-       }
-     },
-     enabled: !!reportId,
-     retry: false,
-   })
+  const orgTreeQuery = useQuery({
+    queryKey: ['report-details', 'orgs', { q: unitSearch.trim() }],
+    queryFn: async () => {
+      const q = unitSearch.trim()
+      const response = await apiClient.get<
+        OrganizationTreeNode[] | { items?: OrganizationTreeNode[] }
+      >('/orgs', { params: { tree: true, q: q.length > 0 ? q : undefined } })
+      const payload = response.data
+      return Array.isArray(payload) ? payload : (payload.items ?? [])
+    },
+    retry: false,
+  })
 
-   const handleSelectAll = () => {
-     if (scopesQuery.data) {
-       const allScopeIds = scopesQuery.data.map(scope => scope.id)
-       setSelectedScopes(new Set(allScopeIds))
-     }
-   }
+  const report = detailQuery.data
 
-   const handleUnselectAll = () => {
-     setSelectedScopes(new Set())
-   }
+  const indicatorsQuery = useQuery({
+    queryKey: [
+      'report-details',
+      'indicators',
+      report?.templateId,
+      indicatorSearch,
+    ],
+    queryFn: async () => {
+      if (!report?.templateId) return []
+      const response = await apiClient.get<
+        IndicatorItem[] | { items: IndicatorItem[] }
+      >(`/forms/${report.templateId}/indicators`, {
+        params: { q: indicatorSearch.trim() || undefined },
+      })
+      const payload = response.data
+      return Array.isArray(payload) ? payload : (payload.items ?? [])
+    },
+    enabled: !!report?.templateId,
+    retry: false,
+  })
 
-   const handleToggleScope = (scopeId: string) => {
-     setSelectedScopes(prev => {
-       const newSet = new Set(prev)
-       if (newSet.has(scopeId)) {
-         newSet.delete(scopeId)
-       } else {
-         newSet.add(scopeId)
-       }
-       return newSet
-     })
-   }
+  const scopesQuery = useQuery({
+    queryKey: ['report-campaign-scopes', reportId],
+    queryFn: () => reportCampaignApi.listScopes(reportId),
+    enabled: !!reportId,
+  })
 
-   const isAllSelected = scopesQuery.data ? selectedScopes.size === scopesQuery.data.length : false
-   const isIndeterminate = scopesQuery.data ? selectedScopes.size > 0 && selectedScopes.size < scopesQuery.data.length : false
+  const defaultValuesQuery = useQuery({
+    queryKey: ['report-campaign-default-values', reportId],
+    queryFn: () => reportCampaignApi.listDefaultValues(reportId),
+    enabled: !!reportId,
+  })
 
-  const currentUnitId = selectedUnitId || report?.unitId
+  const dispatchMutation = useMutation({
+    mutationFn: () => reportCampaignApi.confirmDispatch(reportId),
+    onSuccess: () => {
+      toast.success('Đã phát hành báo cáo thành công.')
+      detailQuery.refetch()
+      scopesQuery.refetch()
+      setConfirmDispatchOpen(false)
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
 
-   const filteredScopes = useMemo(() => {
-     if (!scopesQuery.data || !currentUnitId) return []
-     let unitFiltered = scopesQuery.data.filter(scope => scope.orgId === currentUnitId)
-     
-     if (scopeSearch.trim()) {
-       const searchTerm = scopeSearch.toLowerCase().trim()
-       unitFiltered = unitFiltered.filter(scope => 
-         scope.indicatorCode.toLowerCase().includes(searchTerm) ||
-         scope.indicatorName.toLowerCase().includes(searchTerm)
-       )
-     }
-     
-     // Sắp xếp theo sortBy
-     return [...unitFiltered].sort((a, b) => {
-       switch (sortBy) {
-         case 'code':
-           return a.indicatorCode.localeCompare(b.indicatorCode)
-         case 'name':
-           return a.indicatorName.localeCompare(b.indicatorName)
-         case 'sortOrder':
-           // Sắp xếp theo hierarchy rule với dữ liệu thực tế
-           // 1. Cùng orgId: sắp xếp theo hierarchy
-           // 2. Khác orgId: orgId trước
-           if (a.orgId !== b.orgId) {
-             return a.orgId.localeCompare(b.orgId)
-           }
-           
-           // Tính level hierarchy từ parent_id - sửa lại logic
-           const calculateLevel = (item: any, allItems: any[], memo = new Map()): number => {
-             if (memo.has(item.id)) return memo.get(item.id)!
-             
-             // Build parent map trước
-             const itemMap = new Map(allItems.map(i => [i.id, i]))
-             
-             const getLevel = (itemId: string): number => {
-               if (memo.has(itemId)) return memo.get(itemId)!
-               
-               const currentItem = itemMap.get(itemId)
-               if (!currentItem || !currentItem.parent_id) {
-                 memo.set(itemId, 0)
-                 return 0
-               }
-               
-               const parentLevel = getLevel(currentItem.parent_id)
-               const level = parentLevel + 1
-               memo.set(itemId, level)
-               return level
-             }
-             
-             return getLevel(item.id)
-           }
-           
-           const allScopes = [...unitFiltered]
-           const aLevel = calculateLevel(a, allScopes)
-           const bLevel = calculateLevel(b, allScopes)
-           const aParentId = a.parent_id
-           const bParentId = b.parent_id
-           const aSortOrder = a.sort_order ?? 999
-           const bSortOrder = b.sort_order ?? 999
-           
-           // Rule 1: Parent luôn lên trước con bất kể sort_order
-           if (aParentId === b.id) {
-             return -1 // a là parent của b, a lên trước
-           }
-           if (bParentId === a.id) {
-             return 1 // b là parent của a, b lên trước
-           }
-           
-           // Rule 2: Khác level: parent có level nhỏ hơn lên trước
-           if (aLevel !== bLevel) {
-             return aLevel - bLevel // level nhỏ hơn lên trước
-           }
-           
-           // Rule 3: Cùng level: sort_order nhỏ hơn lên trước
-           return aSortOrder - bSortOrder
-         default:
-           return 0
-       }
-     })
-   }, [scopesQuery.data, currentUnitId, scopeSearch, sortBy])
+  const updateMutation = useMutation({
+    mutationFn: (input: UpdateReportInput) =>
+      apiClient.patch(`/report-campaigns/${reportId}`, input),
+    onSuccess: () => {
+      toast.success('Đã cập nhật thông tin báo cáo.')
+      detailQuery.refetch()
+      setEditOpen(false)
+    },
+    onError: (error) => toast.error(getErrorMessage(error)),
+  })
 
-   const isAllFilteredSelected = filteredScopes.length > 0 && selectedScopes.size === filteredScopes.length
-   const isFilteredIndeterminate = selectedScopes.size > 0 && selectedScopes.size < filteredScopes.length
+  const [confirmDispatchOpen, setConfirmDispatchOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   const openDate = report?.openDate ?? null
   const closeDate = report?.closeDate ?? report?.deadline ?? null
   const updatedAt = report?.updatedAt ?? null
+
+  const currentUnitId = selectedUnitId || report?.unitId
   const currentUnitName = useMemo(() => {
     if (selectedUnitId === report?.unitId) return report?.unitName
-    
+
     const findName = (nodes: OrganizationTreeNode[]): string | null => {
       for (const node of nodes) {
         if (node.id === selectedUnitId) return node.name ?? node.id
@@ -288,47 +210,56 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
     return findName(orgTreeQuery.data ?? []) || report?.unitName
   }, [selectedUnitId, report, orgTreeQuery.data])
 
-   const renderOrgTree = (nodes: OrganizationTreeNode[], depth = 0) => {
-     return nodes.map((node) => {
-       const isSelected = currentUnitId === node.id
-       const canAssign = Boolean(node.canAssignReports ?? node.can_assign_reports ?? true)
-       const children = Array.isArray(node.children) ? node.children : []
-       return (
-         <div key={node.id}>
-           <button
-             type='button'
-             disabled={!canAssign}
-             className={cn(
-               'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
-               isSelected
-                 ? 'bg-primary/10 font-bold text-primary'
-                 : canAssign
-                   ? 'hover:bg-muted/50 font-medium text-foreground'
-                   : 'cursor-not-allowed opacity-50 font-medium text-muted-foreground',
-             )}
-             style={{ paddingLeft: `${8 + depth * 16}px` }}
-             onClick={() => canAssign && setSelectedUnitId(node.id)}
-           >
-             <Building2
-               className={cn(
-                 'size-4',
-                 isSelected ? 'text-primary' : canAssign ? 'text-muted-foreground' : 'text-muted-foreground/40',
-               )}
-             />
-             <span className='min-w-0 truncate'>{node.name ?? node.id}</span>
-           </button>
-           {children.length > 0 ? <div className='space-y-1'>{renderOrgTree(children, depth + 1)}</div> : null}
-         </div>
-       )
-     })
-   }
+  const renderOrgTree = (nodes: OrganizationTreeNode[], depth = 0) => {
+    return nodes.map((node) => {
+      const isSelected = currentUnitId === node.id
+      const canAssign = Boolean(
+        node.canAssignReports ?? node.can_assign_reports ?? true
+      )
+      const children = Array.isArray(node.children) ? node.children : []
+      return (
+        <div key={node.id}>
+          <button
+            type='button'
+            disabled={!canAssign}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+              isSelected
+                ? 'bg-primary/10 font-bold text-primary'
+                : canAssign
+                  ? 'font-medium text-foreground hover:bg-muted/50'
+                  : 'cursor-not-allowed font-medium text-muted-foreground opacity-50'
+            )}
+            style={{ paddingLeft: `${8 + depth * 16}px` }}
+            onClick={() => canAssign && setSelectedUnitId(node.id)}
+          >
+            <Building2
+              className={cn(
+                'size-4',
+                isSelected
+                  ? 'text-primary'
+                  : canAssign
+                    ? 'text-muted-foreground'
+                    : 'text-muted-foreground/40'
+              )}
+            />
+            <span className='min-w-0 truncate'>{node.name ?? node.id}</span>
+          </button>
+          {children.length > 0 ? (
+            <div className='space-y-1'>
+              {renderOrgTree(children, depth + 1)}
+            </div>
+          ) : null}
+        </div>
+      )
+    })
+  }
   const departmentRows = useMemo(() => {
     if (!report) return []
-    
-    // Ưu tiên sử dụng danh sách assignments thực tế từ API mới
-    const assignments = report.assignments || []
-    
-    if (assignments.length > 0) {
+
+    // Nếu DISPATCHED: hiển thị assignments thực tế
+    if (report.status !== 'DRAFT') {
+      const assignments = report.assignments || []
       return assignments.map((item) => {
         const initials = (item.orgName || item.orgId || 'DV')
           .split(/\s+/)
@@ -336,84 +267,62 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
           .slice(0, 2)
           .map((word) => word[0]?.toUpperCase() ?? '')
           .join('')
-          
+
         return {
           id: item.id,
           unitName: item.orgName,
           initials: initials || 'DV',
           assigneeName: item.assigneeName ?? 'Chưa phân công',
-          status: item.status === 'APPROVED' || item.status === 'COMPLETED' 
-            ? 'done' 
-            : ['SUBMITTED', 'UNDER_REVIEW', 'DRAFTING'].includes(item.status)
-              ? 'doing'
-              : 'not_started',
+          status:
+            item.status === 'APPROVED' || item.status === 'COMPLETED'
+              ? 'done'
+              : ['SUBMITTED', 'UNDER_REVIEW', 'DRAFTING'].includes(item.status)
+                ? 'doing'
+                : 'not_started',
           updatedAt: item.updatedAt || item.submittedAt || null,
         } as const
       })
     }
 
-    // Fallback cho trường hợp API cũ hoặc dữ liệu mock
-    const units = (report.assignees ?? [])
-    const fallback = units.length > 0 ? units.slice(0, 10) : ([report.unitName].filter(Boolean) as string[])
-    const names = fallback.length > 0 ? fallback : ['Đơn vị chưa xác định']
-    const completedCount = Math.max(
-      0,
-      Math.min(names.length, Math.round((names.length * (report.completionPercent ?? 0)) / 100)),
+    // Nếu DRAFT: hiển thị danh sách đơn vị từ scopes
+    const scopes = scopesQuery.data || []
+    const orgMap = new Map<
+      string,
+      { id: string; name: string; count: number }
+    >()
+
+    scopes.forEach((s) => {
+      const existing = orgMap.get(s.orgId)
+      if (existing) {
+        existing.count++
+      } else {
+        orgMap.set(s.orgId, {
+          id: s.orgId,
+          name: s.orgName || s.orgId,
+          count: 1,
+        })
+      }
+    })
+
+    return Array.from(orgMap.values()).map(
+      (org) =>
+        ({
+          id: org.id,
+          unitName: org.name,
+          initials:
+            org.name
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((w) => w[0].toUpperCase())
+              .join('') || 'DV',
+          assigneeName: `${org.count} chỉ tiêu đã gán`,
+          status: 'not_started',
+          updatedAt: null,
+        }) as const
     )
-    const mockAssignees = ['Nguyễn Văn An', 'Trần Thị Bích', 'Lê Hoàng Nam', 'Phạm Minh Tuấn']
+  }, [report, scopesQuery.data])
 
-    return names.map((unitName, index) => {
-      const initials = (unitName || 'DV')
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((word) => word[0]?.toUpperCase() ?? '')
-        .join('')
-      const status =
-        index < completedCount ? 'done' : index === completedCount ? 'doing' : 'not_started'
-      return {
-        id: `${report.id}-${index}`,
-        unitName,
-        initials: initials || 'DV',
-        assigneeName: mockAssignees[index] ?? 'Người thực hiện',
-        status,
-        updatedAt: index < completedCount ? updatedAt : null,
-      } as const
-    })
-  }, [report, updatedAt])
-
-  const defaultRows = useMemo(() => {
-    const cells = report?.cells
-    if (!Array.isArray(cells)) return []
-    
-    const unique = new Map<string, (typeof cells)[number]>()
-    cells.forEach((cell) => {
-      if (!cell) return
-      const key = `${cell.indicatorCode}-${cell.attributeName}`
-      if (unique.has(key)) return
-      unique.set(key, cell)
-    })
-    return Array.from(unique.entries())
-      .slice(0, 10)
-      .map(([key, cell], index) => {
-        const rawType = (cell.dataType ?? '').toString().toLowerCase()
-        const isNumber = rawType.includes('number')
-        const isText = rawType.includes('text') || rawType.includes('string')
-        const control: 'number' | 'text' | 'select' = index === 1 ? 'select' : isNumber ? 'number' : 'text'
-
-        return {
-          key,
-          metricName: cell.indicatorName,
-          metricCode: cell.indicatorCode,
-          attribute: cell.attributeName,
-          typeLabel: isNumber ? 'Number' : isText ? 'String' : cell.dataType,
-          typeVariant: (isNumber ? 'secondary' : isText ? 'outline' : 'default') as any,
-          required: Boolean(cell.required),
-          control,
-          initialValue: cell.value != null ? String(cell.value) : '',
-        } as const
-      })
-  }, [report])
   const timelineIcon = useMemo(() => {
     return [CheckCircle2, PencilLine, Lock, Rocket] as const
   }, [])
@@ -421,7 +330,9 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
   return (
     <div className='flex w-full flex-col gap-6 p-6'>
       {detailQuery.isLoading ? (
-        <div className='py-12 text-center text-sm text-muted-foreground'>Đang tải chi tiết báo cáo...</div>
+        <div className='py-12 text-center text-sm text-muted-foreground'>
+          Đang tải chi tiết báo cáo...
+        </div>
       ) : detailQuery.isError || !report ? (
         <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
           {getErrorMessage(detailQuery.error)}
@@ -433,11 +344,16 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
               <div className='flex items-center gap-2 text-xs text-muted-foreground'>
                 <span>Quản lý báo cáo</span>
                 <span>/</span>
-                <span className='font-medium text-foreground'>{report.code}</span>
+                <span className='font-medium text-foreground'>
+                  {report.code}
+                </span>
               </div>
-              <h1 className='truncate text-3xl font-bold tracking-tight text-foreground'>{report.name}</h1>
+              <h1 className='truncate text-3xl font-bold tracking-tight text-foreground'>
+                {report.name}
+              </h1>
               <p className='max-w-3xl text-sm text-muted-foreground'>
-                Theo dõi thông tin chung, tiến độ nhập liệu, dữ liệu ô và lịch sử thao tác của báo cáo.
+                Theo dõi thông tin chung, tiến độ nhập liệu, dữ liệu ô và lịch
+                sử thao tác của báo cáo.
               </p>
             </div>
             <div className='flex flex-wrap gap-2'>
@@ -456,39 +372,79 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
           <div className='rounded-3xl border bg-card p-2'>
             <Tabs defaultValue='general'>
               <TabsList className='grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-muted p-1 lg:grid-cols-4'>
-                <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='general'>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
+                  value='general'
+                >
                   <Info className='size-4' />
                   Thông tin chung
                 </TabsTrigger>
-                <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='permissions'>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
+                  value='permissions'
+                >
                   <Workflow className='size-4' />
                   Phân quyền chỉ tiêu
                 </TabsTrigger>
-                                <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='defaults'>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
+                  value='defaults'
+                >
                   <Settings2 className='size-4' />
                   Giá trị mặc định
                 </TabsTrigger>
-                <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='preview'>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
+                  value='preview'
+                >
                   <Eye className='size-4' />
                   Xem trước
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value='general'>
-                <div className='space-y-6 px-4 pb-6 pt-6 lg:px-6'>
+                <div className='space-y-6 px-4 pt-6 pb-6 lg:px-6'>
                   <div className='flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between'>
                     <div>
-                      <div className='text-2xl font-bold tracking-tight text-primary'>Chi tiết báo cáo</div>
+                      <div className='text-2xl font-bold tracking-tight text-primary'>
+                        Chi tiết báo cáo
+                      </div>
                       <div className='mt-1 text-sm font-medium text-muted-foreground'>
                         Quản lý và theo dõi tiến độ báo cáo định kỳ hệ thống.
                       </div>
                     </div>
+                    {report.status === 'CLOSED' && (
+                      <Badge
+                        variant='outline'
+                        className='h-auto gap-2 rounded-xl border-muted-foreground/20 bg-muted px-4 py-2 text-muted-foreground'
+                      >
+                        <Lock className='size-4' />
+                        Đợt báo cáo đã kết thúc
+                      </Badge>
+                    )}
+                    {report.status === 'CANCELLED' && (
+                      <Badge
+                        variant='destructive'
+                        className='h-auto gap-2 rounded-xl px-4 py-2'
+                      >
+                        Đợt báo cáo đã hủy
+                      </Badge>
+                    )}
                     <div className='flex flex-wrap gap-2'>
-                      <Button type='button' variant='outline' className='h-10 gap-2 font-semibold'>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        className='h-10 gap-2 font-semibold'
+                      >
                         <Download className='size-4' />
                         Xuất dữ liệu
                       </Button>
-                      <Button type='button' className='h-10 gap-2 font-semibold'>
+                      <Button
+                        type='button'
+                        className='h-10 gap-2 font-semibold'
+                        disabled={report.status !== 'DRAFT'}
+                        onClick={() => setEditOpen(true)}
+                      >
                         <PencilLine className='size-4' />
                         Chỉnh sửa
                       </Button>
@@ -498,90 +454,199 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                   <section className='grid gap-4 lg:grid-cols-3'>
                     <div className='lg:col-span-2'>
                       <Card className='relative overflow-hidden rounded-3xl border bg-card p-6'>
-                        <div className='absolute -right-20 -top-20 size-64 rounded-full bg-primary/5' />
+                        <div className='absolute -top-20 -right-20 size-64 rounded-full bg-primary/5' />
                         <div className='relative space-y-6'>
                           <div className='flex items-center gap-3'>
                             <div className='h-6 w-1.5 rounded-full bg-primary' />
-                            <div className='text-xl font-semibold text-primary'>Thông tin chung</div>
+                            <div className='text-xl font-semibold text-primary'>
+                              Thông tin chung
+                            </div>
                           </div>
 
                           <div className='grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2'>
                             <div>
-                              <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Tên báo cáo
+                              <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                                Tên đợt báo cáo
                               </div>
-                              <div className='mt-1 text-lg font-semibold leading-snug text-foreground'>
+                              <div className='mt-1 text-lg leading-snug font-semibold text-foreground'>
                                 {report.name}
                               </div>
                             </div>
 
                             <div>
-                              <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Kỳ báo cáo
+                              <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                                Biểu mẫu gốc
                               </div>
                               <div className='mt-1 flex items-center gap-2 text-lg font-semibold text-foreground'>
-                                <span className='text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded uppercase font-bold'>
-                                  {report.periodCode}
+                                <span className='rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary uppercase'>
+                                  {report.templateCode}
                                 </span>
-                                {report.periodName || report.period}
+                                {report.templateName}
                               </div>
                             </div>
 
-                            <div className='grid grid-cols-2 gap-4 sm:col-span-1'>
+                            <div>
+                              <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                                Kỳ báo cáo
+                              </div>
+                              <div className='mt-1 flex items-center gap-2 text-base font-semibold text-foreground'>
+                                <Badge
+                                  variant='outline'
+                                  className='text-[10px] font-bold uppercase'
+                                >
+                                  {report.periodType}
+                                </Badge>
+                                {report.periodName || report.periodCode}
+                              </div>
+                            </div>
+
+                            <div className='grid grid-cols-2 gap-4'>
                               <div>
-                                <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                  Ngày mở
+                                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                                  Thời hạn
                                 </div>
                                 <div className='mt-1 text-sm font-semibold text-foreground'>
-                                  {formatDate(report.deadlineFrom || openDate)}
+                                  {formatDate(report.deadlineFrom)} →{' '}
+                                  {formatDate(report.deadlineTo)}
                                 </div>
                               </div>
                               <div>
-                                <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                  Ngày đóng
+                                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                                  Trạng thái
                                 </div>
-                                <div className='mt-1 text-sm font-semibold text-foreground'>
-                                  {formatDate(report.deadlineTo || closeDate)}
+                                <div className='mt-1'>
+                                  <ReportStatusBadge status={report.status} />
                                 </div>
                               </div>
                             </div>
 
                             <div>
-                              <div className='text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Trạng thái
+                              <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                                Ngày tạo
                               </div>
-                              <div className='mt-2 inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary'>
-                                <span className='size-2 rounded-full bg-secondary' />
-                                <ReportStatusBadge status={report.status} />
+                              <div className='mt-1 text-sm font-semibold text-muted-foreground'>
+                                {formatDateTime(report.createdAt)}
                               </div>
                             </div>
+
+                            {report.dispatchedAt && (
+                              <div>
+                                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                                  Ngày phát hành
+                                </div>
+                                <div className='mt-1 text-sm font-semibold text-primary'>
+                                  {formatDateTime(report.dispatchedAt)}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </Card>
                     </div>
 
-                    <Card className='relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground'>
-                      <div className='relative space-y-4'>
-                        <div className='text-sm font-medium text-primary-foreground/80'>Tổng quan tiến độ</div>
-                        <div className='text-5xl font-bold'>{report.completionPercent ?? 0}%</div>
-                        <div className='h-2.5 w-full overflow-hidden rounded-full bg-white/20'>
-                          <div
-                            className='h-full rounded-full bg-secondary'
-                            style={{ width: `${Math.max(0, Math.min(100, report.completionPercent ?? 0))}%` }}
-                          />
+                    <Card className='relative overflow-hidden rounded-3xl border bg-card p-6 shadow-sm'>
+                      {report.status === 'DRAFT' ? (
+                        <div className='relative space-y-6'>
+                          <div className='flex items-center gap-2'>
+                            <div className='flex size-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600'>
+                              <Settings2 className='size-5' />
+                            </div>
+                            <div className='text-base font-bold text-foreground'>
+                              Cấu hình đợt báo cáo
+                            </div>
+                          </div>
+
+                          <div className='space-y-4'>
+                            <div className='flex items-center justify-between text-sm'>
+                              <div className='flex items-center gap-2'>
+                                {scopesQuery.data?.length ? (
+                                  <CheckCircle2 className='size-4 text-secondary' />
+                                ) : (
+                                  <div className='size-4 rounded-full border-2' />
+                                )}
+                                <span>Phân quyền chỉ tiêu</span>
+                              </div>
+                              <Badge variant='outline'>
+                                {scopesQuery.data?.length || 0}
+                              </Badge>
+                            </div>
+
+                            <div className='flex items-center justify-between text-sm'>
+                              <div className='flex items-center gap-2'>
+                                {defaultValuesQuery.data?.length ? (
+                                  <CheckCircle2 className='size-4 text-secondary' />
+                                ) : (
+                                  <div className='size-4 rounded-full border-2' />
+                                )}
+                                <span>Giá trị mặc định</span>
+                              </div>
+                              <Badge variant='outline'>
+                                {defaultValuesQuery.data?.length || 0}
+                              </Badge>
+                            </div>
+
+                            <div className='flex items-center justify-between text-sm'>
+                              <div className='flex items-center gap-2 text-muted-foreground'>
+                                <div className='size-4 rounded-full border-2' />
+                                <span>Phát hành (Dispatch)</span>
+                              </div>
+                              <Badge variant='outline' className='opacity-50'>
+                                Chờ
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <Button
+                            className='w-full'
+                            variant='secondary'
+                            onClick={() => setConfirmDispatchOpen(true)}
+                            disabled={dispatchMutation.isPending}
+                          >
+                            {dispatchMutation.isPending
+                              ? 'Đang xử lý...'
+                              : 'Phát hành báo cáo'}
+                          </Button>
                         </div>
-                        <div className='flex justify-between text-xs font-semibold text-primary-foreground/80'>
-                          <span>{Math.round(((report.assignees?.length ?? 0) * (report.completionPercent ?? 0)) / 100)} Đã hoàn thành</span>
-                          <span>
-                            {Math.max(
-                              0,
-                              (report.assignees?.length ?? 0) -
-                                Math.round(((report.assignees?.length ?? 0) * (report.completionPercent ?? 0)) / 100),
-                            )}{' '}
-                            Đang chờ
-                          </span>
+                      ) : (
+                        <div className='relative -m-6 h-[calc(100%+3rem)] space-y-4 bg-gradient-to-br from-primary to-primary/80 p-6 text-primary-foreground'>
+                          <div className='text-sm font-medium text-primary-foreground/80'>
+                            Tổng quan tiến độ
+                          </div>
+                          <div className='text-5xl font-bold'>
+                            {report.completionPercent ?? 0}%
+                          </div>
+                          <div className='h-2.5 w-full overflow-hidden rounded-full bg-white/20'>
+                            <div
+                              className='h-full rounded-full bg-secondary'
+                              style={{
+                                width: `${Math.max(0, Math.min(100, report.completionPercent ?? 0))}%`,
+                              }}
+                            />
+                          </div>
+                          <div className='flex justify-between text-xs font-semibold text-primary-foreground/80'>
+                            <span>
+                              {Math.round(
+                                ((report.assignments?.length ?? 0) *
+                                  (report.completionPercent ?? 0)) /
+                                  100
+                              )}{' '}
+                              Hoàn thành
+                            </span>
+                            <span>
+                              {Math.max(
+                                0,
+                                (report.assignments?.length ?? 0) -
+                                  Math.round(
+                                    ((report.assignments?.length ?? 0) *
+                                      (report.completionPercent ?? 0)) /
+                                      100
+                                  )
+                              )}{' '}
+                              Chờ xử lý
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </Card>
                   </section>
 
@@ -589,13 +654,25 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                     <div className='flex items-center justify-between gap-2 border-b bg-muted/20 px-6 py-5'>
                       <div className='flex items-center gap-3'>
                         <div className='h-6 w-1.5 rounded-full bg-secondary' />
-                        <div className='text-xl font-semibold text-primary'>Tiến độ phòng ban</div>
+                        <div className='text-xl font-semibold text-primary'>
+                          Tiến độ phòng ban
+                        </div>
                       </div>
                       <div className='flex gap-2'>
-                        <Button type='button' variant='ghost' size='icon' className='h-9 w-9'>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='icon'
+                          className='h-9 w-9'
+                        >
                           <Filter className='size-4 text-muted-foreground' />
                         </Button>
-                        <Button type='button' variant='ghost' size='icon' className='h-9 w-9'>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='icon'
+                          className='h-9 w-9'
+                        >
                           <MoreVertical className='size-4 text-muted-foreground' />
                         </Button>
                       </div>
@@ -604,19 +681,19 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                     <Table>
                       <TableHeader>
                         <TableRow className='bg-muted/30'>
-                          <TableHead className='px-6 text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
+                          <TableHead className='px-6 text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
                             Đơn vị
                           </TableHead>
-                          <TableHead className='px-6 text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
+                          <TableHead className='px-6 text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
                             Người thực hiện
                           </TableHead>
-                          <TableHead className='px-6 text-center text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
+                          <TableHead className='px-6 text-center text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
                             Trạng thái
                           </TableHead>
-                          <TableHead className='px-6 text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
+                          <TableHead className='px-6 text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
                             Cập nhật lúc
                           </TableHead>
-                          <TableHead className='px-6 text-right text-[11px] font-bold uppercase tracking-widest text-muted-foreground'>
+                          <TableHead className='px-6 text-right text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
                             Thao tác
                           </TableHead>
                         </TableRow>
@@ -624,25 +701,35 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                       <TableBody>
                         {departmentRows.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className='py-16 text-center text-sm text-muted-foreground'>
+                            <TableCell
+                              colSpan={5}
+                              className='py-16 text-center text-sm text-muted-foreground'
+                            >
                               Không có dữ liệu
                             </TableCell>
                           </TableRow>
                         ) : (
                           departmentRows.map((row) => (
-                            <TableRow key={row.id} className='hover:bg-muted/20'>
+                            <TableRow
+                              key={row.id}
+                              className='hover:bg-muted/20'
+                            >
                               <TableCell className='px-6 py-4'>
                                 <div className='flex items-center gap-3'>
                                   <div className='flex size-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary'>
                                     {row.initials}
                                   </div>
-                                  <div className='font-semibold text-foreground'>{row.unitName}</div>
+                                  <div className='font-semibold text-foreground'>
+                                    {row.unitName}
+                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell className='px-6 py-4'>
                                 <div className='flex items-center gap-2'>
                                   <div className='size-7 rounded-full bg-muted' />
-                                  <div className='text-sm font-medium text-foreground'>{row.assigneeName}</div>
+                                  <div className='text-sm font-medium text-foreground'>
+                                    {row.assigneeName}
+                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell className='px-6 py-4 text-center'>
@@ -653,7 +740,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                       ? 'bg-secondary/15 text-secondary'
                                       : row.status === 'doing'
                                         ? 'bg-amber-100 text-amber-800'
-                                        : 'bg-destructive/10 text-destructive',
+                                        : 'bg-destructive/10 text-destructive'
                                   )}
                                 >
                                   {row.status === 'done'
@@ -667,10 +754,20 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 {formatTimeDashDate(row.updatedAt)}
                               </TableCell>
                               <TableCell className='px-6 py-4 text-right'>
-                                <Button type='button' variant='ghost' size='icon' className='h-9 w-9'>
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='icon'
+                                  className='h-9 w-9'
+                                >
                                   <Eye className='size-4 text-primary' />
                                 </Button>
-                                <Button type='button' variant='ghost' size='icon' className='h-9 w-9'>
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='icon'
+                                  className='h-9 w-9'
+                                >
                                   <MoreVertical className='size-4 text-muted-foreground' />
                                 </Button>
                               </TableCell>
@@ -681,15 +778,34 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                     </Table>
 
                     <div className='flex flex-wrap items-center justify-between gap-2 bg-muted/20 px-6 py-4 text-xs font-semibold text-muted-foreground'>
-                      <div>Hiển thị {Math.min(4, departmentRows.length)} trên tổng số {departmentRows.length} đơn vị</div>
+                      <div>
+                        Hiển thị {Math.min(4, departmentRows.length)} trên tổng
+                        số {departmentRows.length} đơn vị
+                      </div>
                       <div className='flex gap-2'>
-                        <Button type='button' variant='outline' size='icon' className='h-8 w-8' disabled>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          size='icon'
+                          className='h-8 w-8'
+                          disabled
+                        >
                           <ArrowLeft className='size-4' />
                         </Button>
-                        <Button type='button' className='h-8 w-8 px-0 text-xs font-semibold' disabled>
+                        <Button
+                          type='button'
+                          className='h-8 w-8 px-0 text-xs font-semibold'
+                          disabled
+                        >
                           1
                         </Button>
-                        <Button type='button' variant='outline' size='icon' className='h-8 w-8' disabled>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          size='icon'
+                          className='h-8 w-8'
+                          disabled
+                        >
                           <ArrowRight className='size-4' />
                         </Button>
                       </div>
@@ -700,10 +816,13 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                     <div className='absolute inset-0 bg-gradient-to-r from-primary/40 to-transparent' />
                     <div className='relative flex h-full items-center px-8'>
                       <div className='max-w-md text-primary-foreground'>
-                        <div className='text-lg font-semibold'>Hỗ trợ kỹ thuật</div>
+                        <div className='text-lg font-semibold'>
+                          Hỗ trợ kỹ thuật
+                        </div>
                         <div className='mt-2 text-sm text-primary-foreground/90'>
-                          Nếu gặp khó khăn trong quá trình tổng hợp báo cáo, vui lòng liên hệ đội ngũ quản trị hệ thống để
-                          được hỗ trợ kịp thời.
+                          Nếu gặp khó khăn trong quá trình tổng hợp báo cáo, vui
+                          lòng liên hệ đội ngũ quản trị hệ thống để được hỗ trợ
+                          kịp thời.
                         </div>
                       </div>
                     </div>
@@ -712,446 +831,141 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
               </TabsContent>
 
               <TabsContent value='permissions'>
-                <div className='space-y-6 px-4 pb-6 pt-6 lg:px-6'>
-                  <div className='grid grid-cols-1 gap-6 lg:grid-cols-4'>
-                    <div className='lg:col-span-1'>
-                      <Card className='overflow-hidden rounded-2xl border shadow-sm'>
-                        <CardHeader className='pb-4'>
-                          <CardTitle className='text-base font-bold'>Đơn vị nhận báo cáo</CardTitle>
-                          <CardDescription className='text-xs'>
-                            Chọn đơn vị để thiết lập phân quyền chỉ tiêu.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className='p-0'>
-                          <div className='border-y bg-muted/20 px-4 py-3'>
-                            <div className='relative'>
-                              <Search className='absolute left-2.5 top-2.5 size-4 text-muted-foreground' />
-                              <Input
-                                placeholder='Tìm kiếm đơn vị...'
-                                className='h-9 rounded-lg pl-9 text-xs focus-visible:ring-primary'
-                                value={unitSearch}
-                                onChange={(e) => setUnitSearch(e.target.value)}
-                              />
-                            </div>
-                          </div>
-                          <div className='max-h-[600px] overflow-auto p-3'>
-                            {orgTreeQuery.isLoading ? (
-                              <div className='py-12 text-center text-xs text-muted-foreground'>
-                                Đang tải cây đơn vị...
-                              </div>
-                            ) : (orgTreeQuery.data?.length ?? 0) > 0 ? (
-                              <div className='space-y-1'>{renderOrgTree(orgTreeQuery.data ?? [])}</div>
-                            ) : (
-                              <div className='py-12 text-center text-xs text-muted-foreground'>
-                                Không tìm thấy đơn vị.
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className='space-y-6 lg:col-span-3'>
-                      <div className='rounded-2xl border bg-background p-5 shadow-sm'>
-                        <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-                          <div className='flex items-center gap-4'>
-                            <div className='flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
-                              <Building2 className='size-6' />
-                            </div>
-                            <div>
-                              <Label className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                Đơn vị đang thiết lập
-                              </Label>
-                              <div className='mt-0.5 text-lg font-bold text-foreground'>
-                                {currentUnitName}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className='flex items-center gap-2'>
-                            <Button type='button' variant='outline' className='h-10 gap-2 rounded-xl text-xs font-bold'>
-                              <Filter className='size-4' />
-                              Bộ lọc nâng cao
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className='grid gap-6 lg:grid-cols-2'>
-                        <Card className='overflow-hidden rounded-2xl border shadow-sm'>
-                          <CardHeader className='border-b bg-muted/10 pb-4 pt-5'>
-                            <div className='flex items-center justify-between'>
-                              <CardTitle className='flex items-center gap-2 text-base font-bold'>
-                                  <List className='size-4 text-muted-foreground' />
-                                  Chỉ tiêu chưa phân quyền
-                                </CardTitle>
-                                <Badge variant='outline' className='rounded-full px-2 py-0 text-[10px]'>
-                                  {indicatorsQuery.data?.length ?? 0} chỉ tiêu
-                                </Badge>
-                              </div>
-                              <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
-                                <div className='relative flex-1'>
-                                  <Search className='absolute left-2.5 top-2.5 size-3.5 text-muted-foreground' />
-                                  <Input
-                                    placeholder='Tìm mã hoặc tên...'
-                                    className='h-9 rounded-lg pl-9 text-xs'
-                                    value={indicatorSearch}
-                                    onChange={(e) => setIndicatorSearch(e.target.value)}
-                                  />
-                                </div>
-                                <Button type='button' className='h-9 gap-2 rounded-lg bg-primary text-xs font-bold'>
-                                  Gán <ArrowRight className='size-4' />
-                                </Button>
-                              </div>
-                            </CardHeader>
-                            <CardContent className='p-0'>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow className='bg-muted/30 hover:bg-muted/30'>
-                                    <TableHead className='w-12 text-center'>
-                                      <div className='flex justify-center'>
-                                        <Checkbox />
-                                      </div>
-                                    </TableHead>
-                                    <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                      Mã chỉ tiêu
-                                    </TableHead>
-                                    <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                      Tên chỉ tiêu
-                                    </TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {indicatorsQuery.isLoading ? (
-                                    <TableRow>
-                                      <TableCell colSpan={3} className='py-12 text-center text-xs text-muted-foreground'>
-                                        Đang tải danh sách chỉ tiêu...
-                                      </TableCell>
-                                    </TableRow>
-                                  ) : (indicatorsQuery.data?.length ?? 0) === 0 ? (
-                                    <TableRow>
-                                      <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
-                                        <div className='flex flex-col items-center gap-2'>
-                                          <div className='rounded-full bg-muted p-3'>
-                                            <List className='size-6 opacity-20' />
-                                          </div>
-                                          <span>Không có dữ liệu chỉ tiêu</span>
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  ) : (
-                                    indicatorsQuery.data?.map((item) => (
-                                      <TableRow key={item.id} className='hover:bg-muted/10'>
-                                        <TableCell className='w-12 text-center'>
-                                          <div className='flex justify-center'>
-                                            <Checkbox />
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className='text-xs font-medium'>{item.code}</TableCell>
-                                        <TableCell className='text-xs'>{item.name}</TableCell>
-                                      </TableRow>
-                                    ))
-                                  )}
-                                </TableBody>
-                              </Table>
-                            </CardContent>
-                          </Card>
-
-                        <Card className='overflow-hidden rounded-2xl border shadow-sm'>
-                          <CardHeader className='border-b bg-muted/10 pb-4 pt-5'>
-                            <div className='flex items-center justify-between'>
-                              <CardTitle className='flex items-center gap-2 text-base font-bold'>
-                                <ShieldCheck className='size-4 text-primary' />
-                                Chỉ tiêu đã phân quyền
-                              </CardTitle>
-                              <Badge className='rounded-full bg-primary/10 px-2 py-0 text-[10px] text-primary hover:bg-primary/10'>
-                                {filteredScopes.length} chỉ tiêu
-                              </Badge>
-                            </div>
-                            <div className='mt-4 flex flex-col gap-2 sm:flex-row'>
-                              <div className='relative flex-1'>
-                                <Search className='absolute left-2.5 top-2.5 size-3.5 text-muted-foreground' />
-                                <Input
-                                  placeholder='Tìm mã hoặc tên...'
-                                  className='h-9 rounded-lg pl-9 text-xs'
-                                  value={scopeSearch}
-                                  onChange={(e) => setScopeSearch(e.target.value)}
-                                />
-                              </div>
-                              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'code' | 'name' | 'sortOrder')}>
-                                <SelectTrigger className='h-9 w-32 rounded-lg text-xs'>
-                                  <SelectValue placeholder='Sắp xếp' />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value='sortOrder'>Thứ tự mặc định</SelectItem>
-                                  <SelectItem value='code'>Mã chỉ tiêu</SelectItem>
-                                  <SelectItem value='name'>Tên chỉ tiêu</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                type='button'
-                                variant='outline'
-                                className='h-9 gap-2 rounded-lg border-destructive/20 text-xs font-bold text-destructive hover:bg-destructive/5'
-                              >
-                                <ArrowLeft className='size-4' />
-                                Hủy gán
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className='p-0'>
-                            <Table>
-                              <TableHeader>
-                                <TableRow className='bg-muted/30 hover:bg-muted/30'>
-                                  <TableHead className='w-12 text-center'>
-                                    <div className='flex justify-center'>
-                                      <Checkbox
-                                        checked={isAllFilteredSelected}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) {
-                                            if (scopesQuery.data) {
-                                              const filteredScopeIds = filteredScopes.map(scope => scope.id)
-                                              setSelectedScopes(new Set(filteredScopeIds))
-                                            }
-                                          } else {
-                                            if (scopesQuery.data) {
-                                              const filteredScopeIds = new Set(filteredScopes.map(scope => scope.id))
-                                              setSelectedScopes(prev => {
-                                                const newSet = new Set(prev)
-                                                filteredScopeIds.forEach(id => newSet.delete(id))
-                                                return newSet
-                                              })
-                                            }
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                  </TableHead>
-                                  <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                    Mã chỉ tiêu
-                                  </TableHead>
-                                  <TableHead className='text-[10px] font-bold uppercase tracking-wider text-muted-foreground'>
-                                    Tên chỉ tiêu
-                                  </TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {scopesQuery.isLoading ? (
-                                  <TableRow>
-                                    <TableCell colSpan={3} className='py-12 text-center text-xs text-muted-foreground'>
-                                      Đang tải dữ liệu chỉ tiêu đã phân quyền...
-                                    </TableCell>
-                                  </TableRow>
-                                ) : scopesQuery.isError ? (
-                                  <TableRow>
-                                    <TableCell colSpan={3} className='py-12 text-center text-sm text-destructive'>
-                                      Không thể tải dữ liệu chỉ tiêu đã phân quyền
-                                    </TableCell>
-                                  </TableRow>
-                                ) : filteredScopes.length === 0 ? (
-                                  <TableRow>
-                                    <TableCell colSpan={3} className='py-24 text-center text-xs text-muted-foreground'>
-                                      <div className='flex flex-col items-center gap-2'>
-                                        <div className='rounded-full bg-primary/5 p-3 text-primary/30'>
-                                          <ShieldCheck className='size-6' />
-                                        </div>
-                                        <span>Đơn vị này chưa có chỉ tiêu nào được phân quyền</span>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ) : (
-                                  filteredScopes.map((scope, index) => (
-                                    <TableRow key={scope.id} className='hover:bg-muted/10'>
-                                      <TableCell className='w-12 text-center'>
-                                        <div className='flex justify-center'>
-                                          <Checkbox
-                                            checked={selectedScopes.has(scope.id)}
-                                            onCheckedChange={() => handleToggleScope(scope.id)}
-                                          />
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className='text-xs font-medium'>
-                                        <Badge variant='secondary' className='rounded-md px-2 py-1 text-xs font-mono'>
-                                          {scope.indicatorCode}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell className='text-xs font-medium'>{scope.indicatorName}</TableCell>
-                                    </TableRow>
-                                  ))
-                                )}
-                              </TableBody>
-                            </Table>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  </div>
+                <div className='px-4 pt-6 pb-6 lg:px-6'>
+                  <CampaignScopesTab
+                    campaignId={reportId}
+                    templateId={report.formId || report.templateId || ''}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value='defaults'>
-                <div className='space-y-6 px-4 pb-6 pt-6 lg:px-6'>
-                  <div className='overflow-hidden rounded-xl border bg-gradient-to-r from-primary to-primary/70'>
-                    <div className='flex items-center justify-between gap-4 p-6 text-primary-foreground'>
-                      <div className='min-w-0'>
-                        <div className='text-xs font-semibold opacity-90'>Cấu hình giá trị mặc định</div>
-                        <div className='mt-1 truncate text-xl font-bold'>{report.templateName}</div>
-                        <div className='mt-1 text-sm opacity-90'>Mã báo cáo: {report.templateCode}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className='grid grid-cols-12 gap-6'>
-                    <div className='col-span-12 space-y-4 lg:col-span-8'>
-                      <div className='flex flex-wrap items-center justify-between gap-2'>
-                        <div className='text-base font-semibold text-foreground'>Cấu hình giá trị mặc định</div>
-                        <div className='flex gap-2'>
-                          <Button type='button' variant='outline' className='h-9 text-xs font-semibold'>
-                            Hủy bỏ
-                          </Button>
-                          <Button type='button' className='h-9 text-xs font-semibold'>
-                            Lưu cấu hình
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Card className='overflow-hidden'>
-                        <CardContent className='p-0'>
-                          <Table>
-                            <TableHeader>
-                              <TableRow className='bg-muted/40'>
-                                <TableHead className='text-xs font-bold'>Chỉ tiêu (Metric)</TableHead>
-                                <TableHead className='text-xs font-bold'>Thuộc tính</TableHead>
-                                <TableHead className='text-xs font-bold'>Kiểu</TableHead>
-                                <TableHead className='text-xs font-bold'>Giá trị</TableHead>
-                                <TableHead className='w-[110px] text-center text-xs font-bold'>Bắt buộc</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {defaultRows.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={5} className='py-16 text-center text-sm text-muted-foreground'>
-                                    Không có dữ liệu
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                defaultRows.map((row) => (
-                                  <TableRow key={row.key} className='hover:bg-muted/20'>
-                                    <TableCell className='px-4 py-3'>
-                                      <div className='flex flex-col'>
-                                        <div className='text-sm font-semibold text-foreground'>{row.metricName}</div>
-                                        <div className='text-[10px] font-medium text-muted-foreground'>{row.metricCode}</div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className='px-4 py-3 text-sm text-muted-foreground'>{row.attribute}</TableCell>
-                                    <TableCell className='px-4 py-3'>
-                                      <Badge variant={row.typeVariant}>{row.typeLabel}</Badge>
-                                    </TableCell>
-                                    <TableCell className='px-4 py-3'>
-                                      {row.control === 'select' ? (
-                                        <Select defaultValue={row.initialValue || 'VND'}>
-                                          <SelectTrigger className='w-full' size='sm'>
-                                            <SelectValue placeholder='Chọn giá trị' />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value='VND'>VND</SelectItem>
-                                            <SelectItem value='USD'>USD</SelectItem>
-                                            <SelectItem value='EUR'>EUR</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      ) : (
-                                        <Input
-                                          defaultValue={row.initialValue}
-                                          type={row.control}
-                                          className='h-9 text-sm'
-                                          placeholder={row.control === 'number' ? '0.00' : 'Nhập giá trị...'}
-                                        />
-                                      )}
-                                    </TableCell>
-                                    <TableCell className='px-4 py-3 text-center'>
-                                      <div className='flex justify-center'>
-                                        <Checkbox checked={row.required} disabled />
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                              )}
-                            </TableBody>
-                          </Table>
-                          <div className='flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-4 py-3'>
-                            <div className='text-xs text-muted-foreground'>
-                              Hiển thị {defaultRows.length} trên {defaultRows.length} chỉ tiêu
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Button type='button' variant='ghost' size='icon' className='h-8 w-8' disabled>
-                                <ArrowLeft className='size-4' />
-                              </Button>
-                              <Button type='button' variant='secondary' className='h-8 px-3 text-xs font-semibold' disabled>
-                                1
-                              </Button>
-                              <Button type='button' variant='ghost' size='icon' className='h-8 w-8' disabled>
-                                <ArrowRight className='size-4' />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className='col-span-12 space-y-4 lg:col-span-4'>
-                      <div className='text-base font-semibold text-foreground'>Lịch sử xử lý</div>
-                      <Card>
-                        <CardContent className='relative space-y-6 p-6'>
-                          <div className='absolute bottom-6 left-9 top-6 w-px bg-border' />
-                          {(report.history ?? []).slice(0, 4).map((item, index) => {
-                            const Icon = timelineIcon[index] ?? CheckCircle2
-                            return (
-                              <div key={item.id} className='relative flex gap-4'>
-                                <div className='mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-                                  <Icon className='size-3.5' />
-                                </div>
-                                <div className='flex min-w-0 flex-1 flex-col gap-1'>
-                                  <div className='flex items-center justify-between gap-2'>
-                                    <div className='truncate text-sm font-semibold text-foreground'>{item.action}</div>
-                                    <div className='shrink-0 text-[10px] font-medium text-muted-foreground'>
-                                      {formatDateTime(item.createdAt)}
-                                    </div>
-                                  </div>
-                                  <div className='text-xs text-muted-foreground'>
-                                    {item.note}
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                          {(report.history ?? []).length === 0 && (
-                            <div className='py-10 text-center text-sm text-muted-foreground'>Chưa có lịch sử.</div>
-                          )}
-                          <Button type='button' variant='outline' className='w-full text-xs font-semibold'>
-                            Xem toàn bộ lịch sử
-                          </Button>
-                        </CardContent>
-                      </Card>
-                      <div className='flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/20 px-4 py-3'>
-                        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                          <span className='size-2 rounded-full bg-secondary' />
-                          Sẵn sàng nhập dữ liệu
-                        </div>
-                        <div className='text-xs text-muted-foreground'>
-                          © 2023 QLDD System
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div className='px-4 pt-6 pb-6 lg:px-6'>
+                  <CampaignDefaultValuesTab
+                    campaignId={reportId}
+                    templateId={report.formId || report.templateId || ''}
+                  />
                 </div>
               </TabsContent>
               <TabsContent value='preview'>
-                <div className='px-4 pb-6 pt-6 text-sm text-muted-foreground lg:px-6'>
-                  Chưa hỗ trợ.
+                <div className='p-4 lg:p-6'>
+                  <TemplatePreviewMatrix
+                    templateId={report.templateId}
+                    lockTemplateSelection={true}
+                    mode='preview'
+                  />
                 </div>
               </TabsContent>
             </Tabs>
           </div>
         </>
       )}
+
+      <ReportConfirmDialog
+        open={confirmDispatchOpen}
+        onOpenChange={setConfirmDispatchOpen}
+        title='Xác nhận phát hành báo cáo'
+        description='Sau khi phát hành, cấu hình về chỉ tiêu và giá trị mặc định sẽ bị KHÓA. Hệ thống sẽ sinh bảng nhập liệu cho các đơn vị. Bạn có chắc chắn muốn tiếp tục?'
+        confirmLabel='Phát hành ngay'
+        variant='primary'
+        loading={dispatchMutation.isPending}
+        onConfirm={() => dispatchMutation.mutate()}
+      />
+
+      {report && (
+        <EditCampaignDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          report={report}
+          isLoading={updateMutation.isPending}
+          onSave={(input) => updateMutation.mutate(input)}
+        />
+      )}
     </div>
+  )
+}
+
+type EditCampaignDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  report: ReportDetail
+  isLoading: boolean
+  onSave: (input: UpdateReportInput) => void
+}
+
+function EditCampaignDialog({
+  open,
+  onOpenChange,
+  report,
+  isLoading,
+  onSave,
+}: EditCampaignDialogProps) {
+  const [form, setForm] = useState<UpdateReportInput>({
+    periodName: report?.periodName ?? '',
+    deadlineFrom: report?.deadlineFrom?.split('T')[0] ?? '',
+    deadlineTo: report?.deadlineTo?.split('T')[0] ?? '',
+  })
+
+  useEffect(() => {
+    if (open && report) {
+      setForm({
+        periodName: report.periodName ?? '',
+        deadlineFrom: report.deadlineFrom?.split('T')[0] ?? '',
+        deadlineTo: report.deadlineTo?.split('T')[0] ?? '',
+      })
+    }
+  }, [open, report])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Chỉnh sửa báo cáo</DialogTitle>
+          <DialogDescription>
+            Cập nhật thông tin cơ bản cho đợt báo cáo này.
+          </DialogDescription>
+        </DialogHeader>
+        <div className='grid gap-4 py-4'>
+          <div className='grid gap-2'>
+            <Label>Tên kỳ báo cáo</Label>
+            <Input
+              value={form.periodName}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, periodName: e.target.value }))
+              }
+            />
+          </div>
+          <div className='grid grid-cols-2 gap-4'>
+            <div className='grid gap-2'>
+              <Label>Ngày mở</Label>
+              <Input
+                type='date'
+                value={form.deadlineFrom}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, deadlineFrom: e.target.value }))
+                }
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label>Ngày đóng</Label>
+              <Input
+                type='date'
+                value={form.deadlineTo}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, deadlineTo: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant='outline' onClick={() => onOpenChange(false)}>
+            Hủy
+          </Button>
+          <Button onClick={() => onSave(form)} disabled={isLoading}>
+            {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarPlus, PlusCircle, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -39,8 +38,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { periodsApi } from '../api/mock-system-admin-api'
-import { periodTypeOptions, type PeriodType, type ReportPeriod } from '../api/types'
+import {
+  periodTypeOptions,
+  type PeriodType,
+  type ReportPeriod,
+} from '../api/types'
 
 const EMPTY_PERIODS: ReportPeriod[] = []
 
@@ -84,7 +88,10 @@ function getApiErrorMessage(error: unknown) {
           payload.message[0]) ||
         (typeof payload.error === 'string' && payload.error)
       if (message) return message
-      if (isRecord(payload.error) && typeof payload.error.message === 'string') {
+      if (
+        isRecord(payload.error) &&
+        typeof payload.error.message === 'string'
+      ) {
         const details = payload.error.details
         if (Array.isArray(details) && details.length > 0) {
           const first = details[0]
@@ -114,7 +121,9 @@ export function PeriodsTab() {
   const [openForm, setOpenForm] = useState(false)
   const [editingPeriod, setEditingPeriod] = useState<ReportPeriod | null>(null)
   const [form, setForm] = useState<PeriodFormState>(defaultForm)
-  const [deletingPeriod, setDeletingPeriod] = useState<ReportPeriod | null>(null)
+  const [deletingPeriod, setDeletingPeriod] = useState<ReportPeriod | null>(
+    null
+  )
 
   const periods = periodsQuery.data ?? EMPTY_PERIODS
 
@@ -124,7 +133,9 @@ export function PeriodsTab() {
       return periods
     }
     return periods.filter((period) =>
-      [period.code, period.name].some((value) => value.toLowerCase().includes(keyword))
+      [period.code, period.name].some((value) =>
+        value.toLowerCase().includes(keyword)
+      )
     )
   }, [search, periods])
 
@@ -229,7 +240,10 @@ export function PeriodsTab() {
         payload.isActive !== editingPeriod.isActive
 
       if (onlyActiveChanged) {
-        setActiveMutation.mutate({ id: editingPeriod.id, isActive: payload.isActive })
+        setActiveMutation.mutate({
+          id: editingPeriod.id,
+          isActive: payload.isActive,
+        })
         return
       }
 
@@ -248,7 +262,8 @@ export function PeriodsTab() {
         <div>
           <CardTitle>Kỳ báo cáo</CardTitle>
           <CardDescription>
-            Quản lý kỳ tuần/tháng/quý/năm với quy tắc chống trùng thời gian theo loại kỳ.
+            Quản lý kỳ tuần/tháng/quý/năm với quy tắc chống trùng thời gian theo
+            loại kỳ.
           </CardDescription>
         </div>
         <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
@@ -457,7 +472,9 @@ export function PeriodsTab() {
             : ''
         }
         destructive
-        handleConfirm={() => deletingPeriod && deleteMutation.mutate(deletingPeriod.id)}
+        handleConfirm={() =>
+          deletingPeriod && deleteMutation.mutate(deletingPeriod.id)
+        }
         confirmText='Xóa kỳ'
         isLoading={deleteMutation.isPending}
       />

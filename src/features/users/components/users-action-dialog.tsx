@@ -34,7 +34,8 @@ const formSchema = z
     username: z.string().min(1, 'Vui lòng nhập tài khoản.'),
     phone: z.string().optional(),
     email: z.email({
-      error: (iss) => (iss.input === '' ? 'Vui lòng nhập email.' : 'Email không hợp lệ.'),
+      error: (iss) =>
+        iss.input === '' ? 'Vui lòng nhập email.' : 'Email không hợp lệ.',
     }),
     password: z.string().transform((pwd) => pwd.trim()),
     roleId: z.string().min(1, 'Vui lòng chọn vai trò.'),
@@ -145,8 +146,10 @@ export function UsersActionDialog({
   })
 
   const updateMutation = useMutation({
-    mutationFn: async (payload: { id: string; input: Parameters<typeof usersApi.update>[1] }) =>
-      usersApi.update(payload.id, payload.input),
+    mutationFn: async (payload: {
+      id: string
+      input: Parameters<typeof usersApi.update>[1]
+    }) => usersApi.update(payload.id, payload.input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['users'] })
     },
@@ -204,9 +207,7 @@ export function UsersActionDialog({
             {isEdit ? 'Cập nhật người dùng' : 'Thêm người dùng'}
           </DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? 'Cập nhật thông tin người dùng.'
-              : 'Tạo mới người dùng.'}{' '}
+            {isEdit ? 'Cập nhật thông tin người dùng.' : 'Tạo mới người dùng.'}{' '}
             Nhấn lưu khi hoàn tất.
           </DialogDescription>
         </DialogHeader>
@@ -297,7 +298,9 @@ export function UsersActionDialog({
                 name='roleId'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>Vai trò</FormLabel>
+                    <FormLabel className='col-span-2 text-end'>
+                      Vai trò
+                    </FormLabel>
                     <SelectDropdown
                       defaultValue={field.value}
                       onValueChange={field.onChange}

@@ -67,7 +67,9 @@ export function TemplateGeneralInfoDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-xl'>
         <DialogHeader className='text-start'>
-          <DialogTitle>{title ?? (editing ? 'Cập nhật biểu mẫu' : 'Tạo biểu mẫu mới')}</DialogTitle>
+          <DialogTitle>
+            {title ?? (editing ? 'Cập nhật biểu mẫu' : 'Tạo biểu mẫu mới')}
+          </DialogTitle>
           <DialogDescription>{description ?? ''}</DialogDescription>
         </DialogHeader>
 
@@ -78,7 +80,9 @@ export function TemplateGeneralInfoDialog({
               <Input
                 value={formState.code}
                 disabled={editing}
-                onChange={(event) => onFormStateChange({ ...formState, code: event.target.value })}
+                onChange={(event) =>
+                  onFormStateChange({ ...formState, code: event.target.value })
+                }
               />
             </div>
           )}
@@ -86,14 +90,18 @@ export function TemplateGeneralInfoDialog({
             <Label>Tên biểu mẫu</Label>
             <Input
               value={formState.name}
-              onChange={(event) => onFormStateChange({ ...formState, name: event.target.value })}
+              onChange={(event) =>
+                onFormStateChange({ ...formState, name: event.target.value })
+              }
             />
           </div>
           <div className='space-y-2'>
             <Label>Lĩnh vực biểu mẫu</Label>
             <Select
               value={formState.fieldCategoryId}
-              onValueChange={(value) => onFormStateChange({ ...formState, fieldCategoryId: value })}
+              onValueChange={(value) =>
+                onFormStateChange({ ...formState, fieldCategoryId: value })
+              }
             >
               <SelectTrigger className='w-full'>
                 <SelectValue placeholder='Chọn lĩnh vực biểu mẫu' />
@@ -111,7 +119,9 @@ export function TemplateGeneralInfoDialog({
             <Label>Kỳ báo cáo</Label>
             <Select
               value={formState.periodType}
-              onValueChange={(value: PeriodType) => onFormStateChange({ ...formState, periodType: value })}
+              onValueChange={(value: PeriodType) =>
+                onFormStateChange({ ...formState, periodType: value })
+              }
             >
               <SelectTrigger className='w-full'>
                 <SelectValue />
@@ -128,7 +138,9 @@ export function TemplateGeneralInfoDialog({
             <Label>Loại biểu mẫu</Label>
             <Select
               value={formState.templateType}
-              onValueChange={(value: TemplateType) => onFormStateChange({ ...formState, templateType: value })}
+              onValueChange={(value: TemplateType) =>
+                onFormStateChange({ ...formState, templateType: value })
+              }
             >
               <SelectTrigger className='w-full'>
                 <SelectValue />
@@ -146,7 +158,9 @@ export function TemplateGeneralInfoDialog({
             <Label>Trạng thái hoạt động</Label>
             <Select
               value={formState.isActive ? 'true' : 'false'}
-              onValueChange={(value) => onFormStateChange({ ...formState, isActive: value === 'true' })}
+              onValueChange={(value) =>
+                onFormStateChange({ ...formState, isActive: value === 'true' })
+              }
             >
               <SelectTrigger className='w-full'>
                 <SelectValue />
@@ -162,7 +176,12 @@ export function TemplateGeneralInfoDialog({
             <Textarea
               rows={3}
               value={formState.description}
-              onChange={(event) => onFormStateChange({ ...formState, description: event.target.value })}
+              onChange={(event) =>
+                onFormStateChange({
+                  ...formState,
+                  description: event.target.value,
+                })
+              }
             />
           </div>
         </div>

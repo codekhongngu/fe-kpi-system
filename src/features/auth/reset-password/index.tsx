@@ -17,7 +17,9 @@ export function ResetPassword() {
     <AuthLayout>
       <Card className='gap-4'>
         <CardHeader>
-          <CardTitle className='text-lg tracking-tight'>Đặt lại mật khẩu</CardTitle>
+          <CardTitle className='text-lg tracking-tight'>
+            Đặt lại mật khẩu
+          </CardTitle>
           <CardDescription>
             Nhập mật khẩu mới để hoàn tất đặt lại mật khẩu.
           </CardDescription>
@@ -28,7 +30,10 @@ export function ResetPassword() {
         <CardFooter>
           <p className='mx-auto px-8 text-center text-sm text-balance text-muted-foreground'>
             Quay lại{' '}
-            <Link to='/sign-in' className='underline underline-offset-4 hover:text-primary'>
+            <Link
+              to='/sign-in'
+              className='underline underline-offset-4 hover:text-primary'
+            >
               đăng nhập
             </Link>{' '}
             hoặc{' '}

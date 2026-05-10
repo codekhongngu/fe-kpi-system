@@ -36,7 +36,11 @@ type ResetPasswordFormProps = React.HTMLAttributes<HTMLFormElement> & {
   token?: string
 }
 
-export function ResetPasswordForm({ className, token, ...props }: ResetPasswordFormProps) {
+export function ResetPasswordForm({
+  className,
+  token,
+  ...props
+}: ResetPasswordFormProps) {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -55,7 +59,10 @@ export function ResetPasswordForm({ className, token, ...props }: ResetPasswordF
     }
 
     setIsLoading(true)
-    const promise = authApi.resetPassword({ token, newPassword: values.newPassword })
+    const promise = authApi.resetPassword({
+      token,
+      newPassword: values.newPassword,
+    })
     promise.finally(() => setIsLoading(false))
 
     toast.promise(promise, {
@@ -66,7 +73,9 @@ export function ResetPasswordForm({ className, token, ...props }: ResetPasswordF
         return result.message
       },
       error: (error) => {
-        return error instanceof Error ? error.message : 'Không thể đặt lại mật khẩu.'
+        return error instanceof Error
+          ? error.message
+          : 'Không thể đặt lại mật khẩu.'
       },
     })
   }
@@ -121,4 +130,3 @@ export function ResetPasswordForm({ className, token, ...props }: ResetPasswordF
     </Form>
   )
 }
-

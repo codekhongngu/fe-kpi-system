@@ -1,17 +1,17 @@
-import { Outlet } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Outlet } from '@tanstack/react-router'
+import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
-import { useAuthStore } from '@/stores/auth-store'
-import { authApi } from '@/features/auth/api/auth-api'
 // import { SkipToMain } from '@/components/skip-to-main'
 import { Header } from '@/components/layout/header'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
+import { authApi } from '@/features/auth/api/auth-api'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -38,7 +38,9 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   if (!!accessToken && !user && meQuery.isLoading) {
     return (
       <div className='flex min-h-svh items-center justify-center p-6'>
-        <p className='text-sm text-muted-foreground'>Đang tải phiên đăng nhập...</p>
+        <p className='text-sm text-muted-foreground'>
+          Đang tải phiên đăng nhập...
+        </p>
       </div>
     )
   }
@@ -61,7 +63,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
 
               // If layout is fixed and sidebar is inset,
               // set the height to 100svh - spacing (total margins) to prevent overflow
-              'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]',
+              'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
             )}
           >
             <Header fixed>

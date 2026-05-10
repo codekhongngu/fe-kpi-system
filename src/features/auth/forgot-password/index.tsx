@@ -19,7 +19,8 @@ export function ForgotPassword() {
             Quên mật khẩu
           </CardTitle>
           <CardDescription>
-            Nhập email đã đăng ký, hệ thống sẽ gửi link <br /> để bạn đặt lại mật khẩu.
+            Nhập email đã đăng ký, hệ thống sẽ gửi link <br /> để bạn đặt lại
+            mật khẩu.
           </CardDescription>
         </CardHeader>
         <CardContent>

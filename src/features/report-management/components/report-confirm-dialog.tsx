@@ -77,7 +77,11 @@ export function ReportConfirmDialog({
               event.preventDefault()
               confirm()
             }}
-            className={destructive ? 'bg-destructive text-white hover:bg-destructive/90' : ''}
+            className={
+              destructive
+                ? 'bg-destructive text-white hover:bg-destructive/90'
+                : ''
+            }
           >
             {isSubmitting ? 'Đang xử lý...' : confirmLabel}
           </AlertDialogAction>

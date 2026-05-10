@@ -1,16 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
-import {
-  Building2,
-  ChevronRight,
-  Lock,
-  PlusCircle,
-  Trash2,
-  Unlock,
-  UserPen,
-} from 'lucide-react'
-import { toast } from 'sonner'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -24,8 +14,17 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { DataTableColumnHeader, DataTablePagination, DataTableToolbar } from '@/components/data-table'
+import {
+  Building2,
+  ChevronRight,
+  Lock,
+  PlusCircle,
+  Trash2,
+  Unlock,
+  UserPen,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,6 +34,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
@@ -46,8 +50,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -55,11 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -68,7 +66,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
+import { Textarea } from '@/components/ui/textarea'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import {
+  DataTableColumnHeader,
+  DataTablePagination,
+  DataTableToolbar,
+} from '@/components/data-table'
 import { organizationsApi } from '../api/mock-system-admin-api'
 import {
   type OrganizationUnit,
@@ -90,7 +94,10 @@ function getApiErrorMessage(error: unknown) {
         (typeof payload.message === 'string' && payload.message) ||
         (typeof payload.error === 'string' && payload.error)
       if (message) return message
-      if (isRecord(payload.error) && typeof payload.error.message === 'string') {
+      if (
+        isRecord(payload.error) &&
+        typeof payload.error.message === 'string'
+      ) {
         return payload.error.message
       }
     }
@@ -120,7 +127,9 @@ const defaultForm: UnitFormState = {
 }
 
 function getUnitLevelLabel(level: OrganizationUnit['level']) {
-  return unitLevelOptions.find((option) => option.value === level)?.label ?? level
+  return (
+    unitLevelOptions.find((option) => option.value === level)?.label ?? level
+  )
 }
 
 function getAncestors(unitId: string, parentById: Map<string, string | null>) {
@@ -315,7 +324,9 @@ export function UnitsTab() {
   const [openForm, setOpenForm] = useState(false)
   const [editingUnit, setEditingUnit] = useState<OrganizationUnit | null>(null)
   const [form, setForm] = useState<UnitFormState>(defaultForm)
-  const [deletingUnit, setDeletingUnit] = useState<OrganizationUnit | null>(null)
+  const [deletingUnit, setDeletingUnit] = useState<OrganizationUnit | null>(
+    null
+  )
   const [statusDialog, setStatusDialog] = useState<{
     unit: OrganizationUnit
     action: 'lock' | 'unlock'
@@ -323,7 +334,10 @@ export function UnitsTab() {
 
   const units = unitsQuery.data ?? EMPTY_UNITS
 
-  const unitsById = useMemo(() => new Map(units.map((unit) => [unit.id, unit])), [units])
+  const unitsById = useMemo(
+    () => new Map(units.map((unit) => [unit.id, unit])),
+    [units]
+  )
   const parentById = useMemo(
     () => new Map(units.map((unit) => [unit.id, unit.parentId])),
     [units]
@@ -412,13 +426,16 @@ export function UnitsTab() {
     setForm(defaultForm)
   }, [])
 
-  const openCreateDialog = useCallback((parentId: string | null = null) => {
-    setEditingUnit(null)
-    const parent = parentId ? unitsById.get(parentId) : undefined
-    const suggestedLevel = parent ? Math.min(parent.level + 1, 4) : 1
-    setForm({ ...defaultForm, parentId, level: suggestedLevel })
-    setOpenForm(true)
-  }, [unitsById])
+  const openCreateDialog = useCallback(
+    (parentId: string | null = null) => {
+      setEditingUnit(null)
+      const parent = parentId ? unitsById.get(parentId) : undefined
+      const suggestedLevel = parent ? Math.min(parent.level + 1, 4) : 1
+      setForm({ ...defaultForm, parentId, level: suggestedLevel })
+      setOpenForm(true)
+    },
+    [unitsById]
+  )
 
   const openEditDialog = useCallback((unit: OrganizationUnit) => {
     setEditingUnit(unit)
@@ -466,7 +483,9 @@ export function UnitsTab() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title='Mã đơn vị' />
         ),
-        cell: ({ row }) => <div className='font-medium'>{row.original.code}</div>,
+        cell: ({ row }) => (
+          <div className='font-medium'>{row.original.code}</div>
+        ),
       },
       {
         accessorKey: 'name',
@@ -496,7 +515,8 @@ export function UnitsTab() {
           <div className='text-sm'>{getUnitLevelLabel(row.original.level)}</div>
         ),
         filterFn: (row, id, value) => {
-          if (!value || (Array.isArray(value) && value.length === 0)) return true
+          if (!value || (Array.isArray(value) && value.length === 0))
+            return true
           const level = row.getValue(id) as number
           const key = String(level)
           if (Array.isArray(value)) return value.includes(key)
@@ -510,7 +530,8 @@ export function UnitsTab() {
         ),
         cell: ({ row }) => (
           <div className='text-sm'>
-            {row.original.memberCount} user | {row.original.activeAssignments} đang giao
+            {row.original.memberCount} user | {row.original.activeAssignments}{' '}
+            đang giao
           </div>
         ),
       },
@@ -520,12 +541,15 @@ export function UnitsTab() {
           <DataTableColumnHeader column={column} title='Trạng thái' />
         ),
         cell: ({ row }) => (
-          <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'}>
+          <Badge
+            variant={row.original.status === 'active' ? 'default' : 'secondary'}
+          >
             {row.original.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
           </Badge>
         ),
         filterFn: (row, id, value) => {
-          if (!value || (Array.isArray(value) && value.length === 0)) return true
+          if (!value || (Array.isArray(value) && value.length === 0))
+            return true
           const status = row.getValue(id) as UnitStatus
           if (Array.isArray(value)) return value.includes(status)
           return value === status
@@ -549,7 +573,12 @@ export function UnitsTab() {
               <Button
                 size='sm'
                 variant='outline'
-                onClick={() => setStatusDialog({ unit, action: unit.status === 'active' ? 'lock' : 'unlock' })}
+                onClick={() =>
+                  setStatusDialog({
+                    unit,
+                    action: unit.status === 'active' ? 'lock' : 'unlock',
+                  })
+                }
               >
                 {unit.status === 'active' ? 'Khóa' : 'Mở'}
               </Button>
@@ -601,9 +630,7 @@ export function UnitsTab() {
       <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
           <CardTitle>Quản lý đơn vị</CardTitle>
-          <CardDescription>
-            Cơ cấu Hành chính & Đơn vị
-          </CardDescription>
+          <CardDescription>Cơ cấu Hành chính & Đơn vị</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -648,7 +675,8 @@ export function UnitsTab() {
                 ) : unitsQuery.isError ? (
                   <div className='space-y-1 py-6 text-center text-sm text-destructive'>
                     <div>Không tải được danh sách đơn vị.</div>
-                    {'error' in unitsQuery && unitsQuery.error instanceof Error ? (
+                    {'error' in unitsQuery &&
+                    unitsQuery.error instanceof Error ? (
                       <div className='text-xs text-muted-foreground'>
                         {unitsQuery.error.message}
                       </div>
@@ -688,11 +716,15 @@ export function UnitsTab() {
                       </Badge>
                       <Badge
                         variant={
-                          selectedUnit.status === 'active' ? 'default' : 'secondary'
+                          selectedUnit.status === 'active'
+                            ? 'default'
+                            : 'secondary'
                         }
                       >
                         Trạng thái:{' '}
-                        {selectedUnit.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
+                        {selectedUnit.status === 'active'
+                          ? 'Hoạt động'
+                          : 'Đã khóa'}
                       </Badge>
                     </div>
                   )}
@@ -722,7 +754,8 @@ export function UnitsTab() {
                       selectedUnit &&
                       setStatusDialog({
                         unit: selectedUnit,
-                        action: selectedUnit.status === 'active' ? 'lock' : 'unlock',
+                        action:
+                          selectedUnit.status === 'active' ? 'lock' : 'unlock',
                       })
                     }
                     disabled={!selectedUnit}
@@ -835,7 +868,9 @@ export function UnitsTab() {
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent className='sm:max-w-2xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingUnit ? 'Cập nhật đơn vị' : 'Thêm đơn vị mới'}</DialogTitle>
+            <DialogTitle>
+              {editingUnit ? 'Cập nhật đơn vị' : 'Thêm đơn vị mới'}
+            </DialogTitle>
             <DialogDescription>
               Cấu trúc đơn vị theo cây Cơ quan → Phòng ban → Bộ phận → Nhóm.
             </DialogDescription>
@@ -923,7 +958,10 @@ export function UnitsTab() {
               <Textarea
                 value={form.description}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, description: event.target.value }))
+                  setForm((prev) => ({
+                    ...prev,
+                    description: event.target.value,
+                  }))
                 }
               />
             </div>
@@ -972,7 +1010,9 @@ export function UnitsTab() {
             : ''
         }
         destructive
-        handleConfirm={() => deletingUnit && deleteMutation.mutate(deletingUnit.id)}
+        handleConfirm={() =>
+          deletingUnit && deleteMutation.mutate(deletingUnit.id)
+        }
         confirmText='Xóa đơn vị'
         isLoading={deleteMutation.isPending}
       />
@@ -982,7 +1022,9 @@ export function UnitsTab() {
         onOpenChange={(open) => {
           if (!open) setStatusDialog(null)
         }}
-        title={statusDialog?.action === 'lock' ? 'Khóa đơn vị' : 'Mở khóa đơn vị'}
+        title={
+          statusDialog?.action === 'lock' ? 'Khóa đơn vị' : 'Mở khóa đơn vị'
+        }
         desc={
           statusDialog
             ? `${statusDialog.action === 'lock' ? 'Khóa' : 'Mở khóa'} ${statusDialog.unit.name}.`
@@ -990,7 +1032,10 @@ export function UnitsTab() {
         }
         handleConfirm={() => {
           if (!statusDialog) return
-          statusMutation.mutate({ id: statusDialog.unit.id, action: statusDialog.action })
+          statusMutation.mutate({
+            id: statusDialog.unit.id,
+            action: statusDialog.action,
+          })
           setStatusDialog(null)
         }}
         confirmText={statusDialog?.action === 'lock' ? 'Khóa' : 'Mở khóa'}

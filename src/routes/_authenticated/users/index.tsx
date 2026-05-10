@@ -17,10 +17,7 @@ const usersSearchSchema = z.object({
     )
     .optional()
     .catch([]),
-  role: z
-    .array(z.string())
-    .optional()
-    .catch([]),
+  role: z.array(z.string()).optional().catch([]),
   // Per-column text filter (example for username)
   username: z.string().optional().catch(''),
 })

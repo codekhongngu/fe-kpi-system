@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle, RotateCcw, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { systemAdminMockApi } from '../api/mock-system-admin-api'
 import { type SystemUser } from '../api/types'
 
@@ -104,7 +104,9 @@ export function UsersTab() {
   const createMutation = useMutation({
     mutationFn: systemAdminMockApi.createUser,
     onSuccess: () => {
-      toast.success('Đã tạo người dùng mới và gửi mật khẩu tạm qua email (mock).')
+      toast.success(
+        'Đã tạo người dùng mới và gửi mật khẩu tạm qua email (mock).'
+      )
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
     },
@@ -214,7 +216,8 @@ export function UsersTab() {
   const roleLabel = (roleId: string) =>
     roles.find((role) => role.id === roleId)?.name ?? 'N/A'
 
-  const loading = usersQuery.isLoading || rolesQuery.isLoading || unitsQuery.isLoading
+  const loading =
+    usersQuery.isLoading || rolesQuery.isLoading || unitsQuery.isLoading
 
   return (
     <Card>
@@ -264,7 +267,9 @@ export function UsersTab() {
                   <TableCell className='font-medium'>{user.userCode}</TableCell>
                   <TableCell>
                     <div>{user.fullName}</div>
-                    <div className='text-xs text-muted-foreground'>{user.email}</div>
+                    <div className='text-xs text-muted-foreground'>
+                      {user.email}
+                    </div>
                   </TableCell>
                   <TableCell>{unitLabel(user.unitId)}</TableCell>
                   <TableCell>
@@ -277,8 +282,14 @@ export function UsersTab() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                      {user.status === 'active' ? 'Hoạt động' : 'Dừng hoạt động'}
+                    <Badge
+                      variant={
+                        user.status === 'active' ? 'default' : 'secondary'
+                      }
+                    >
+                      {user.status === 'active'
+                        ? 'Hoạt động'
+                        : 'Dừng hoạt động'}
                     </Badge>
                   </TableCell>
                   <TableCell className='text-right'>
@@ -330,7 +341,8 @@ export function UsersTab() {
               {editingUser ? 'Cập nhật người dùng' : 'Thêm người dùng mới'}
             </DialogTitle>
             <DialogDescription>
-              Bảo đảm duy nhất mã người dùng, email và username trên toàn hệ thống.
+              Bảo đảm duy nhất mã người dùng, email và username trên toàn hệ
+              thống.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 sm:grid-cols-2'>
@@ -375,7 +387,9 @@ export function UsersTab() {
               <Label>Đơn vị</Label>
               <Select
                 value={form.unitId}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, unitId: value }))}
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, unitId: value }))
+                }
               >
                 <SelectTrigger className='w-full'>
                   <SelectValue placeholder='Chọn đơn vị' />
@@ -430,11 +444,13 @@ export function UsersTab() {
                   </Button>
                 </div>
               )}
-              {!rolesQuery.isLoading && !rolesQuery.isError && roles.length === 0 && (
-                <div className='col-span-2 text-sm text-muted-foreground'>
-                  Chưa có vai trò.
-                </div>
-              )}
+              {!rolesQuery.isLoading &&
+                !rolesQuery.isError &&
+                roles.length === 0 && (
+                  <div className='col-span-2 text-sm text-muted-foreground'>
+                    Chưa có vai trò.
+                  </div>
+                )}
               {roles.map((role) => {
                 const checked = form.roleIds.includes(role.id)
                 return (
@@ -494,7 +510,9 @@ export function UsersTab() {
             : ''
         }
         destructive
-        handleConfirm={() => deletingUser && deleteMutation.mutate(deletingUser.id)}
+        handleConfirm={() =>
+          deletingUser && deleteMutation.mutate(deletingUser.id)
+        }
         confirmText='Xác nhận xóa'
         isLoading={deleteMutation.isPending}
       />
@@ -504,7 +522,11 @@ export function UsersTab() {
         onOpenChange={(open) => {
           if (!open) setStatusDialog(null)
         }}
-        title={statusDialog?.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+        title={
+          statusDialog?.status === 'active'
+            ? 'Khóa tài khoản'
+            : 'Mở khóa tài khoản'
+        }
         desc={
           statusDialog
             ? `${statusDialog.status === 'active' ? 'Khóa' : 'Mở khóa'} tài khoản ${statusDialog.fullName}.`

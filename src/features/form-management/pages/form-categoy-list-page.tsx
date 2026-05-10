@@ -2,10 +2,15 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { formManagementApi } from '../api/template-management-api'
 import { type FieldCategory } from '../api/types'
 
@@ -59,9 +65,12 @@ export function FormCategoryListPage() {
 
   const [search, setSearch] = useState('')
   const [openForm, setOpenForm] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<FieldCategory | null>(null)
+  const [editingCategory, setEditingCategory] = useState<FieldCategory | null>(
+    null
+  )
   const [form, setForm] = useState<FieldCategoryFormState>(defaultForm)
-  const [deletingCategory, setDeletingCategory] = useState<FieldCategory | null>(null)
+  const [deletingCategory, setDeletingCategory] =
+    useState<FieldCategory | null>(null)
 
   const filteredCategories = useMemo(() => {
     const keyword = search.trim().toLowerCase()
@@ -101,13 +110,18 @@ export function FormCategoryListPage() {
       formManagementApi.createFieldCategory({
         code: form.code.trim(),
         name: form.name.trim(),
-        description: form.description.trim().length > 0 ? form.description.trim() : null,
-        sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
+        description:
+          form.description.trim().length > 0 ? form.description.trim() : null,
+        sortOrder: Number.isFinite(Number(form.sortOrder))
+          ? Number(form.sortOrder)
+          : 0,
         isActive: form.isActive,
       }),
     onSuccess: () => {
       toast.success('Đã tạo lĩnh vực biểu mẫu.')
-      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
+      queryClient.invalidateQueries({
+        queryKey: ['form-management', 'field-categories'],
+      })
       closeForm()
     },
     onError: (error: Error) => toast.error(error.message),
@@ -121,14 +135,19 @@ export function FormCategoryListPage() {
       return formManagementApi.updateFieldCategory(editingCategory.id, {
         code: editingCategory.code,
         name: form.name.trim(),
-        description: form.description.trim().length > 0 ? form.description.trim() : null,
-        sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
+        description:
+          form.description.trim().length > 0 ? form.description.trim() : null,
+        sortOrder: Number.isFinite(Number(form.sortOrder))
+          ? Number(form.sortOrder)
+          : 0,
         isActive: form.isActive,
       })
     },
     onSuccess: () => {
       toast.success('Đã cập nhật lĩnh vực biểu mẫu.')
-      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
+      queryClient.invalidateQueries({
+        queryKey: ['form-management', 'field-categories'],
+      })
       closeForm()
     },
     onError: (error: Error) => toast.error(error.message),
@@ -138,7 +157,9 @@ export function FormCategoryListPage() {
     mutationFn: (id: string) => formManagementApi.deleteFieldCategory(id),
     onSuccess: () => {
       toast.success('Đã xóa lĩnh vực biểu mẫu.')
-      queryClient.invalidateQueries({ queryKey: ['form-management', 'field-categories'] })
+      queryClient.invalidateQueries({
+        queryKey: ['form-management', 'field-categories'],
+      })
       setDeletingCategory(null)
     },
     onError: (error: Error) => toast.error(error.message),
@@ -149,7 +170,9 @@ export function FormCategoryListPage() {
       <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
         <div>
           <CardTitle>Lĩnh vực biểu mẫu</CardTitle>
-          <CardDescription>Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.</CardDescription>
+          <CardDescription>
+            Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.
+          </CardDescription>
         </div>
 
         <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
@@ -181,25 +204,33 @@ export function FormCategoryListPage() {
             <TableBody>
               {categoriesQuery.isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center text-sm text-muted-foreground'>
+                  <TableCell
+                    colSpan={6}
+                    className='h-20 text-center text-sm text-muted-foreground'
+                  >
                     Đang tải danh sách lĩnh vực...
                   </TableCell>
                 </TableRow>
               )}
               {categoriesQuery.isError && (
                 <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center text-sm text-destructive'>
+                  <TableCell
+                    colSpan={6}
+                    className='h-20 text-center text-sm text-destructive'
+                  >
                     Không tải được danh sách lĩnh vực.
                   </TableCell>
                 </TableRow>
               )}
-              {!categoriesQuery.isLoading && !categoriesQuery.isError && filteredCategories.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center'>
-                    Chưa có lĩnh vực biểu mẫu.
-                  </TableCell>
-                </TableRow>
-              )}
+              {!categoriesQuery.isLoading &&
+                !categoriesQuery.isError &&
+                filteredCategories.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className='h-20 text-center'>
+                      Chưa có lĩnh vực biểu mẫu.
+                    </TableCell>
+                  </TableRow>
+                )}
               {filteredCategories.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className='font-medium'>{item.code}</TableCell>
@@ -210,7 +241,9 @@ export function FormCategoryListPage() {
                       {item.isActive ? 'Hoạt động' : 'Ngừng'}
                     </Badge>
                   </TableCell>
-                  <TableCell className='max-w-[420px] truncate'>{item.description ?? '-'}</TableCell>
+                  <TableCell className='max-w-[420px] truncate'>
+                    {item.description ?? '-'}
+                  </TableCell>
                   <TableCell className='text-right'>
                     <div className='flex justify-end gap-1'>
                       <Button
@@ -247,8 +280,12 @@ export function FormCategoryListPage() {
       >
         <DialogContent className='sm:max-w-xl'>
           <DialogHeader className='text-start'>
-            <DialogTitle>{editingCategory ? 'Cập nhật lĩnh vực' : 'Thêm lĩnh vực'}</DialogTitle>
-            <DialogDescription>Quản lý danh mục lĩnh vực biểu mẫu.</DialogDescription>
+            <DialogTitle>
+              {editingCategory ? 'Cập nhật lĩnh vực' : 'Thêm lĩnh vực'}
+            </DialogTitle>
+            <DialogDescription>
+              Quản lý danh mục lĩnh vực biểu mẫu.
+            </DialogDescription>
           </DialogHeader>
 
           <div className='grid gap-4 sm:grid-cols-2'>
@@ -264,7 +301,9 @@ export function FormCategoryListPage() {
                 <Label>Mã lĩnh vực</Label>
                 <Input
                   value={form.code}
-                  onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, code: event.target.value }))
+                  }
                   placeholder='vd: qldl'
                 />
               </div>
@@ -274,7 +313,12 @@ export function FormCategoryListPage() {
               <Input
                 inputMode='numeric'
                 value={form.sortOrder}
-                onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    sortOrder: event.target.value,
+                  }))
+                }
                 placeholder='0'
               />
             </div>
@@ -282,7 +326,9 @@ export function FormCategoryListPage() {
               <Label>Tên lĩnh vực</Label>
               <Input
                 value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, name: event.target.value }))
+                }
                 placeholder='vd: Quản lý dữ liệu'
               />
             </div>
@@ -290,7 +336,12 @@ export function FormCategoryListPage() {
               <Label>Mô tả</Label>
               <Textarea
                 value={form.description}
-                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    description: event.target.value,
+                  }))
+                }
                 placeholder='Mô tả ngắn...'
               />
             </div>
@@ -303,7 +354,9 @@ export function FormCategoryListPage() {
               </div>
               <Switch
                 checked={form.isActive}
-                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
               />
             </div>
           </div>
