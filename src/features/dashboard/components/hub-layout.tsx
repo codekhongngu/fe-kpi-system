@@ -5,26 +5,42 @@ import {
   UserCheck, 
   Brain, 
   CloudLightning,
-  MapPin
+  MapPin,
+  Sprout
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useNavigate } from '@tanstack/react-router'
 
 interface HubItemProps {
   icon: React.ReactNode
   label: string
   className?: string
+  href?: string
 }
 
-const HubItem = ({ icon, label, className }: HubItemProps) => (
-  <div className={cn('hub-item group cursor-pointer', className)}>
-    <div className='hub-item-icon'>
-      <div style={{ color: '#0c447c' }}>
-        {icon}
+const HubItem = ({ icon, label, className, href }: HubItemProps) => {
+  const navigate = useNavigate()
+  
+  const handleClick = () => {
+    if (href) {
+      navigate({ to: href })
+    }
+  }
+  
+  return (
+    <div 
+      className={cn('hub-item group cursor-pointer', className)} 
+      onClick={handleClick}
+    >
+      <div className='hub-item-icon'>
+        <div style={{ color: '#0c447c' }}>
+          {icon}
+        </div>
       </div>
+      <p className='hub-item-label' dangerouslySetInnerHTML={{ __html: label }} />
     </div>
-    <p className='hub-item-label' dangerouslySetInnerHTML={{ __html: label }} />
-  </div>
-)
+  )
+}
 
 export function HubLayout() {
   return (
@@ -57,6 +73,7 @@ export function HubLayout() {
         className='hub-item-2' 
         icon={<TrendingUp size={24} />} 
         label='Thông tin<br/>kinh tế - xã hội' 
+        href="/grdp"
       />
       <HubItem 
         className='hub-item-3' 
@@ -77,6 +94,12 @@ export function HubLayout() {
         className='hub-item-6' 
         icon={<CloudLightning size={24} />} 
         label='Thông tin phòng<br/>chống thiên tai' 
+      />
+      <HubItem 
+        className='hub-item-7' 
+        icon={<Sprout size={24} />} 
+        label='Nông nghiệp<br/>trồng trọt' 
+        href="/agriculture"
       />
     </div>
   )
