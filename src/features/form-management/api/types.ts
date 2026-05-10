@@ -5,7 +5,7 @@ export type TemplateType = 'AGGREGATE' | 'UNIQUE'
 export type TemplateLifecycleStatus = 'DRAFT' | 'READY' | 'IN_USE' | 'ARCHIVED'
 export type TemplateActivationStatus = 'active' | 'inactive'
 export type FieldDataType = 'text' | 'number'
-export type IndicatorType = 'input' | 'calculated'
+
 export type PeriodType = 'TUAN' | 'THANG' | 'QUY' | 'NAM'
 
 export type CatalogOption = {
@@ -48,14 +48,9 @@ export type TemplateField = {
   id: string
   key: string
   label: string
-  dataType: FieldDataType | string
-  required: boolean
-  readonly?: boolean
-  visible: boolean
   order: number
   parentId?: string | null
   level?: number
-  validationRule?: Record<string, unknown> | null
   isSystemDefault: boolean
 }
 
@@ -64,13 +59,8 @@ export type TemplateIndicator = {
   code: string
   name: string
   unit: string
-  type: IndicatorType
-  group: string
-  formula: string | null
   dataType?: FieldDataType | string
-  required?: boolean
-  readonly?: boolean
-  validationRule?: Record<string, unknown> | null
+  type: 'INPUT' | 'TITLE'
   parentId?: string | null
   order?: number
   level?: number
@@ -145,12 +135,7 @@ export type UpdateTemplateInput = {
 export type CreateFieldInput = {
   key: string
   label: string
-  dataType: FieldDataType | string
-  required: boolean
-  readonly?: boolean
-  visible: boolean
   parentId?: string | null
-  validationRule?: Record<string, unknown> | null
 }
 
 export type UpdateFieldInput = CreateFieldInput
@@ -159,13 +144,8 @@ export type CreateIndicatorInput = {
   code: string
   name: string
   unit: string
-  type: IndicatorType
-  group: string
-  formula: string | null
   dataType?: FieldDataType | string
-  required?: boolean
-  readonly?: boolean
-  validationRule?: Record<string, unknown> | null
+  type?: 'INPUT' | 'TITLE'
   parentId?: string | null
 }
 
@@ -208,7 +188,9 @@ export const fieldDataTypeOptions: Array<{ value: FieldDataType; label: string }
   { value: 'number', label: 'Số' },
 ]
 
-export const indicatorTypeOptions: Array<{ value: IndicatorType; label: string }> = [
-  { value: 'input', label: 'Nhập tay' },
-  { value: 'calculated', label: 'Tính toán' },
+export const indicatorTypeOptions: Array<{ value: 'INPUT' | 'TITLE'; label: string }> = [
+  { value: 'INPUT', label: 'Nhập liệu' },
+  { value: 'TITLE', label: 'Chỉ hiển thị (Tiêu đề)' },
 ]
+
+

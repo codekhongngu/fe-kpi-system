@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { ThemeSwitch } from '../theme-switch'
 
 type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean
@@ -47,6 +48,7 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
         />
         <Separator orientation='vertical' className='h-5 bg-border/70' />
         {children}
+        <ThemeSwitch/>
       </div>
     </header>
   )

@@ -3,8 +3,11 @@ import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor,
 import { CSS } from '@dnd-kit/utilities'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, FileUp, GripVertical, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
+import { ChevronDown, ChevronRight, FileUp, GripVertical, PlusCircle, Save, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -16,7 +19,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -24,43 +26,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { formManagementApi } from '../../api/template-management-api'
 import {
-  fieldDataTypeOptions,
-  type FieldDataType,
-  type TemplateField,
-} from '../../api/types'
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { formManagementApi } from '../../api/template-management-api'
+import { type TemplateField } from '../../api/types'
 import { buildTree, flattenTree, reorderSameLevelItems, type TreeNode } from '../shared/template-tree-utils'
 
 type TemplateAttributesTabProps = {
   templateId: string
 }
 
-type FieldFormState = {
-  key: string
-  label: string
-  dataType: FieldDataType
-  required: boolean
-  readonly: boolean
-  visible: boolean
-  parentId: string | null
-  validationText: string
-}
+const fieldSchema = z.object({
+  label: z.string().min(1, 'Vui lòng nhập tên thuộc tính').trim(),
+  parentId: z.string().nullable(),
+})
 
-const defaultFieldForm: FieldFormState = {
-  key: '',
+type FieldFormValues = z.infer<typeof fieldSchema>
+
+const defaultFieldForm: FieldFormValues = {
   label: '',
-  dataType: 'text',
-  required: true,
-  readonly: false,
-  visible: true,
   parentId: null,
-  validationText: '',
 }
 
 function getFlatFields(fields: TemplateField[]) {
   return flattenTree(buildTree(fields))
+}
+
+function generateKeyFromLabel(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s]/g, '')
+    .trim()
+    .replace(/\s+/g, '_')
 }
 
 type FieldTreeNodeProps = {
@@ -71,8 +77,6 @@ type FieldTreeNodeProps = {
   onAddChild: (parentId: string) => void
   onEdit: (item: TemplateField) => void
   onDelete: (item: TemplateField) => void
-  onMoveUp: (item: TemplateField) => void
-  onMoveDown: (item: TemplateField) => void
 }
 
 function FieldTreeNode({
@@ -83,8 +87,6 @@ function FieldTreeNode({
   onAddChild,
   onEdit,
   onDelete,
-  onMoveUp,
-  onMoveDown,
 }: FieldTreeNodeProps) {
   const hasChildren = node.children.length > 0
   const locked = node.isSystemDefault
@@ -124,9 +126,7 @@ function FieldTreeNode({
             <div className='min-w-0 border-s border-border/70 ps-3' style={{ marginInlineStart: `${depth * 10}px` }}>
               <p className='text-xs text-muted-foreground'>{node.key}</p>
               <p className='text-sm font-medium'>{node.label}</p>
-              <p className='text-xs text-muted-foreground'>
-                {node.dataType} - {node.required ? 'Bắt buộc' : 'Không bắt buộc'} {node.readonly ? 'Chỉ đọc' : 'Có thể sửa'}
-              </p>
+
             </div>
           </div>
 
@@ -137,12 +137,7 @@ function FieldTreeNode({
             <Button size='icon' variant='outline' onClick={() => onEdit(node)} disabled={!canEdit} title='Chỉnh sửa'>
               <UserPen className='size-4' />
             </Button>
-            <Button size='icon' variant='outline' onClick={() => onMoveUp(node)} disabled={!canEdit} title='Lên trên'>
-              <ArrowUp className='size-4' />
-            </Button>
-            <Button size='icon' variant='outline' onClick={() => onMoveDown(node)} disabled={!canEdit} title='Xuống dưới'>
-              <ArrowDown className='size-4' />
-            </Button>
+
             <Button size='icon' variant='destructive' onClick={() => onDelete(node)} disabled={!canEdit} title='Xóa'>
               <Trash2 className='size-4' />
             </Button>
@@ -163,8 +158,6 @@ function FieldTreeNode({
                 onAddChild={onAddChild}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                onMoveUp={onMoveUp}
-                onMoveDown={onMoveDown}
               />
             ))}
           </div>
@@ -178,7 +171,6 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   const queryClient = useQueryClient()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingField, setEditingField] = useState<TemplateField | null>(null)
-  const [fieldForm, setFieldForm] = useState<FieldFormState>(defaultFieldForm)
   const [draftFields, setDraftFields] = useState<TemplateField[]>([])
   const [hasPendingReorder, setHasPendingReorder] = useState(false)
 
@@ -186,6 +178,11 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
     queryKey: ['form-management', 'template', templateId, 'attributes-tab'],
     queryFn: () => formManagementApi.getTemplate(templateId),
     enabled: Boolean(templateId),
+  })
+
+  const form = useForm<FieldFormValues>({
+    resolver: zodResolver(fieldSchema),
+    defaultValues: defaultFieldForm,
   })
 
   const template = templateQuery.data ?? null
@@ -218,25 +215,12 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   }
 
   const createMutation = useMutation({
-    mutationFn: async (payload: FieldFormState) => {
-      let validationRule: Record<string, unknown> | null = null
-      if (payload.validationText.trim()) {
-        try {
-          validationRule = JSON.parse(payload.validationText)
-        } catch {
-          throw new Error('JSON kiểm tra dữ liệu không hợp lệ.')
-        }
-      }
-
+    mutationFn: async (payload: FieldFormValues) => {
+      const autoKey = generateKeyFromLabel(payload.label)
       return formManagementApi.createField(templateId, {
-        key: payload.key.trim(),
-        label: payload.label.trim(),
-        dataType: payload.dataType,
-        required: payload.required,
-        readonly: payload.readonly,
-        visible: payload.visible,
+        key: autoKey,
+        label: payload.label,
         parentId: payload.parentId,
-        validationRule,
       })
     },
     onSuccess: async () => {
@@ -248,25 +232,11 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ fieldId, payload }: { fieldId: string; payload: FieldFormState }) => {
-      let validationRule: Record<string, unknown> | null = null
-      if (payload.validationText.trim()) {
-        try {
-          validationRule = JSON.parse(payload.validationText)
-        } catch {
-          throw new Error('JSON kiểm tra dữ liệu không hợp lệ.')
-        }
-      }
-
+    mutationFn: async ({ fieldId, payload }: { fieldId: string; payload: FieldFormValues }) => {
       return formManagementApi.updateField(templateId, fieldId, {
-        key: payload.key.trim(),
-        label: payload.label.trim(),
-        dataType: payload.dataType,
-        required: payload.required,
-        readonly: payload.readonly,
-        visible: payload.visible,
+        ...editingField!,
+        label: payload.label,
         parentId: payload.parentId,
-        validationRule,
       })
     },
     onSuccess: async () => {
@@ -297,7 +267,7 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
     onSuccess: async () => {
       await refreshTemplate()
       setHasPendingReorder(false)
-      toast.success('Order saved.')
+      toast.success('Cập nhật vị trí thành công.')
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -313,21 +283,15 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
 
   function openCreateDialog(parentId: string | null = null) {
     setEditingField(null)
-    setFieldForm({ ...defaultFieldForm, parentId })
+    form.reset({ ...defaultFieldForm, parentId })
     setDialogOpen(true)
   }
 
   function openEditDialog(item: TemplateField) {
     setEditingField(item)
-    setFieldForm({
-      key: item.key,
+    form.reset({
       label: item.label,
-      dataType: (item.dataType ?? 'text') as FieldDataType,
-      required: item.required ?? true,
-      readonly: item.readonly ?? false,
-      visible: item.visible ?? true,
       parentId: item.parentId ?? null,
-      validationText: item.validationRule ? JSON.stringify(item.validationRule, null, 2) : '',
     })
     setDialogOpen(true)
   }
@@ -335,38 +299,10 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
   function closeDialog() {
     setDialogOpen(false)
     setEditingField(null)
-    setFieldForm(defaultFieldForm)
+    form.reset(defaultFieldForm)
   }
 
-  function handleMoveUp(item: TemplateField) {
-    const current = draftFields.find((entry) => entry.id === item.id)
-    if (!current || current.isSystemDefault) return
-    const siblings = flatFields.filter(
-      (entry) => (entry.parentId ?? null) === (current.parentId ?? null) && !entry.isSystemDefault,
-    )
-    const index = siblings.findIndex((entry) => entry.id === item.id)
-    if (index <= 0) return
-    const target = siblings[index - 1]
-    const next = reorderSameLevelItems(draftFields, item.id, target.id)
-    if (next === draftFields) return
-    setDraftFields(next)
-    setHasPendingReorder(true)
-  }
 
-  function handleMoveDown(item: TemplateField) {
-    const current = draftFields.find((entry) => entry.id === item.id)
-    if (!current || current.isSystemDefault) return
-    const siblings = flatFields.filter(
-      (entry) => (entry.parentId ?? null) === (current.parentId ?? null) && !entry.isSystemDefault,
-    )
-    const index = siblings.findIndex((entry) => entry.id === item.id)
-    if (index === -1 || index >= siblings.length - 1) return
-    const target = siblings[index + 1]
-    const next = reorderSameLevelItems(draftFields, item.id, target.id)
-    if (next === draftFields) return
-    setDraftFields(next)
-    setHasPendingReorder(true)
-  }
 
   function handleDragEnd(event: DragEndEvent) {
     const activeId = String(event.active.id)
@@ -388,16 +324,11 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
     saveOrderMutation.mutate()
   }
 
-  function submitFieldForm() {
-    if (!fieldForm.key.trim() || !fieldForm.label.trim()) {
-      toast.error('Mã thuộc tính và tên thuộc tính là bắt buộc.')
-      return
-    }
-
+  function onSubmit(values: FieldFormValues) {
     if (editingField) {
-      updateMutation.mutate({ fieldId: editingField.id, payload: fieldForm })
+      updateMutation.mutate({ fieldId: editingField.id, payload: values })
     } else {
-      createMutation.mutate(fieldForm)
+      createMutation.mutate(values)
     }
   }
 
@@ -417,7 +348,7 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
               disabled={!canEdit || !hasPendingReorder || saveOrderMutation.isPending}
             >
               <Save className='size-4' />
-              Save order
+              Cập nhật vị trí
             </Button>
             <Button
               size='sm'
@@ -458,9 +389,14 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
                     canDrag={canEdit}
                     onAddChild={(parentId) => openCreateDialog(parentId)}
                     onEdit={openEditDialog}
-                    onDelete={(item) => deleteMutation.mutate(item.id)}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
+                    onDelete={(item) => {
+                      const hasChildren = draftFields.some((entry) => entry.parentId === item.id)
+                      if (hasChildren) {
+                        toast.error('Không thể xóa thuộc tính này vì đang có thuộc tính con.')
+                        return
+                      }
+                      deleteMutation.mutate(item.id)
+                    }}
                   />
                 ))}
               </div>
@@ -470,109 +406,68 @@ export function TemplateAttributesTab({ templateId }: TemplateAttributesTabProps
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
-        <DialogContent className='sm:max-w-2xl'>
+        <DialogContent className='sm:max-w-md'>
           <DialogHeader className='text-start'>
             <DialogTitle>{editingField ? 'Sửa thuộc tính' : 'Thêm thuộc tính'}</DialogTitle>
-            <DialogDescription>Quản lý cây thuộc tính theo mã, nhãn, kiểu dữ liệu và quy tắc kiểm tra.</DialogDescription>
+            <DialogDescription>Chỉ định tên và nhóm của thuộc tính. Mã thuộc tính sẽ được tự tạo.</DialogDescription>
           </DialogHeader>
 
-          <div className='grid gap-4 sm:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label>Mã thuộc tính</Label>
-              <Input
-                value={fieldForm.key}
-                onChange={(event) => setFieldForm((prev) => ({ ...prev, key: event.target.value }))}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='grid gap-4'>
+              <FormField
+                control={form.control}
+                name='label'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tên thuộc tính</FormLabel>
+                    <FormControl>
+                      <Input placeholder='Nhập tên thuộc tính...' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className='space-y-2'>
-              <Label>Tên thuộc tính</Label>
-              <Input
-                value={fieldForm.label}
-                onChange={(event) => setFieldForm((prev) => ({ ...prev, label: event.target.value }))}
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Kiểu dữ liệu</Label>
-              <Select
-                value={fieldForm.dataType}
-                onValueChange={(value) => setFieldForm((prev) => ({ ...prev, dataType: value as FieldDataType }))}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {fieldDataTypeOptions.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-2'>
-              <Label>Thuộc cha</Label>
-              <Select
-                value={fieldForm.parentId ?? 'root'}
-                onValueChange={(value) => setFieldForm((prev) => ({ ...prev, parentId: value === 'root' ? null : value }))}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='Gốc' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='root'>Gốc</SelectItem>
-                  {parentOptions.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='grid gap-4 sm:col-span-2 sm:grid-cols-3'>
-              <label className='inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  checked={fieldForm.required}
-                  onChange={(event) => setFieldForm((prev) => ({ ...prev, required: event.target.checked }))}
-                />
-                Bắt buộc
-              </label>
-              <label className='inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  checked={fieldForm.readonly}
-                  onChange={(event) => setFieldForm((prev) => ({ ...prev, readonly: event.target.checked }))}
-                />
-                Chỉ đọc
-              </label>
-              <label className='inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  checked={fieldForm.visible}
-                  onChange={(event) => setFieldForm((prev) => ({ ...prev, visible: event.target.checked }))}
-                />
-                Hiển thị
-              </label>
-            </div>
-            <div className='space-y-2 sm:col-span-2'>
-              <Label>JSON kiểm tra dữ liệu</Label>
-              <Textarea
-                rows={3}
-                value={fieldForm.validationText}
-                onChange={(event) => setFieldForm((prev) => ({ ...prev, validationText: event.target.value }))}
-              />
-            </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant='outline' onClick={closeDialog}>
-              Hủy
-            </Button>
-            <Button onClick={submitFieldForm} disabled={createMutation.isPending || updateMutation.isPending}>
-              <Save className='size-4' />
-              {editingField ? 'Lưu thay đổi' : 'Thêm thuộc tính'}
-            </Button>
-          </DialogFooter>
+              <FormField
+                control={form.control}
+                name='parentId'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nút cha</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(val === 'root' ? null : val)}
+                      value={field.value ?? 'root'}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder='Gốc' />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value='root'>Gốc</SelectItem>
+                        {parentOptions.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter className='mt-4'>
+                <Button type='button' variant='outline' onClick={closeDialog}>
+                  Hủy
+                </Button>
+                <Button type='submit' disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Save className='size-4 mr-2' />
+                  {editingField ? 'Lưu thay đổi' : 'Thêm thuộc tính'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </Card>

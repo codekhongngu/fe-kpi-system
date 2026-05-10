@@ -402,7 +402,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
               // disabled={!canEdit || !hasPendingReorder || saveOrderMutation.isPending}
             >
               <Save className='size-4' />
-              Save order
+              Cập nhật vị trí
             </Button>
             {/* <Button
               size='sm'

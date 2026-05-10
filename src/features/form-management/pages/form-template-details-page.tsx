@@ -211,7 +211,7 @@ export function FormTemplateDetailsPage({ templateId }: FormTemplateDetailsPageP
                 <TabsList className='grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-muted p-1 lg:grid-cols-5'>
                   <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='indicators'>
                     <Workflow className='size-4' />
-                    Chỉ số
+                    Chỉ tiêu
                   </TabsTrigger>
                   <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='attributes'>
                     <Table2 className='size-4' />
@@ -223,7 +223,7 @@ export function FormTemplateDetailsPage({ templateId }: FormTemplateDetailsPageP
                   </TabsTrigger>
                   <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='scopes'>
                     <Eye className='size-4' />
-                    Phạm vi mẫu
+                    Phân bổ chỉ tiêu
                   </TabsTrigger>
                   <TabsTrigger className='h-11 justify-center gap-2 rounded-xl' value='preview'>
                     <Eye className='size-4' />

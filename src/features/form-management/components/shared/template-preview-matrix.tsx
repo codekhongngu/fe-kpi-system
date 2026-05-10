@@ -29,6 +29,7 @@ import {
   type TemplateCellConfig,
   type TemplateIndicator,
 } from '../../api/types'
+import { TemplateMatrixGrid } from './template-matrix-grid'
 
 const EMPTY_TEMPLATES: FormTemplate[] = []
 
@@ -44,57 +45,17 @@ type TemplatePreviewMatrixProps = {
 }
 
 type CellEditorState = {
-  indicatorId: string
-  attributeId: string
   dataType: TemplateCellConfig['dataType']
-  required: boolean
-  readOnly: boolean
-  formula: string
-}
-
-type MatrixRow = {
-  id: string
-  code: string
-  name: string
-  unit: string
 }
 
 function cellKey(indicatorId: string, attributeId: string) {
   return `${indicatorId}__${attributeId}`
 }
 
-function defaultEditorState(indicatorId: string, attributeId: string): CellEditorState {
+function defaultEditorState(): CellEditorState {
   return {
-    indicatorId,
-    attributeId,
     dataType: 'text',
-    required: false,
-    readOnly: false,
-    formula: '',
   }
-}
-
-function buildRows(indicators: TemplateIndicator[]): MatrixRow[] {
-  return indicators.map((indicator) => ({
-    id: indicator.id,
-    code: indicator.code,
-    name: indicator.name,
-    unit: indicator.unit,
-  }))
-}
-
-function getMatrixFields(fields: TemplateField[]) {
-  const systemFields = fields.filter((field) => field.isSystemDefault)
-  const nameField = systemFields.find((field) => field.label === 'Tên chỉ tiêu') ?? systemFields[0] ?? fields[0] ?? null
-  const unitField =
-    systemFields.find((field) => field.id !== nameField?.id && field.label === 'Đơn vị tính') ??
-    systemFields.find((field) => field.id !== nameField?.id) ??
-    fields.find((field) => field.id !== nameField?.id) ??
-    fields[1] ??
-    null
-  const specialIds = new Set([nameField?.id, unitField?.id].filter(Boolean) as string[])
-  const extraFields = fields.filter((field) => !specialIds.has(field.id))
-  return { nameField, unitField, extraFields }
 }
 
 export function TemplatePreviewMatrix({
@@ -108,7 +69,8 @@ export function TemplatePreviewMatrix({
   const queryClient = useQueryClient()
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplateId ?? templateId ?? '')
   const [editorOpen, setEditorOpen] = useState(false)
-  const [editingCell, setEditingCell] = useState<CellEditorState>(defaultEditorState('', ''))
+  const [editingCell, setEditingCell] = useState<CellEditorState>(defaultEditorState())
+  const [selectedCells, setSelectedCells] = useState<{ indicatorId: string; attributeId: string }[]>([])
 
   const templatesQuery = useQuery({
     queryKey: ['form-management', 'templates', 'preview-selector'],
@@ -138,17 +100,6 @@ export function TemplatePreviewMatrix({
   })
 
   const template = templateQuery.data
-  const rows = useMemo(() => buildRows(template?.indicators ?? []), [template?.indicators])
-  const matrixFields = useMemo(
-    () => getMatrixFields(template?.fields ?? []),
-    [template?.fields],
-  )
-  const visibleFields = useMemo(
-    () => [matrixFields.nameField, matrixFields.unitField, ...matrixFields.extraFields].filter(
-      (field): field is TemplateField => Boolean(field),
-    ),
-    [matrixFields],
-  )
 
   const overrideMap = useMemo(() => {
     const map = new Map<string, TemplateCellConfig>()
@@ -171,16 +122,15 @@ export function TemplatePreviewMatrix({
       if (!currentTemplateId) {
         throw new Error('Thiếu mã biểu mẫu.')
       }
-      await formManagementApi.upsertCellConfigs(currentTemplateId, [
-        {
-          indicatorId: payload.indicatorId,
-          attributeId: payload.attributeId,
-          dataType: payload.dataType,
-          required: payload.required,
-          readOnly: payload.formula.trim().length > 0 ? true : payload.readOnly,
-          formula: payload.formula.trim().length > 0 ? payload.formula.trim() : null,
-        },
-      ])
+      const upsertPayload = selectedCells.map((cell) => ({
+        indicatorId: cell.indicatorId,
+        attributeId: cell.attributeId,
+        dataType: payload.dataType,
+        required: true,
+        readOnly: false,
+        formula: null,
+      }))
+      await formManagementApi.upsertCellConfigs(currentTemplateId, upsertPayload)
       return true
     },
     onSuccess: async () => {
@@ -192,13 +142,11 @@ export function TemplatePreviewMatrix({
   })
 
   const deleteCellConfigMutation = useMutation({
-    mutationFn: async (payload: CellEditorState) => {
+    mutationFn: async () => {
       if (!currentTemplateId) {
         throw new Error('Thiếu mã biểu mẫu.')
       }
-      await formManagementApi.deleteCellConfigs(currentTemplateId, [
-        { indicatorId: payload.indicatorId, attributeId: payload.attributeId },
-      ])
+      await formManagementApi.deleteCellConfigs(currentTemplateId, selectedCells)
       return true
     },
     onSuccess: async () => {
@@ -209,75 +157,78 @@ export function TemplatePreviewMatrix({
     onError: (error: Error) => toast.error(error.message),
   })
 
-  function openEditor(indicatorId: string, attributeId: string) {
-    const current = overrideMap.get(cellKey(indicatorId, attributeId)) ?? effectiveMap.get(cellKey(indicatorId, attributeId))
-    setEditingCell(
-      current
-        ? {
-            indicatorId,
-            attributeId,
-            dataType: current.dataType,
-            required: current.required,
-            readOnly: current.readOnly,
-            formula: current.formula ?? '',
-          }
-        : defaultEditorState(indicatorId, attributeId),
-    )
+  function toggleCellSelection(indicatorId: string, attributeId: string) {
+    setSelectedCells((prev) => {
+      const exists = prev.find((c) => c.indicatorId === indicatorId && c.attributeId === attributeId)
+      if (exists) {
+        return prev.filter((c) => c.indicatorId !== indicatorId || c.attributeId !== attributeId)
+      }
+      return [...prev, { indicatorId, attributeId }]
+    })
+  }
+
+  function openEditor() {
+    if (selectedCells.length === 0) return
+    
+    // Default to the first selected cell's datatype if all match, else default to text
+    let initialDataType: 'text' | 'number' = 'text'
+    if (selectedCells.length > 0) {
+      const firstCell = overrideMap.get(cellKey(selectedCells[0].indicatorId, selectedCells[0].attributeId)) 
+        ?? effectiveMap.get(cellKey(selectedCells[0].indicatorId, selectedCells[0].attributeId))
+      initialDataType = firstCell?.dataType ?? 'text'
+    }
+
+    setEditingCell({ dataType: initialDataType })
     setEditorOpen(true)
   }
 
-  function renderDisplayCell(row: MatrixRow, field: TemplateField) {
-    const isNameField = field.id === matrixFields.nameField?.id
-    const isUnitField = field.id === matrixFields.unitField?.id
+  function clearSelection() {
+    setSelectedCells([])
+  }
 
-    if (isNameField) {
+  function renderCell(indicator: TemplateIndicator, field: TemplateField) {
+    if (indicator.type === 'TITLE') {
       return (
-        <div className='rounded-md border border-dashed px-2 py-1 text-left'>
-          <div className='text-xs text-muted-foreground'>{row.code}</div>
-          <div className='font-medium'>{row.name}</div>
+        <div className='flex w-full min-w-[120px] items-center justify-center rounded-md border border-dashed border-transparent bg-muted/5 px-2 py-1 opacity-50'>
+          <span className='text-[10px] uppercase text-muted-foreground'>Không áp dụng</span>
         </div>
       )
     }
 
-    if (isUnitField) {
-      return (
-        <div className='rounded-md border border-dashed px-2 py-1 text-left'>
-          <div className='font-medium'>{row.unit || '-'}</div>
-          <div className='text-xs text-muted-foreground'>Đơn vị tính</div>
-        </div>
-      )
-    }
-
-    const cell = effectiveMap.get(cellKey(row.id, field.id))
+    const cell = effectiveMap.get(cellKey(indicator.id, field.id))
 
     if (!cell) {
-      return <span className='text-xs text-muted-foreground'>-</span>
+      return <span className='text-xs text-muted-foreground block text-center'>-</span>
     }
 
     const content = (
       <>
         <div className='flex items-center justify-between gap-2'>
-          <span className='text-xs font-medium uppercase text-muted-foreground'>{cell.dataType}</span>
-          {overrideMap.has(cellKey(row.id, field.id)) && (
+          <span className='text-[10px] font-medium uppercase text-muted-foreground'>{cell.dataType}</span>
+          {overrideMap.has(cellKey(indicator.id, field.id)) && (
             <span className='text-[10px] font-semibold text-primary'>Ghi đè</span>
           )}
         </div>
-        <div className='text-xs text-muted-foreground'>
-          {cell.required ? 'Bắt buộc' : 'Không bắt buộc'} · {cell.readOnly ? 'Chỉ đọc' : 'Có thể sửa'}
+        <div className='text-[10px] text-muted-foreground'>
+          {cell.required ? 'Bắt buộc' : 'Tùy chọn'} · {cell.readOnly ? 'Chỉ đọc' : 'Sửa'}
         </div>
-        {cell.formula && <div className='truncate text-[11px] text-primary'>{cell.formula}</div>}
+        {cell.formula && <div className='truncate mt-0.5 text-[10px] text-primary'>{cell.formula}</div>}
       </>
     )
 
     if (mode !== 'cell-config') {
-      return <div className='rounded-md border border-dashed px-2 py-1 text-left'>{content}</div>
+      return <div className='rounded-md border border-dashed border-transparent bg-muted/10 px-2 py-1 text-left'>{content}</div>
     }
+
+    const isSelected = selectedCells.some((c) => c.indicatorId === indicator.id && c.attributeId === field.id)
 
     return (
       <button
         type='button'
-        className='flex w-full flex-col gap-1 rounded-md border border-dashed px-2 py-1 text-left transition hover:border-primary hover:bg-primary/5'
-        onClick={() => openEditor(row.id, field.id)}
+        className={`flex w-full min-w-[120px] flex-col gap-0.5 rounded-md border px-2 py-1 text-left transition hover:border-primary hover:bg-primary/5 ${
+          isSelected ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-dashed'
+        }`}
+        onClick={() => toggleCellSelection(indicator.id, field.id)}
       >
         {content}
       </button>
@@ -308,6 +259,13 @@ export function TemplatePreviewMatrix({
               </SelectContent>
             </Select>
           )}
+          {mode === 'cell-config' && selectedCells.length > 0 && (
+            <div className='flex items-center gap-2'>
+              <span className='text-sm text-muted-foreground mr-2'>Đã chọn {selectedCells.length} ô</span>
+              <Button size='sm' variant='outline' onClick={clearSelection}>Hủy chọn</Button>
+              <Button size='sm' onClick={openEditor}>Sửa cấu hình</Button>
+            </div>
+          )}
         </div>
       </CardHeader>
 
@@ -323,37 +281,12 @@ export function TemplatePreviewMatrix({
             Không thể tải dữ liệu cấu hình ô.
           </div>
         ) : (
-          <div className='overflow-auto rounded-md border'>
-            <table className='w-full border-collapse text-sm'>
-              <thead>
-                <tr className='bg-muted/60'>
-                  {visibleFields.map((field) => (
-                    <th key={field.id} className='border-b px-4 py-3 text-left font-semibold'>
-                      {field.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={Math.max(visibleFields.length, 1)} className='px-4 py-8 text-center text-muted-foreground'>
-                      Chưa có chỉ tiêu hoặc thuộc tính để xem trước.
-                    </td>
-                  </tr>
-                )}
-                {rows.map((row) => (
-                  <tr key={row.id} className='align-top'>
-                    {visibleFields.map((field) => (
-                      <td key={`${row.id}_${field.id}`} className='border-b px-3 py-2 align-top'>
-                        {renderDisplayCell(row, field)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TemplateMatrixGrid
+            indicators={template.indicators}
+            fields={template.fields}
+            renderCell={renderCell}
+            emptyMessage='Chưa có chỉ tiêu hoặc thuộc tính để xem trước.'
+          />
         )}
       </CardContent>
 
@@ -365,72 +298,35 @@ export function TemplatePreviewMatrix({
           </DialogHeader>
 
           <div className='grid gap-4'>
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label>Kiểu dữ liệu</Label>
-                <Select
-                  value={editingCell.dataType}
-                  onValueChange={(value) =>
-                    setEditingCell((prev) => ({ ...prev, dataType: value as CellEditorState['dataType'] }))
-                  }
-                >
-                  <SelectTrigger className='w-full'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fieldDataTypeOptions.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label>Công thức</Label>
-                <Input
-                  value={editingCell.formula}
-                  onChange={(event) =>
-                    setEditingCell((prev) => ({
-                      ...prev,
-                      formula: event.target.value,
-                      readOnly: event.target.value.trim().length > 0 ? true : prev.readOnly,
-                    }))
-                  }
-                />
-              </div>
+            <div className='space-y-2'>
+              <Label>Kiểu dữ liệu</Label>
+              <Select
+                value={editingCell.dataType}
+                onValueChange={(value) =>
+                  setEditingCell({ dataType: value as CellEditorState['dataType'] })
+                }
+              >
+                <SelectTrigger className='w-full'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {fieldDataTypeOptions.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
-            <div className='grid gap-4 sm:grid-cols-2'>
-              <label className='inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  checked={editingCell.required}
-                  onChange={(event) => setEditingCell((prev) => ({ ...prev, required: event.target.checked }))}
-                />
-                Bắt buộc
-              </label>
-              <label className='inline-flex items-center gap-2 text-sm'>
-                <input
-                  type='checkbox'
-                  checked={editingCell.readOnly}
-                  disabled={editingCell.formula.trim().length > 0}
-                  onChange={(event) => setEditingCell((prev) => ({ ...prev, readOnly: event.target.checked }))}
-                />
-                Chỉ đọc
-              </label>
-            </div>
-
             <div className='text-xs text-muted-foreground'>
-              Nếu có công thức, hệ thống sẽ tự động ép ô ở chế độ chỉ đọc.
+              Cấu hình này sẽ được áp dụng cho {selectedCells.length} ô đã chọn.
             </div>
           </div>
 
           <DialogFooter>
             <Button
               variant='outline'
-              onClick={() => deleteCellConfigMutation.mutate(editingCell)}
+              onClick={() => deleteCellConfigMutation.mutate()}
               disabled={deleteCellConfigMutation.isPending || saveCellConfigMutation.isPending}
             >
               <Trash2 className='size-4' />

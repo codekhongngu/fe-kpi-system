@@ -54,15 +54,10 @@ type BeAttribute = {
   parentId?: string | null
   name?: string
   key?: string
-  dataType?: string
-  isRequired?: boolean
-  isReadonly?: boolean
-  isVisible?: boolean
-  isSystem?: boolean
   sortOrder?: number
   order?: number
   level?: number
-  validationRule?: Record<string, unknown> | null
+  isSystem?: boolean
 }
 type BeIndicator = {
   id: string
@@ -72,15 +67,10 @@ type BeIndicator = {
   name?: string
   unit?: string
   dataType?: string
-  isRequired?: boolean
-  isReadonly?: boolean
-  isCalculated?: boolean
+  type?: 'INPUT' | 'TITLE'
   sortOrder?: number
   order?: number
   level?: number
-  formula?: string | null
-  validationRule?: Record<string, unknown> | null
-  isActive?: boolean
 }
 
 type BeScope = {
@@ -93,13 +83,7 @@ type BeScope = {
   indicatorName?: string
 }
 
-type FormulaValidateResponse = {
-  valid: boolean
-  errors: string[]
-  warnings: string[]
-  refs?: string[]
-  missingRefs?: string[]
-}
+
 
 type BeEffectiveCellConfig = EffectiveTemplateCellConfig
 type BeCellConfig = {
@@ -137,15 +121,10 @@ const mapAttribute = (item: BeAttribute): TemplateField => ({
   id: item.id,
   key: item.key ?? item.name ?? '',
   label: item.name ?? item.key ?? '',
-  dataType: item.dataType ?? 'text',
-  required: item.isRequired ?? false,
-  readonly: item.isReadonly ?? false,
-  visible: item.isVisible ?? true,
   order: item.sortOrder ?? item.order ?? 0,
   parentId: item.parentId ?? null,
   level: item.level ?? 0,
-  validationRule: item.validationRule ?? null,
-  isSystemDefault: item.isSystem ?? false,
+  isSystemDefault: Boolean(item.isSystem),
 })
 
 const mapIndicator = (item: BeIndicator): TemplateIndicator => ({
@@ -153,13 +132,8 @@ const mapIndicator = (item: BeIndicator): TemplateIndicator => ({
   code: item.code ?? item.displayIndex ?? '',
   name: item.name ?? '',
   unit: item.unit ?? '',
-  type: item.isCalculated ? 'calculated' : 'input',
-  group: '',
-  formula: item.formula ?? null,
   dataType: item.dataType ?? 'number',
-  required: item.isRequired ?? true,
-  readonly: item.isReadonly ?? false,
-  validationRule: item.validationRule ?? null,
+  type: item.type === 'TITLE' ? 'TITLE' : 'INPUT',
   parentId: item.parentId ?? null,
   order: item.sortOrder ?? item.order ?? 0,
   level: item.level ?? 0,
@@ -502,11 +476,6 @@ export const formManagementApi = {
     const payload = {
       parentId: input.parentId ?? null,
       name: input.label,
-      dataType: input.dataType,
-      isRequired: input.required,
-      isReadonly: input.readonly ?? false,
-      isVisible: input.visible,
-      validationRule: input.validationRule ?? null,
     }
     const response = await apiClient.post<BeAttribute>(`/forms/${templateId}/attributes`, payload)
     return mapAttribute(response.data)
@@ -516,11 +485,6 @@ export const formManagementApi = {
     const payload = {
       parentId: input.parentId ?? null,
       name: input.label,
-      dataType: input.dataType,
-      isRequired: input.required,
-      isReadonly: input.readonly ?? false,
-      isVisible: input.visible,
-      validationRule: input.validationRule ?? null,
     }
     const response = await apiClient.patch<BeAttribute>(`/forms/${templateId}/attributes/${fieldId}`, payload)
     return mapAttribute(response.data)
@@ -544,13 +508,7 @@ export const formManagementApi = {
       name: input.name,
       unit: input.unit,
       dataType: input.dataType ?? 'number',
-      isRequired: input.required ?? true,
-      isReadonly: input.readonly ?? false,
-      isCalculated: input.type === 'calculated',
-      formula: input.formula ?? null,
-      groupName: input.group || null,
-      validationRule: input.validationRule ?? null,
-      isActive: true,
+      type: input.type ?? 'INPUT',
     }
     const response = await apiClient.post<BeIndicator>(`/forms/${templateId}/indicators`, payload)
     return mapIndicator(response.data)
@@ -564,12 +522,7 @@ export const formManagementApi = {
       name: input.name,
       unit: input.unit,
       dataType: input.dataType ?? 'number',
-      isRequired: input.required ?? true,
-      isReadonly: input.readonly ?? false,
-      isCalculated: input.type === 'calculated',
-      formula: input.formula ?? null,
-      groupName: input.group || null,
-      validationRule: input.validationRule ?? null,
+      type: input.type ?? 'INPUT',
     }
     const response = await apiClient.patch<BeIndicator>(`/forms/${templateId}/indicators/${indicatorId}`, payload)
     return mapIndicator(response.data)
@@ -595,13 +548,7 @@ export const formManagementApi = {
     return true
   },
 
-  validateIndicatorFormula: async (templateId: string, payload: { formula: string; code?: string; indicatorId?: string }) => {
-    const response = await apiClient.post<FormulaValidateResponse>(
-      `/forms/${templateId}/indicators/formula/validate`,
-      payload
-    )
-    return response.data
-  },
+
 
   listTemplateScopes: async (templateId: string) => {
     const response = await apiClient.get<{ items?: BeScope[] }>(`/forms/${templateId}/template-scopes`)
