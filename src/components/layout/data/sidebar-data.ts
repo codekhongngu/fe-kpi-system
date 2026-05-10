@@ -105,38 +105,18 @@ export function getAppRoleForUser(
   return 'DATA_ENTRY'
 }
 
-function buildNavGroups(role: AppRole): NavGroup[] {
-  void role
-
-  const utilities: NavGroup = {
-    title: 'Tiện ích',
-    items: [
-      {
-        title: 'Thống kê & Phân tích',
-        url: '/report-management?tab=analytics',
-        icon: ChartColumnBig,
-      },
-      {
-        title: 'Thông báo',
-        url: '/settings/notifications',
-        icon: Bell,
-      },
-    ],
-  }
-
-  const overview: NavGroup = {
-    title: 'Tổng quan',
-    items: [
-      {
-        title: 'Dashboard',
-        url: '/',
-        icon: LayoutDashboard,
-      },
-    ],
-  }
-
+function buildNavGroups(): NavGroup[] {
   return [
-    overview,
+    {
+      title: 'Tổng quan',
+      items: [
+        {
+          title: 'Dashboard',
+          url: '/',
+          icon: LayoutDashboard,
+        },
+      ],
+    },
     {
       title: 'Quản trị hệ thống',
       items: [
@@ -163,46 +143,30 @@ function buildNavGroups(role: AppRole): NavGroup[] {
       ],
     },
     {
-      title: 'Nghiệp vụ',
+      title: 'Quản trị Báo cáo',
       items: [
         {
-          title: 'Quản lí biểu mẫu',
+          title: 'Quản lý biểu mẫu',
           url: '/form-management',
           icon: FileSpreadsheet,
         },
         {
-          title: 'Tổng hợp',
+          title: 'Quản lý đợt báo cáo',
+          url: '/report-management?tab=list',
+          icon: SearchCheck,
+        },
+        {
+          title: 'Tổng hợp báo cáo',
           url: '/report-management?tab=analytics',
           icon: ChartColumnBig,
         },
         {
-          title: 'Quản lý báo cáo',
-          url: '/report-management?tab=list',
-          icon: SearchCheck,
-        },
-      ],
-    },
-    {
-      title: 'Công việc của tôi',
-      items: [
-        {
-          title: 'Nhập liệu báo cáo',
+          title: 'Báo cáo được giao',
           url: '/my/assignments',
-          icon: FileSpreadsheet,
-        },
-        {
-          title: 'Phê duyệt báo cáo',
-          url: '/report-management?tab=editing',
-          icon: FileCheck2,
-        },
-        {
-          title: 'Xem báo cáo đã gửi/duyệt',
-          url: '/report-management?tab=list',
-          icon: ChartColumnBig,
+          icon: SendToBack,
         },
       ],
     },
-    utilities,
   ]
 }
 
@@ -212,7 +176,7 @@ export const sidebarData: SidebarData = {
     email: 'satnaingdev@gmail.com',
     avatar: '/avatars/shadcn.jpg',
   },
-  navGroups: buildNavGroups('SYSTEM_ADMIN'),
+  navGroups: buildNavGroups(),
 }
 
 export function getSidebarNavGroupsForUser(
@@ -221,5 +185,5 @@ export function getSidebarNavGroupsForUser(
 ) {
   void user
   void rolesById
-  return buildNavGroups('SYSTEM_ADMIN')
+  return buildNavGroups()
 }
