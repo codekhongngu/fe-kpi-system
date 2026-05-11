@@ -7,15 +7,36 @@ export type MyAssignment = {
     id: string
     status: SubmissionStatus
     completionPct: number | null
+    rejectReason?: string | null
   } | null
 }
 
 export type SubmissionStatus =
-  | 'DRAFT'
-  | 'PENDING'
-  | 'APPROVED'
-  | 'REJECTED'
   | 'NOT_STARTED'
+  | 'DRAFTING'
+  | 'SUBMITTED'
+  | 'PENDING_DEPARTMENT'
+  | 'DEPARTMENT_APPROVED'
+  | 'DISTRICT_APPROVED'
+  | 'REJECTED_DEPARTMENT'
+  | 'REJECTED_DISTRICT'
+  | 'OVERDUE'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'DRAFT' // Giữ lại để tương thích ngược nếu cần
+
+export type ApprovalHistoryItem = {
+  id: string
+  submissionId: string
+  approvalLevel: string
+  action: string
+  userId: string
+  createdAt: string
+  userName: string
+  submissionCode: string
+  submissionStatus: SubmissionStatus
+  note?: string
+}
 
 export type SubmissionDetail = {
   id: string

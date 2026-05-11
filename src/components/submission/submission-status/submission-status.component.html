@@ -1,0 +1,37 @@
+<div class="submission-status" [ngClass]="getStatusClass()">
+  <div class="status-header">
+    <span class="status-icon" [ngClass]="getStatusIcon()"></span>
+    <span class="status-text">{{ getStatusText() }}</span>
+  </div>
+  
+  <div *ngIf="getApprovalInfo()" class="approval-info">
+    <div class="approval-details">
+      <span class="approval-level">{{ getApprovalInfo().level }}</span>
+      <span class="approver-name">{{ getApprovalInfo().approver }}</span>
+      <span class="approval-time">{{ getApprovalInfo().approvedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+    </div>
+  </div>
+
+  <div *ngIf="canShowApprovalActions()" class="approval-actions">
+    <button class="btn btn-primary" (click)="onApprove()" [disabled]="isApproving">
+      <i class="fas fa-check"></i>
+      Duyệt {{ getApprovalLevel() }}
+    </button>
+    <button class="btn btn-danger" (click)="onReject()" [disabled]="isApproving">
+      <i class="fas fa-times"></i>
+      Từ chối
+    </button>
+  </div>
+
+  <div *ngIf="canShowResubmit()" class="resubmit-actions">
+    <button class="btn btn-secondary" (click)="onResubmit()">
+      <i class="fas fa-redo"></i>
+      Nộp lại
+    </button>
+  </div>
+
+  <div *ngIf="submission.rejectReason" class="reject-reason">
+    <h4>Lý do từ chối:</h4>
+    <p>{{ submission.rejectReason }}</p>
+  </div>
+</div>

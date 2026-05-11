@@ -10,18 +10,22 @@ export type ReportTab =
   | 'rejected'
   | 'overdue'
 
-export type ReportStatus =
-  | 'DRAFT'
-  | 'ASSIGNED'
+export type CampaignStatus = 'DRAFT' | 'DISPATCHED' | 'CLOSED' | 'CANCELLED'
+
+export type SubmissionStatus =
   | 'NOT_STARTED'
   | 'DRAFTING'
-  | 'SUBMITTED'
-  | 'UNDER_REVIEW'
-  | 'APPROVED'
-  | 'REJECTED'
+  | 'SUBMITTED' // Chờ phòng duyệt
+  | 'PENDING_DEPARTMENT' // Đồng nhất với BE
+  | 'DEPARTMENT_APPROVED' // Chờ xã chốt
+  | 'DISTRICT_APPROVED' // Đã chốt/Publish
+  | 'REJECTED_DEPARTMENT'
+  | 'REJECTED_DISTRICT'
   | 'OVERDUE'
-  | 'COMPLETED'
+  | 'COMPLETED' // Alias cho DISTRICT_APPROVED
   | 'CANCELLED'
+
+export type ReportStatus = CampaignStatus | SubmissionStatus
 
 export type ReportPriority = 'low' | 'normal' | 'high'
 
@@ -47,7 +51,7 @@ export type ReportListItem = {
   deadlineFrom: string
   deadlineTo: string
   createdBy: string
-  status: ReportStatus
+  status: CampaignStatus
   dispatchedAt: string | null
   dispatchedBy: string | null
   createdAt: string
@@ -65,7 +69,7 @@ export type ReportAssignment = {
   id: string
   orgId: string
   orgName: string
-  status: ReportStatus
+  status: SubmissionStatus
   completionPercent: number
   submittedAt: string | null
   approvedAt: string | null
@@ -82,7 +86,7 @@ export type ReportDetail = {
   deadlineFrom: string
   deadlineTo: string
   createdBy: string
-  status: ReportStatus
+  status: CampaignStatus
   dispatchedAt: string | null
   dispatchedBy: string | null
   createdAt: string
@@ -211,21 +215,33 @@ export const reportTabs: Array<{ value: ReportTab; label: string }> = [
   { value: 'overdue', label: 'Quá hạn' },
 ]
 
-export const reportStatusOptions: Array<{
-  value: ReportStatus
+export const campaignStatusOptions: Array<{
+  value: CampaignStatus
   label: string
 }> = [
   { value: 'DRAFT', label: 'Nháp' },
-  { value: 'ASSIGNED', label: 'Đã giao' },
+  { value: 'DISPATCHED', label: 'Đã phát hành' },
+  { value: 'CLOSED', label: 'Đã đóng' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
+]
+
+export const submissionStatusOptions: Array<{
+  value: SubmissionStatus
+  label: string
+}> = [
   { value: 'NOT_STARTED', label: 'Chưa nhập' },
   { value: 'DRAFTING', label: 'Đang nhập' },
-  { value: 'SUBMITTED', label: 'Đã nộp' },
-  { value: 'UNDER_REVIEW', label: 'Chờ duyệt' },
-  { value: 'APPROVED', label: 'Đã duyệt' },
-  { value: 'REJECTED', label: 'Bị trả lại' },
+  { value: 'SUBMITTED', label: 'Đã nộp (Chờ duyệt)' },
+  { value: 'DEPARTMENT_APPROVED', label: 'Phòng đã duyệt' },
+  { value: 'DISTRICT_APPROVED', label: 'Đã chốt (Xã)' },
+  { value: 'REJECTED_DEPARTMENT', label: 'Phòng trả lại' },
+  { value: 'REJECTED_DISTRICT', label: 'Xã trả lại' },
   { value: 'OVERDUE', label: 'Quá hạn' },
-  { value: 'COMPLETED', label: 'Đã chốt' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
+]
+
+export const reportStatusOptions = [
+  ...campaignStatusOptions,
+  ...submissionStatusOptions,
 ]
 
 export const reportPriorityOptions: Array<{

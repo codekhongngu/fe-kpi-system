@@ -4,6 +4,7 @@ import type {
   SubmissionDetail,
   CellChange,
   PatchCellsResult,
+  ApprovalHistoryItem,
 } from './types'
 
 export type MyAssignmentsQuery = {
@@ -79,5 +80,11 @@ export const submissionApi = {
   cancelSubmit: (submissionId: string) =>
     apiClient
       .post<{ status: string }>(`/submissions/${submissionId}/cancel-submit`)
+      .then((r) => r.data),
+
+  // GET /api/v1/submissions/history/:assignmentId
+  getHistory: (assignmentId: string) =>
+    apiClient
+      .get<ApprovalHistoryItem[]>(`/submissions/history/${assignmentId}`)
       .then((r) => r.data),
 }

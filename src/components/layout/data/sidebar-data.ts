@@ -151,7 +151,7 @@ function buildNavGroups(): NavGroup[] {
           icon: FileSpreadsheet,
         },
         {
-          title: 'Quản lý đợt báo cáo',
+          title: 'Quản trị đợt báo cáo',
           url: '/report-management?tab=list',
           icon: SearchCheck,
         },
@@ -160,10 +160,15 @@ function buildNavGroups(): NavGroup[] {
           url: '/report-management?tab=analytics',
           icon: ChartColumnBig,
         },
+      ],
+    },
+    {
+      title: 'Cá nhân & Tác nghiệp',
+      items: [
         {
-          title: 'Báo cáo được giao',
+          title: 'Nhiệm vụ & Phê duyệt',
           url: '/my/assignments',
-          icon: SendToBack,
+          icon: FileCheck2,
         },
       ],
     },

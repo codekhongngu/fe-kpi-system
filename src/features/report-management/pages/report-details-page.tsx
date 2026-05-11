@@ -16,8 +16,14 @@ import {
   Rocket,
   Settings2,
   Workflow,
+  RotateCcw,
+  Send,
+  XCircle,
+  FileText,
+  AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { format } from 'date-fns'
 import { apiClient } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -50,6 +56,10 @@ import { ReportStatusBadge } from '../components/report-status'
 import { CampaignDefaultValuesTab } from '../components/tabs/campaign-default-values-tab'
 import { CampaignScopesTab } from '../components/tabs/campaign-scopes-tab'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
+import { useSubmissionHistory } from '@/features/submission/hooks/use-my-assignments'
+import { useApproveDistrict, useRejectDistrict } from '@/features/submission/hooks/use-approvals'
+import { getSubmissionStatusInfo } from '@/features/submission/utils/submission-status'
+import { submissionApi } from '@/features/submission/api/submission-api'
 
 type OrganizationTreeNode = {
   id: string
@@ -101,10 +111,37 @@ function formatTimeDashDate(value: string | null) {
   return `${time} - ${day}`
 }
 
+
 export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
   const [unitSearch, setUnitSearch] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [indicatorSearch, setIndicatorSearch] = useState('')
+  const [viewAssignmentId, setViewAssignmentId] = useState<string | null>(null)
+
+  const approveDist = useApproveDistrict()
+  const rejectDist = useRejectDistrict()
+
+  const historyQuery = useSubmissionHistory(viewAssignmentId)
+  const history = historyQuery.data || []
+
+  const handleApproveDist = (submissionId: string) => {
+    approveDist.mutate(submissionId, {
+      onSuccess: () => {
+        detailQuery.refetch()
+      }
+    })
+  }
+
+  const handleRejectDist = (submissionId: string) => {
+    const reason = window.prompt('Nhập lý do trả lại:')
+    if (reason) {
+      rejectDist.mutate({ submissionId, reason }, {
+        onSuccess: () => {
+          detailQuery.refetch()
+        }
+      })
+    }
+  }
 
   const detailQuery = useQuery({
     queryKey: reportQueryKeys.detail(reportId),
@@ -273,12 +310,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
           unitName: item.orgName,
           initials: initials || 'DV',
           assigneeName: item.assigneeName ?? 'Chưa phân công',
-          status:
-            item.status === 'APPROVED' || item.status === 'COMPLETED'
-              ? 'done'
-              : ['SUBMITTED', 'UNDER_REVIEW', 'DRAFTING'].includes(item.status)
-                ? 'doing'
-                : 'not_started',
+          status: item.status,
           updatedAt: item.updatedAt || item.submittedAt || null,
         } as const
       })
@@ -733,22 +765,21 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                 </div>
                               </TableCell>
                               <TableCell className='px-6 py-4 text-center'>
-                                <span
-                                  className={cn(
-                                    'inline-flex rounded-full px-3 py-1 text-[11px] font-semibold',
-                                    row.status === 'done'
-                                      ? 'bg-secondary/15 text-secondary'
-                                      : row.status === 'doing'
-                                        ? 'bg-amber-100 text-amber-800'
-                                        : 'bg-destructive/10 text-destructive'
-                                  )}
-                                >
-                                  {row.status === 'done'
-                                    ? 'Hoàn thành'
-                                    : row.status === 'doing'
-                                      ? 'Đang thực hiện'
-                                      : 'Chưa bắt đầu'}
-                                </span>
+                                {(() => {
+                                  const info = getSubmissionStatusInfo(row.status)
+                                  const StatusIcon = info.icon
+                                  return (
+                                    <span
+                                      className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold border uppercase tracking-wider shadow-sm',
+                                        info.className
+                                      )}
+                                    >
+                                      <StatusIcon className='size-3' />
+                                      {info.label}
+                                    </span>
+                                  )
+                                })()}
                               </TableCell>
                               <TableCell className='px-6 py-4 text-sm font-medium text-muted-foreground'>
                                 {formatTimeDashDate(row.updatedAt)}
@@ -759,6 +790,11 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                                   variant='ghost'
                                   size='icon'
                                   className='h-9 w-9'
+                                  onClick={() => {
+                                    if (row.id) {
+                                      setViewAssignmentId(row.id)
+                                    }
+                                  }}
                                 >
                                   <Eye className='size-4 text-primary' />
                                 </Button>
@@ -880,6 +916,153 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
           onSave={(input) => updateMutation.mutate(input)}
         />
       )}
+
+      {/* Modal Phê duyệt Chi tiết (District Level) */}
+      <Dialog open={!!viewAssignmentId} onOpenChange={(open) => !open && setViewAssignmentId(null)}>
+         <DialogContent className='max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-3xl'>
+            <DialogHeader className='px-8 py-6 border-b bg-muted/10'>
+               <DialogTitle className='text-2xl font-bold text-primary'>Chi tiết bản nộp đơn vị</DialogTitle>
+               <DialogDescription className='text-base font-medium'>
+                  Xem chi tiết tiến độ và thực hiện phê duyệt/trả lại báo cáo cho đơn vị.
+               </DialogDescription>
+            </DialogHeader>
+
+            <div className='flex-1 overflow-y-auto p-8'>
+               {!viewAssignmentId ? null : (
+                  <div className='grid gap-8 lg:grid-cols-3'>
+                     <div className='lg:col-span-2 space-y-8'>
+                        <Card className='rounded-3xl border bg-muted/5 p-8 shadow-sm'>
+                           <div className='flex items-center justify-between mb-6'>
+                              <div className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
+                                 Trạng thái hiện tại
+                              </div>
+                              {(() => {
+                                 const assignment = report.assignments?.find(a => a.id === viewAssignmentId)
+                                 const info = getSubmissionStatusInfo(assignment?.status)
+                                 const StatusIcon = info.icon
+                                 return (
+                                    <Badge className={cn('h-7 border px-3 text-[10px] font-bold uppercase tracking-wider', info.className)}>
+                                       <StatusIcon className='mr-1.5 size-3' />
+                                       {info.label}
+                                    </Badge>
+                                 )
+                              })()}
+                           </div>
+                           <div className='space-y-3'>
+                              <div className='flex items-center justify-between'>
+                                 <span className='text-sm font-semibold'>Tiến độ nhập liệu</span>
+                                 <span className='text-sm font-bold text-primary'>
+                                    {report.assignments?.find(a => a.id === viewAssignmentId)?.completionPct ?? 0}%
+                                 </span>
+                              </div>
+                              <div className='h-3 w-full bg-muted rounded-full overflow-hidden border'>
+                                 <div 
+                                    className='h-full bg-primary transition-all duration-500 ease-in-out' 
+                                    style={{ width: `${report.assignments?.find(a => a.id === viewAssignmentId)?.completionPct ?? 0}%` }}
+                                 />
+                              </div>
+                           </div>
+                        </Card>
+
+                        <Card className='rounded-3xl border p-8 shadow-sm'>
+                           <div className='flex items-center gap-3 mb-8'>
+                              <div className='h-6 w-1.5 rounded-full bg-primary' />
+                              <div className='text-xl font-bold text-primary'>Lịch sử phê duyệt & Phản hồi</div>
+                           </div>
+                           <div className='relative space-y-8 border-l-2 border-muted pl-8 ml-2'>
+                              {history.length === 0 ? (
+                                <div className='py-4 text-sm text-muted-foreground italic flex items-center gap-2'>
+                                   <Info className='size-4' />
+                                   Chưa có lịch sử phê duyệt cho bản nộp này.
+                                </div>
+                              ) : (
+                                history.map((h, idx) => (
+                                  <div key={h.id || idx} className='relative'>
+                                     <div className={`absolute -left-[41px] top-0 size-6 rounded-full border-4 bg-background transition-colors ${idx === 0 ? 'border-primary ring-4 ring-primary/10' : 'border-muted'}`} />
+                                     <div className='flex flex-col gap-2'>
+                                        <div className='text-[10px] font-bold text-muted-foreground uppercase tracking-widest'>
+                                          {h.createdAt ? format(new Date(h.createdAt), 'dd/MM/yyyy HH:mm') : '---'}
+                                        </div>
+                                        <div className='text-sm font-bold text-foreground'>
+                                          {h.userName} <span className='mx-2 font-normal text-muted-foreground'>•</span> 
+                                          <span className='text-primary uppercase tracking-tight'>{h.action}</span>
+                                        </div>
+                                        {h.note && (
+                                          <div className='mt-1 rounded-2xl bg-muted/40 p-4 text-sm italic text-foreground/80 border border-muted-foreground/10'>
+                                            &ldquo;{h.note}&rdquo;
+                                          </div>
+                                        )}
+                                        <div className='text-[11px] text-muted-foreground font-medium'>
+                                          Mã bản nộp: <span className='text-foreground'>{h.submissionCode}</span>
+                                        </div>
+                                     </div>
+                                  </div>
+                                ))
+                              )}
+                           </div>
+                        </Card>
+                     </div>
+
+                     <div className='space-y-8'>
+                        <Card className='rounded-3xl border border-primary/20 bg-primary/5 p-8 shadow-sm'>
+                           <div className='text-xs font-bold uppercase tracking-widest text-primary mb-6'>Thao tác Admin</div>
+                           <div className='space-y-4'>
+                              <Button 
+                                className='w-full h-12 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95'
+                                onClick={() => {
+                                  const assignment = report.assignments?.find(a => a.id === viewAssignmentId)
+                                  if (assignment?.submissionId) handleApproveDist(assignment.submissionId)
+                                }}
+                                disabled={approveDist.isPending || report.assignments?.find(a => a.id === viewAssignmentId)?.status !== 'DEPARTMENT_APPROVED'}
+                              >
+                                 <Send className='mr-2 size-4' />
+                                 Chốt số liệu (Xã)
+                              </Button>
+                              <Button 
+                                variant='destructive' 
+                                className='w-full h-12 rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all active:scale-95'
+                                onClick={() => {
+                                  const assignment = report.assignments?.find(a => a.id === viewAssignmentId)
+                                  if (assignment?.submissionId) handleRejectDist(assignment.submissionId)
+                                }}
+                                disabled={rejectDist.isPending || report.assignments?.find(a => a.id === viewAssignmentId)?.status !== 'DEPARTMENT_APPROVED'}
+                              >
+                                 <XCircle className='mr-2 size-4' />
+                                 Trả lại phòng
+                              </Button>
+                              <div className='pt-4 border-t border-primary/10 mt-4'>
+                                 <Button variant='outline' className='w-full h-12 rounded-xl font-bold border-primary/20 hover:bg-primary/5' asChild>
+                                    <Link 
+                                      to='/my/assignments/$assignmentId/input' 
+                                      params={{ assignmentId: viewAssignmentId }}
+                                    >
+                                       <Eye className='mr-2 size-4' />
+                                       Xem dữ liệu chi tiết
+                                    </Link>
+                                 </Button>
+                              </div>
+                           </div>
+                        </Card>
+
+                        <Card className='rounded-3xl border p-8 bg-muted/30 shadow-inner'>
+                           <div className='flex items-center gap-2 mb-3'>
+                              <AlertCircle className='size-4 text-muted-foreground' />
+                              <div className='text-[10px] font-bold text-muted-foreground uppercase tracking-widest'>Hướng dẫn</div>
+                           </div>
+                           <p className='text-xs text-muted-foreground leading-relaxed font-medium'>
+                              Nút <strong>"Chốt số liệu"</strong> sẽ chỉ khả dụng sau khi báo cáo đã được cấp Phòng duyệt hoàn tất. Sau khi chốt, số liệu sẽ được đưa vào hệ thống tổng hợp chung.
+                           </p>
+                        </Card>
+                     </div>
+                  </div>
+               )}
+            </div>
+
+            <DialogFooter className='px-8 py-6 border-t bg-muted/10'>
+               <Button variant='ghost' className='rounded-xl font-bold' onClick={() => setViewAssignmentId(null)}>Đóng cửa sổ</Button>
+            </DialogFooter>
+         </DialogContent>
+      </Dialog>
     </div>
   )
 }

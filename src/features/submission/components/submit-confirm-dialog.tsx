@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { Send, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 
 type SubmitConfirmDialogProps = {
   open: boolean
@@ -35,49 +36,70 @@ export function SubmitConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-[425px]'>
-        <DialogHeader>
-          <DialogTitle>Xác nhận nộp báo cáo</DialogTitle>
-          <DialogDescription>
-            Sau khi nộp, báo cáo sẽ được chuyển đến cán bộ quản lý để phê duyệt.
-            Bạn sẽ không thể chỉnh sửa trừ khi báo cáo bị trả lại.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className='sm:max-w-[480px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl'>
+        <div className='bg-primary/5 p-8 border-b border-primary/10'>
+          <div className='mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
+            <Send className='size-6' />
+          </div>
+          <DialogHeader className='text-left'>
+            <DialogTitle className='text-2xl font-bold text-slate-900'>Xác nhận nộp báo cáo</DialogTitle>
+            <DialogDescription className='text-slate-500 mt-2 text-sm leading-relaxed'>
+              Báo cáo của bạn sẽ được chuyển đến cán bộ quản lý đơn vị để kiểm tra và phê duyệt. 
+              Dữ liệu sẽ được khóa cho đến khi có phản hồi mới.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className='py-4'>
+        <div className='p-8 space-y-6'>
           {!isComplete && (
-            <div className='mb-4 flex items-start gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800'>
-              <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
+            <div className='flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800 border border-amber-100'>
+              <AlertCircle className='mt-0.5 h-4 w-4 shrink-0 text-amber-600' />
               <div>
-                <strong>Báo cáo chưa hoàn thành 100%.</strong> Bạn vẫn muốn nộp?
+                <strong className='block mb-0.5'>Báo cáo chưa hoàn tất (mới đạt {completionPct}%)</strong>
+                Bạn vẫn muốn nộp bản ghi này chứ?
               </div>
             </div>
           )}
 
-          <div className='space-y-2'>
-            <label htmlFor='note' className='text-sm font-medium'>
-              Ghi chú thêm (tùy chọn)
-            </label>
+          <div className='space-y-3'>
+            <Label htmlFor='note' className='text-xs font-bold uppercase tracking-widest text-slate-500 ml-1'>
+              Lời nhắn gửi người duyệt (Không bắt buộc)
+            </Label>
             <Textarea
               id='note'
-              placeholder='Nhập ghi chú cho người duyệt...'
+              placeholder='Nhập lời nhắn hoặc ghi chú giải trình nếu cần...'
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              rows={3}
+              className='min-h-[100px] rounded-2xl border-slate-200 focus:border-primary focus:ring-primary/10 transition-all resize-none p-4'
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className='bg-slate-50 p-6 px-8 flex gap-3 sm:gap-0'>
           <Button
-            variant='outline'
+            variant='ghost'
+            className='rounded-xl hover:bg-slate-200 text-slate-600 font-medium'
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            Hủy
+            Quay lại sửa
           </Button>
-          <Button onClick={handleConfirm} disabled={isSubmitting}>
-            {isSubmitting ? 'Đang nộp...' : 'Xác nhận nộp'}
+          <Button 
+            onClick={handleConfirm} 
+            disabled={isSubmitting}
+            className='rounded-xl px-8 font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95'
+          >
+            {isSubmitting ? (
+              <>
+                <div className='mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent' />
+                Đang gửi đi...
+              </>
+            ) : (
+              <>
+                Nộp báo cáo ngay
+                <CheckCircle2 className='ml-2 h-4 w-4' />
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

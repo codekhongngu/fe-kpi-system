@@ -308,14 +308,13 @@ export function ReportListPage() {
       <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
         <div>
           <div className='inline-flex items-center rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700'>
-            Quản lý báo cáo
+            Quản trị đợt báo cáo
           </div>
           <h1 className='mt-3 text-2xl font-bold tracking-tight'>
-            Danh sách báo cáo
+            Danh sách đợt báo cáo toàn xã
           </h1>
           <p className='mt-1 max-w-3xl text-sm text-muted-foreground'>
-            Theo dõi report instance được tạo từ template, giao đơn vị nhập liệu
-            và xử lý phê duyệt.
+            Khởi tạo, cấu hình và theo dõi tiến độ tổng thể của các đợt báo cáo trên toàn địa bàn.
           </p>
         </div>
         <div className='flex flex-wrap gap-2'>
@@ -341,7 +340,7 @@ export function ReportListPage() {
           <PermissionGuard action='report:create'>
             <Button type='button' onClick={openCreateForm}>
               <FilePlus2 className='me-2 size-4' />
-              Tạo báo cáo
+              Tạo đợt báo cáo
             </Button>
           </PermissionGuard>
         </div>
@@ -355,14 +354,7 @@ export function ReportListPage() {
       <Card>
         <CardHeader className='gap-4'>
           <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
-            <CardTitle>Quản lý danh sách báo cáo</CardTitle>
-            <ReportTabs
-              value={filters.tab}
-              visibleTabs={permission.visibleTabs}
-              onValueChange={(tab) =>
-                setFilters((prev) => ({ ...prev, tab, page: 1 }))
-              }
-            />
+            <CardTitle>Danh sách đợt báo cáo</CardTitle>
           </div>
         </CardHeader>
         <CardContent className='space-y-4'>
