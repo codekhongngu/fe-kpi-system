@@ -36,18 +36,13 @@ export function TemplateMetadataCard({ template }: TemplateMetadataCardProps) {
           isActive={template.isActive}
         />
       </CardHeader>
-      <CardContent className='grid gap-4 sm:grid-cols-2'>
+      <CardContent className='grid gap-4 sm:grid-cols-3'>
+        {/* First row: Thông tin chung, Mã biểu mẫu, Lĩnh vực, Loại biểu mẫu */}
         <div>
           <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
             Mã biểu mẫu
           </div>
           <div className='mt-1 text-sm font-semibold'>{template.code}</div>
-        </div>
-        <div>
-          <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-            Tên biểu mẫu
-          </div>
-          <div className='mt-1 text-sm font-semibold'>{template.name}</div>
         </div>
         <div>
           <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
@@ -59,14 +54,6 @@ export function TemplateMetadataCard({ template }: TemplateMetadataCardProps) {
         </div>
         <div>
           <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-            Kỳ báo cáo
-          </div>
-          <div className='mt-1 text-sm font-semibold'>
-            {periodLabel(template.periodType)}
-          </div>
-        </div>
-        <div>
-          <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
             Loại biểu mẫu
           </div>
           <div className='mt-1 text-sm font-semibold'>
@@ -74,6 +61,22 @@ export function TemplateMetadataCard({ template }: TemplateMetadataCardProps) {
               ? (templateTypeLabel[template.templateType] ??
                 template.templateType)
               : '--'}
+          </div>
+        </div>
+        
+        {/* Second row: Trạng thái, Tên biểu mẫu, Kỳ báo cáo */}
+        <div>
+          <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+            Tên biểu mẫu
+          </div>
+          <div className='mt-1 text-sm font-semibold'>{template.name}</div>
+        </div>
+        <div>
+          <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+            Kỳ báo cáo
+          </div>
+          <div className='mt-1 text-sm font-semibold'>
+            {periodLabel(template.periodType)}
           </div>
         </div>
         <div>

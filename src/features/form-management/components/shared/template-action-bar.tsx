@@ -26,11 +26,18 @@ export function TemplateActionBar({
   const status = template.templateStatus ?? 'DRAFT'
 
   return (
-    <div className='flex flex-wrap gap-2'>
+    <div className='flex flex-col gap-2'>
       <Button variant='outline' onClick={onEditMetadata} disabled={disabled}>
         <PencilLine className='size-4' />
         Chỉnh sửa
       </Button>
+
+      {(status === 'READY' || status === 'IN_USE') && onArchive && (
+        <Button variant='outline' onClick={onArchive} disabled={disabled}>
+          <Archive className='size-4' />
+          Lưu trữ
+        </Button>
+      )}
 
       {status === 'DRAFT' && onMarkReady && (
         <Button onClick={onMarkReady} disabled={disabled}>
@@ -43,13 +50,6 @@ export function TemplateActionBar({
         <Button onClick={onCreateCampaign} disabled={disabled}>
           <FilePlus2 className='size-4' />
           Tạo chiến dịch
-        </Button>
-      )}
-
-      {(status === 'READY' || status === 'IN_USE') && onArchive && (
-        <Button variant='outline' onClick={onArchive} disabled={disabled}>
-          <Archive className='size-4' />
-          Lưu trữ
         </Button>
       )}
 

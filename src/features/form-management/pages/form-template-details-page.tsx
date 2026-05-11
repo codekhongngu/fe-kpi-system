@@ -2,11 +2,16 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
+  Archive,
   ArrowLeft,
+  Copy,
   Eye,
+  FilePlus2,
+  PencilLine,
   RefreshCcw,
   Settings2,
   Table2,
+  Trash2,
   Workflow,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,8 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/template-management-api'
 import type { PeriodType, TemplateType } from '../api/types'
-import { TemplateActionBar } from '../components/shared/template-action-bar'
-import { TemplateMetadataCard } from '../components/shared/template-metadata-card'
+import { TemplateStatusBadge } from '../components/shared/template-status-badge'
 import { TemplateAttributesTab } from '../components/tabs/template-attributes-tab'
 import { TemplateCellConfigsTab } from '../components/tabs/template-cell-configs-tab'
 import { TemplateIndicatorsTab } from '../components/tabs/template-indicators-tab'
@@ -86,7 +90,7 @@ export function FormTemplateDetailsPage({
       isActive: boolean
     }) => formManagementApi.updateTemplate(templateId, payload),
     onSuccess: async () => {
-      toast.success('�� cập nhật thông tin chung biểu mẫu.')
+      toast.success('Đã cập nhật thông tin chung biểu mẫu.')
       await refreshTemplate()
       setOpenUpdateModal(false)
     },
@@ -219,6 +223,7 @@ export function FormTemplateDetailsPage({
         </div>
       ) : (
         <>
+          {/* Tầng 1: Header - Tiêu đề và nút điều hướng */}
           <div className='flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between'>
             <div className='min-w-0 space-y-2'>
               <h1 className='truncate text-3xl font-bold tracking-tight text-foreground'>
@@ -247,142 +252,231 @@ export function FormTemplateDetailsPage({
             </div>
           </div>
 
-          <div className='grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]'>
-            <div className='space-y-4'>
-              <TemplateMetadataCard template={template} />
-              <TemplateActionBar
-                template={template}
-                onEditMetadata={openModal}
-                onMarkReady={canEdit ? handleMarkReady : undefined}
-                onArchive={
-                  ['READY', 'IN_USE'].includes(
-                    template.templateStatus ?? 'DRAFT'
-                  )
-                    ? () => archiveMutation.mutate()
-                    : undefined
-                }
-                onClone={
-                  ['IN_USE', 'ARCHIVED'].includes(
-                    template.templateStatus ?? 'DRAFT'
-                  )
-                    ? () => cloneMutation.mutate()
-                    : undefined
-                }
-                onDelete={
-                  template.templateStatus === 'DRAFT'
-                    ? () => deleteMutation.mutate()
-                    : undefined
-                }
-                disabled={
-                  markReadyMutation.isPending ||
-                  archiveMutation.isPending ||
-                  deleteMutation.isPending ||
-                  cloneMutation.isPending
-                }
-              />
-              <div className='rounded-3xl border bg-card p-4 text-sm text-muted-foreground'>
-                <div className='font-medium text-foreground'>Mô tả</div>
-                <div className='mt-2 whitespace-pre-wrap'>
-                  {template.description || 'Không có mô tả'}
+          {/* Tầng 2: Info Bar - Thông tin chung và hành động */}
+          <div className='rounded-2xl border bg-card shadow-sm p-4'>
+            <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 items-start w-full'>
+              {/* Cột 1: Mã biểu mẫu & Trạng thái */}
+              <div className='space-y-2'>
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Mã biểu mẫu
+                  </div>
+                  <div className='mt-1 text-sm font-semibold truncate'>{template.code}</div>
                 </div>
-                <div className='mt-4 text-xs'>
-                  Kỳ báo cáo hiện tại: {periodLabel(template.periodType)}
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Trạng thái
+                  </div>
+                  <div className='mt-1'>
+                    <TemplateStatusBadge
+                      templateStatus={template.templateStatus}
+                      isActive={template.isActive}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột 2: Tên biểu mẫu & Lĩnh vực */}
+              <div className='space-y-2'>
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Tên biểu mẫu
+                  </div>
+                  <div className='mt-1 text-sm font-semibold truncate'>{template.name}</div>
+                </div>
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Lĩnh vực
+                  </div>
+                  <div className='mt-1 text-sm font-semibold truncate'>
+                    {template.fieldCategoryName ?? template.fieldCategoryId}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột 3: Kỳ báo cáo & Cập nhật lần cuối */}
+              <div className='space-y-2'>
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Kỳ báo cáo
+                  </div>
+                  <div className='mt-1 text-sm font-semibold'>{periodLabel(template.periodType)}</div>
+                </div>
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Cập nhật lần cuối
+                  </div>
+                  <div className='mt-1 text-sm font-semibold'>
+                    {template.updatedAt
+                      ? new Date(template.updatedAt).toLocaleString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '--'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột 4: Loại biểu mẫu & Mô tả */}
+              <div className='space-y-2'>
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Loại biểu mẫu
+                  </div>
+                  <div className='mt-1 text-sm font-semibold'>
+                    {template.templateType
+                      ? (template.templateType === 'AGGREGATE' ? 'Tổng hợp' : 'Đơn nhất')
+                      : '--'}
+                  </div>
+                </div>
+                <div>
+                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                    Mô tả
+                  </div>
+                  <div className='mt-1 text-sm font-semibold truncate max-w-[200px]'>
+                    {template.description || 'Không có mô tả'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột 5: Nhóm nút hành động */}
+              <div className='space-y-2 lg:col-span-2 xl:col-span-2'>
+                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                  Hành động
+                </div>
+                <div className='flex flex-wrap gap-1 mt-1'>
+                  <Button variant='outline' size='sm' onClick={openModal}>
+                    <PencilLine className='size-3' />
+                    <span className='hidden sm:inline ml-1'>Chỉnh sửa</span>
+                  </Button>
+
+                  {['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') && (
+                    <Button variant='outline' size='sm' onClick={() => archiveMutation.mutate()}>
+                      <Archive className='size-3' />
+                      <span className='hidden sm:inline ml-1'>Lưu trữ</span>
+                    </Button>
+                  )}
+
+                  {template.templateStatus === 'DRAFT' && canEdit && (
+                    <Button size='sm' onClick={handleMarkReady}>
+                      <FilePlus2 className='size-3' />
+                      <span className='hidden sm:inline ml-1'>Sẵn sàng</span>
+                    </Button>
+                  )}
+
+                  {['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') && (
+                    <Button variant='outline' size='sm' onClick={() => cloneMutation.mutate()}>
+                      <Copy className='size-3' />
+                      <span className='hidden sm:inline ml-1'>Sao chép</span>
+                    </Button>
+                  )}
+
+                  {template.templateStatus === 'DRAFT' && (
+                    <Button variant='destructive' size='sm' onClick={() => deleteMutation.mutate()}>
+                      <Trash2 className='size-3' />
+                      <span className='hidden sm:inline ml-1'>Xóa</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className='rounded-3xl border bg-card p-2'>
-              <Tabs defaultValue='indicators'>
-                <TabsList className='grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-muted p-1 lg:grid-cols-5'>
-                  <TabsTrigger
-                    className='h-11 justify-center gap-2 rounded-xl'
-                    value='indicators'
-                  >
-                    <Workflow className='size-4' />
-                    Chỉ tiêu
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className='h-11 justify-center gap-2 rounded-xl'
-                    value='attributes'
-                  >
-                    <Table2 className='size-4' />
-                    Thuộc tính
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className='h-11 justify-center gap-2 rounded-xl'
-                    value='cell-configs'
-                  >
-                    <Settings2 className='size-4' />
-                    Cấu hình ô
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className='h-11 justify-center gap-2 rounded-xl'
-                    value='scopes'
-                  >
-                    <Eye className='size-4' />
-                    Phân bổ chỉ tiêu
-                  </TabsTrigger>
-                  <TabsTrigger
-                    className='h-11 justify-center gap-2 rounded-xl'
-                    value='preview'
-                  >
-                    <Eye className='size-4' />
-                    Xem trước
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent
+          {/* Tầng 3: Main Content - Tabs nội dung chính */}
+          <div className='rounded-3xl border bg-card p-2'>
+            <Tabs defaultValue='indicators'>
+              <TabsList className='grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-muted p-1 lg:grid-cols-5'>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
                   value='indicators'
-                  className='mt-2 flex-1 overflow-auto'
                 >
-                  <div className='px-4 pt-4 pb-6 lg:px-6'>
-                    <TemplateIndicatorsTab templateId={templateId} />
-                  </div>
-                </TabsContent>
-
-                <TabsContent
+                  <Workflow className='size-4' />
+                  Chỉ tiêu
+                </TabsTrigger>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
                   value='attributes'
-                  className='mt-2 flex-1 overflow-auto'
                 >
-                  <div className='px-4 pt-4 pb-6 lg:px-6'>
-                    <TemplateAttributesTab templateId={templateId} />
-                  </div>
-                </TabsContent>
-
-                <TabsContent
+                  <Table2 className='size-4' />
+                  Thuộc tính
+                </TabsTrigger>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
                   value='cell-configs'
-                  className='mt-2 flex-1 overflow-auto'
                 >
-                  <div className='px-4 pt-4 pb-6 lg:px-6'>
-                    <TemplateCellConfigsTab
-                      templateId={templateId}
-                      lockTemplateSelection
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent
+                  <Settings2 className='size-4' />
+                  Cấu hình ô
+                </TabsTrigger>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
                   value='scopes'
-                  className='mt-2 flex-1 overflow-auto'
                 >
-                  <div className='px-4 pt-4 pb-6 lg:px-6'>
-                    <TemplateScopesTab templateId={templateId} />
-                  </div>
-                </TabsContent>
-
-                <TabsContent
+                  <Eye className='size-4' />
+                  Phân bổ chỉ tiêu
+                </TabsTrigger>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
                   value='preview'
-                  className='mt-2 flex-1 overflow-auto'
                 >
-                  <div className='px-4 pt-4 pb-6 lg:px-6'>
-                    <TemplatePreviewTab
-                      templateId={templateId}
-                      lockTemplateSelection
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
+                  <Eye className='size-4' />
+                  Xem trước
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent
+                value='indicators'
+                className='mt-2 flex-1 overflow-auto'
+              >
+                <div className='px-4 pt-4 pb-6 lg:px-6'>
+                  <TemplateIndicatorsTab templateId={templateId} />
+                </div>
+              </TabsContent>
+
+              <TabsContent
+                value='attributes'
+                className='mt-2 flex-1 overflow-auto'
+              >
+                <div className='px-4 pt-4 pb-6 lg:px-6'>
+                  <TemplateAttributesTab templateId={templateId} />
+                </div>
+              </TabsContent>
+
+              <TabsContent
+                value='cell-configs'
+                className='mt-2 flex-1 overflow-auto'
+              >
+                <div className='px-4 pt-4 pb-6 lg:px-6'>
+                  <TemplateCellConfigsTab
+                    templateId={templateId}
+                    lockTemplateSelection
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent
+                value='scopes'
+                className='mt-2 flex-1 overflow-auto'
+              >
+                <div className='px-4 pt-4 pb-6 lg:px-6'>
+                  <TemplateScopesTab templateId={templateId} />
+                </div>
+              </TabsContent>
+
+              <TabsContent
+                value='preview'
+                className='mt-2 flex-1 overflow-auto'
+              >
+                <div className='px-4 pt-4 pb-6 lg:px-6'>
+                  <TemplatePreviewTab
+                    templateId={templateId}
+                    lockTemplateSelection
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </>
       )}
