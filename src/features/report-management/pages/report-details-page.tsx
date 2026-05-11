@@ -9,6 +9,7 @@ import {
   Download,
   Filter,
   Eye,
+  History,
   Info,
   Lock,
   MoreVertical,
@@ -19,11 +20,10 @@ import {
   RotateCcw,
   Send,
   XCircle,
-  FileText,
   AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+
 import { apiClient } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -39,6 +39,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -57,9 +64,15 @@ import { CampaignDefaultValuesTab } from '../components/tabs/campaign-default-va
 import { CampaignScopesTab } from '../components/tabs/campaign-scopes-tab'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
 import { useSubmissionHistory } from '@/features/submission/hooks/use-my-assignments'
-import { useApproveDistrict, useRejectDistrict } from '@/features/submission/hooks/use-approvals'
+import { useApproveDistrict, useRejectDistrict, useApproveDepartment, useRejectDepartment } from '@/features/submission/hooks/use-approvals'
 import { getSubmissionStatusInfo } from '@/features/submission/utils/submission-status'
 import { submissionApi } from '@/features/submission/api/submission-api'
+import { SubmissionTimeline } from '@/components/submission/submission-timeline'
+import { Textarea } from '@/components/ui/textarea'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+
 
 type OrganizationTreeNode = {
   id: string
@@ -118,28 +131,93 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
   const [indicatorSearch, setIndicatorSearch] = useState('')
   const [viewAssignmentId, setViewAssignmentId] = useState<string | null>(null)
 
+  const [assignmentSearch, setAssignmentSearch] = useState('')
+  const [assignmentStatusFilter, setAssignmentStatusFilter] = useState<string>('all')
+
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false)
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [actionType, setActionType] = useState<'DEPARTMENT' | 'DISTRICT' | null>(null)
+  const [isAggregating, setIsAggregating] = useState(false)
+
+  const approveDept = useApproveDepartment()
+  const rejectDept = useRejectDepartment()
   const approveDist = useApproveDistrict()
   const rejectDist = useRejectDistrict()
 
   const historyQuery = useSubmissionHistory(viewAssignmentId)
   const history = historyQuery.data || []
 
-  const handleApproveDist = (submissionId: string) => {
-    approveDist.mutate(submissionId, {
+  const handleApprove = (type: 'DEPARTMENT' | 'DISTRICT') => {
+    setActionType(type)
+    setIsApproveModalOpen(true)
+  }
+
+  const handleReject = (type: 'DEPARTMENT' | 'DISTRICT') => {
+    setActionType(type)
+    setRejectReason('')
+    setIsRejectModalOpen(true)
+  }
+
+  const confirmApprove = () => {
+    if (!viewAssignmentId || !actionType) return
+
+    const submissionId = report?.assignments?.find(a => a.id === viewAssignmentId)?.id
+    if (!submissionId) return
+
+    const mutation = actionType === 'DEPARTMENT' ? approveDept : approveDist
+    mutation.mutate(submissionId, {
       onSuccess: () => {
         detailQuery.refetch()
+        setIsApproveModalOpen(false)
       }
     })
   }
 
-  const handleRejectDist = (submissionId: string) => {
-    const reason = window.prompt('Nhập lý do trả lại:')
-    if (reason) {
-      rejectDist.mutate({ submissionId, reason }, {
-        onSuccess: () => {
-          detailQuery.refetch()
-        }
+  const confirmReject = () => {
+    if (!viewAssignmentId || !actionType || !rejectReason.trim()) {
+      if (!rejectReason.trim()) toast.error('Vui lòng nhập lý do từ chối')
+      return
+    }
+
+    const submissionId = report?.assignments?.find(a => a.id === viewAssignmentId)?.id
+    if (!submissionId) return
+
+    const mutation = actionType === 'DEPARTMENT' ? rejectDept : rejectDist
+    mutation.mutate({ submissionId, reason: rejectReason }, {
+      onSuccess: () => {
+        detailQuery.refetch()
+        setIsRejectModalOpen(false)
+      }
+    })
+  }
+
+  const handleAggregate = async () => {
+    if (!report) return
+    setIsAggregating(true)
+    try {
+      // 1. Create summary
+      const createRes = await apiClient.post('/summaries', {
+        formId: report.formId,
+        periodType: report.periodType,
+        periodFrom: report.deadlineFrom,
+        periodTo: report.deadlineTo,
+        periodCode: report.periodCode,
+        periodName: report.periodName,
+        orgId: report.unitId || 'ROOT' // Default to ROOT if not specified
       })
+
+      const summaryId = createRes.data.id
+
+      // 2. Recompute
+      await apiClient.post(`/summaries/${summaryId}/recompute`)
+
+      toast.success('Tổng hợp báo cáo thành công')
+      detailQuery.refetch()
+    } catch (error: any) {
+      toast.error('Lỗi tổng hợp: ' + (error.response?.data?.message || error.message))
+    } finally {
+      setIsAggregating(false)
     }
   }
 
@@ -403,7 +481,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
 
           <div className='rounded-3xl border bg-card p-2'>
             <Tabs defaultValue='general'>
-              <TabsList className='grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-muted p-1 lg:grid-cols-4'>
+              <TabsList className='grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-muted p-1 lg:grid-cols-5'>
                 <TabsTrigger
                   className='h-11 justify-center gap-2 rounded-xl'
                   value='general'
@@ -424,6 +502,13 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                 >
                   <Settings2 className='size-4' />
                   Giá trị mặc định
+                </TabsTrigger>
+                <TabsTrigger
+                  className='h-11 justify-center gap-2 rounded-xl'
+                  value='approvals'
+                >
+                  <CheckCircle2 className='size-4' />
+                  Phê duyệt & Tổng hợp
                 </TabsTrigger>
                 <TabsTrigger
                   className='h-11 justify-center gap-2 rounded-xl'
@@ -660,7 +745,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                               {Math.round(
                                 ((report.assignments?.length ?? 0) *
                                   (report.completionPercent ?? 0)) /
-                                  100
+                                100
                               )}{' '}
                               Hoàn thành
                             </span>
@@ -668,11 +753,11 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                               {Math.max(
                                 0,
                                 (report.assignments?.length ?? 0) -
-                                  Math.round(
-                                    ((report.assignments?.length ?? 0) *
-                                      (report.completionPercent ?? 0)) /
-                                      100
-                                  )
+                                Math.round(
+                                  ((report.assignments?.length ?? 0) *
+                                    (report.completionPercent ?? 0)) /
+                                  100
+                                )
                               )}{' '}
                               Chờ xử lý
                             </span>
@@ -848,21 +933,269 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                     </div>
                   </section>
 
-                  <div className='relative h-48 overflow-hidden rounded-3xl border bg-muted'>
-                    <div className='absolute inset-0 bg-gradient-to-r from-primary/40 to-transparent' />
-                    <div className='relative flex h-full items-center px-8'>
-                      <div className='max-w-md text-primary-foreground'>
-                        <div className='text-lg font-semibold'>
-                          Hỗ trợ kỹ thuật
-                        </div>
-                        <div className='mt-2 text-sm text-primary-foreground/90'>
-                          Nếu gặp khó khăn trong quá trình tổng hợp báo cáo, vui
-                          lòng liên hệ đội ngũ quản trị hệ thống để được hỗ trợ
-                          kịp thời.
-                        </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value='approvals' className='p-0'>
+                <div className='flex h-[700px] overflow-hidden rounded-b-3xl border-t bg-background'>
+                  {/* Master Column */}
+                  <div className='flex w-full flex-col border-e bg-muted/5 md:w-[350px]'>
+                    <div className='space-y-3 p-4'>
+                      <div className='relative'>
+                        <Filter className='absolute top-2.5 left-3 h-4 w-4 text-muted-foreground' />
+                        <Input
+                          placeholder='Tìm đơn vị...'
+                          className='h-9 pl-9 rounded-xl text-xs'
+                          value={assignmentSearch}
+                          onChange={(e) => setAssignmentSearch(e.target.value)}
+                        />
                       </div>
+                      <Select
+                        value={assignmentStatusFilter}
+                        onValueChange={setAssignmentStatusFilter}
+                      >
+                        <SelectTrigger className='h-9 rounded-xl border-muted bg-background text-[11px]'>
+                          <SelectValue placeholder='Lọc trạng thái' />
+                        </SelectTrigger>
+                        <SelectContent className='rounded-xl'>
+                          <SelectItem value='all'>Tất cả trạng thái</SelectItem>
+                          <SelectItem value='NOT_STARTED'>Chưa bắt đầu</SelectItem>
+                          <SelectItem value='PENDING_DEPARTMENT'>Chờ phòng duyệt</SelectItem>
+                          <SelectItem value='DEPARTMENT_APPROVED'>Phòng đã duyệt</SelectItem>
+                          <SelectItem value='DISTRICT_APPROVED'>Đã chốt (Xã)</SelectItem>
+                          <SelectItem value='REJECTED'>Bị trả lại</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+
+                    <ScrollArea className='flex-1'>
+                      <div className='divide-y divide-muted/10'>
+                        {departmentRows
+                          .filter(row => {
+                            const matchesSearch = row.unitName.toLowerCase().includes(assignmentSearch.toLowerCase())
+                            const matchesStatus = assignmentStatusFilter === 'all' || row.status === assignmentStatusFilter
+                            return matchesSearch && matchesStatus
+                          })
+                          .map((row) => {
+                            const isActive = viewAssignmentId === row.id
+                            const statusInfo = getSubmissionStatusInfo(row.status)
+                            const StatusIcon = statusInfo.icon
+
+                            return (
+                              <button
+                                key={row.id}
+                                className={cn(
+                                  'flex w-full flex-col gap-1.5 p-4 text-left transition-all hover:bg-muted/30',
+                                  isActive && 'bg-primary/5 shadow-[inset_4px_0_0_0_theme(colors.primary.DEFAULT)]'
+                                )}
+                                onClick={() => setViewAssignmentId(row.id)}
+                              >
+                                <div className='flex items-center justify-between gap-2'>
+                                  <span className={cn(
+                                    'text-sm font-bold truncate',
+                                    isActive ? 'text-primary' : 'text-foreground'
+                                  )}>
+                                    {row.unitName}
+                                  </span>
+                                  <Badge
+                                    variant='outline'
+                                    className={cn(
+                                      'shrink-0 h-4 px-1 text-[8px] font-bold uppercase tracking-tighter border-none',
+                                      statusInfo.className
+                                    )}
+                                  >
+                                    {statusInfo.label}
+                                  </Badge>
+                                </div>
+                                <div className='flex items-center justify-between text-[10px] text-muted-foreground'>
+                                  <span>{row.assigneeName}</span>
+                                  <span>{formatTimeDashDate(row.updatedAt)}</span>
+                                </div>
+                              </button>
+                            )
+                          })}
+                      </div>
+                    </ScrollArea>
                   </div>
+
+                  {/* Detail Column */}
+                  <div className='flex flex-1 flex-col overflow-hidden'>
+                    {viewAssignmentId ? (
+                      <div className='flex flex-1 flex-col overflow-hidden'>
+                        <div className='flex items-center justify-between border-b px-6 py-4'>
+                          <div>
+                            <h3 className='text-lg font-bold text-foreground'>
+                              {departmentRows.find(r => r.id === viewAssignmentId)?.unitName}
+                            </h3>
+                            <p className='text-xs text-muted-foreground'>
+                              Chi tiết nhiệm vụ báo cáo và lịch sử phê duyệt
+                            </p>
+                          </div>
+                          <div className='flex items-center gap-2'>
+                            <Button variant='outline' size='sm' className='h-9 rounded-xl' asChild>
+                              <Link to='/my/assignments/$assignmentId/input' params={{ assignmentId: viewAssignmentId }}>
+                                <Eye className='mr-2 size-4' />
+                                Xem dữ liệu
+                              </Link>
+                            </Button>
+
+                            {(() => {
+                              const row = departmentRows.find(r => r.id === viewAssignmentId)
+                              if (!row) return null
+
+                              if (row.status === 'PENDING_DEPARTMENT') {
+                                return (
+                                  <>
+                                    <Button
+                                      size='sm'
+                                      className='h-9 rounded-xl bg-green-600 hover:bg-green-700'
+                                      onClick={() => handleApprove('DEPARTMENT')}
+                                      disabled={approveDept.isPending}
+                                    >
+                                      <CheckCircle2 className='mr-2 size-4' />
+                                      Duyệt Phòng
+                                    </Button>
+                                    <Button
+                                      variant='destructive'
+                                      size='sm'
+                                      className='h-9 rounded-xl'
+                                      onClick={() => handleReject('DEPARTMENT')}
+                                      disabled={rejectDept.isPending}
+                                    >
+                                      <XCircle className='mr-2 size-4' />
+                                      Từ chối
+                                    </Button>
+                                  </>
+                                )
+                              }
+
+                              if (row.status === 'DEPARTMENT_APPROVED') {
+                                return (
+                                  <>
+                                    <Button
+                                      size='sm'
+                                      className='h-9 rounded-xl'
+                                      onClick={() => handleApprove('DISTRICT')}
+                                      disabled={approveDist.isPending}
+                                    >
+                                      <CheckCircle2 className='mr-2 size-4' />
+                                      Chốt Số (Xã)
+                                    </Button>
+                                    <Button
+                                      variant='destructive'
+                                      size='sm'
+                                      className='h-9 rounded-xl'
+                                      onClick={() => handleReject('DISTRICT')}
+                                      disabled={rejectDist.isPending}
+                                    >
+                                      <XCircle className='mr-2 size-4' />
+                                      Từ chối
+                                    </Button>
+                                  </>
+                                )
+                              }
+
+                              return null
+                            })()}
+                          </div>
+                        </div>
+
+                        <ScrollArea className='flex-1 p-6'>
+                          <div className='space-y-8'>
+                            {/* Summary Stats */}
+                            <div className='grid grid-cols-3 gap-4'>
+                              <Card className='p-4 bg-muted/20 border-none rounded-2xl'>
+                                <p className='text-[10px] font-bold text-muted-foreground uppercase'>Trạng thái</p>
+                                <div className='mt-1 flex items-center gap-2'>
+                                  {(() => {
+                                    const row = departmentRows.find(r => r.id === viewAssignmentId)
+                                    const info = getSubmissionStatusInfo(row?.status)
+                                    const Icon = info.icon
+                                    return (
+                                      <>
+                                        <Icon className={cn('size-4', info.className.split(' ')[0])} />
+                                        <span className='text-sm font-bold'>{info.label}</span>
+                                      </>
+                                    )
+                                  })()}
+                                </div>
+                              </Card>
+                              <Card className='p-4 bg-muted/20 border-none rounded-2xl'>
+                                <p className='text-[10px] font-bold text-muted-foreground uppercase'>Tiến độ</p>
+                                <div className='mt-1 flex items-baseline gap-1'>
+                                  <span className='text-xl font-bold'>
+                                    {report.assignments?.find(a => a.id === viewAssignmentId)?.completionPercent || 0}
+                                  </span>
+                                  <span className='text-xs font-medium text-muted-foreground'>%</span>
+                                </div>
+                              </Card>
+                              <Card className='p-4 bg-primary/10 border-none rounded-2xl text-primary'>
+                                <p className='text-[10px] font-bold opacity-70 uppercase'>Hạn chốt</p>
+                                <p className='mt-1 text-sm font-bold'>
+                                  {formatDate(report.deadlineTo)}
+                                </p>
+                              </Card>
+                            </div>
+
+                            {/* Timeline */}
+                            <div className='space-y-4'>
+                              <div className='flex items-center gap-2 text-sm font-bold'>
+                                <History className='size-4 text-primary' />
+                                Lịch sử quy trình
+                              </div>
+                              <div className='rounded-2xl border bg-muted/5 p-6'>
+                                {historyQuery.isLoading ? (
+                                  <div className='py-8 text-center text-xs text-muted-foreground'>
+                                    Đang tải lịch sử...
+                                  </div>
+                                ) : history.length === 0 ? (
+                                  <div className='py-8 text-center text-xs text-muted-foreground'>
+                                    Chưa có dữ liệu lịch sử
+                                  </div>
+                                ) : (
+                                  <SubmissionTimeline history={history} />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    ) : (
+                      <div className='flex flex-1 flex-col items-center justify-center p-12 text-center text-muted-foreground'>
+                        <div className='mb-4 rounded-3xl bg-muted/20 p-6'>
+                          <Workflow className='size-10 opacity-20' />
+                        </div>
+                        <h4 className='font-bold text-foreground/70'>Chọn đơn vị để xem chi tiết</h4>
+                        <p className='mt-1 max-w-[250px] text-xs leading-relaxed'>
+                          Hãy chọn một đơn vị từ danh sách bên trái để kiểm tra tiến độ và thực hiện phê duyệt.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className='flex items-center justify-between border-t bg-muted/5 p-4 rounded-b-3xl'>
+                  <div className='flex items-center gap-2 text-xs font-medium text-muted-foreground'>
+                    <AlertCircle className='size-4' />
+                    Số liệu sẽ được tổng hợp vào báo cáo chung sau khi tất cả các đơn vị đã chốt số.
+                  </div>
+                  <Button
+                    className='rounded-xl font-bold shadow-lg shadow-primary/20'
+                    onClick={handleAggregate}
+                    disabled={isAggregating}
+                  >
+                    {isAggregating ? (
+                      <>
+                        <RotateCcw className='mr-2 size-4 animate-spin' />
+                        Đang tổng hợp...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className='mr-2 size-4' />
+                        Tổng hợp báo cáo
+                      </>
+                    )}
+                  </Button>
                 </div>
               </TabsContent>
 
@@ -917,151 +1250,85 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
         />
       )}
 
-      {/* Modal Phê duyệt Chi tiết (District Level) */}
-      <Dialog open={!!viewAssignmentId} onOpenChange={(open) => !open && setViewAssignmentId(null)}>
-         <DialogContent className='max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-3xl'>
-            <DialogHeader className='px-8 py-6 border-b bg-muted/10'>
-               <DialogTitle className='text-2xl font-bold text-primary'>Chi tiết bản nộp đơn vị</DialogTitle>
-               <DialogDescription className='text-base font-medium'>
-                  Xem chi tiết tiến độ và thực hiện phê duyệt/trả lại báo cáo cho đơn vị.
-               </DialogDescription>
-            </DialogHeader>
-
-            <div className='flex-1 overflow-y-auto p-8'>
-               {!viewAssignmentId ? null : (
-                  <div className='grid gap-8 lg:grid-cols-3'>
-                     <div className='lg:col-span-2 space-y-8'>
-                        <Card className='rounded-3xl border bg-muted/5 p-8 shadow-sm'>
-                           <div className='flex items-center justify-between mb-6'>
-                              <div className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-                                 Trạng thái hiện tại
-                              </div>
-                              {(() => {
-                                 const assignment = report.assignments?.find(a => a.id === viewAssignmentId)
-                                 const info = getSubmissionStatusInfo(assignment?.status)
-                                 const StatusIcon = info.icon
-                                 return (
-                                    <Badge className={cn('h-7 border px-3 text-[10px] font-bold uppercase tracking-wider', info.className)}>
-                                       <StatusIcon className='mr-1.5 size-3' />
-                                       {info.label}
-                                    </Badge>
-                                 )
-                              })()}
-                           </div>
-                           <div className='space-y-3'>
-                              <div className='flex items-center justify-between'>
-                                 <span className='text-sm font-semibold'>Tiến độ nhập liệu</span>
-                                 <span className='text-sm font-bold text-primary'>
-                                    {report.assignments?.find(a => a.id === viewAssignmentId)?.completionPct ?? 0}%
-                                 </span>
-                              </div>
-                              <div className='h-3 w-full bg-muted rounded-full overflow-hidden border'>
-                                 <div 
-                                    className='h-full bg-primary transition-all duration-500 ease-in-out' 
-                                    style={{ width: `${report.assignments?.find(a => a.id === viewAssignmentId)?.completionPct ?? 0}%` }}
-                                 />
-                              </div>
-                           </div>
-                        </Card>
-
-                        <Card className='rounded-3xl border p-8 shadow-sm'>
-                           <div className='flex items-center gap-3 mb-8'>
-                              <div className='h-6 w-1.5 rounded-full bg-primary' />
-                              <div className='text-xl font-bold text-primary'>Lịch sử phê duyệt & Phản hồi</div>
-                           </div>
-                           <div className='relative space-y-8 border-l-2 border-muted pl-8 ml-2'>
-                              {history.length === 0 ? (
-                                <div className='py-4 text-sm text-muted-foreground italic flex items-center gap-2'>
-                                   <Info className='size-4' />
-                                   Chưa có lịch sử phê duyệt cho bản nộp này.
-                                </div>
-                              ) : (
-                                history.map((h, idx) => (
-                                  <div key={h.id || idx} className='relative'>
-                                     <div className={`absolute -left-[41px] top-0 size-6 rounded-full border-4 bg-background transition-colors ${idx === 0 ? 'border-primary ring-4 ring-primary/10' : 'border-muted'}`} />
-                                     <div className='flex flex-col gap-2'>
-                                        <div className='text-[10px] font-bold text-muted-foreground uppercase tracking-widest'>
-                                          {h.createdAt ? format(new Date(h.createdAt), 'dd/MM/yyyy HH:mm') : '---'}
-                                        </div>
-                                        <div className='text-sm font-bold text-foreground'>
-                                          {h.userName} <span className='mx-2 font-normal text-muted-foreground'>•</span> 
-                                          <span className='text-primary uppercase tracking-tight'>{h.action}</span>
-                                        </div>
-                                        {h.note && (
-                                          <div className='mt-1 rounded-2xl bg-muted/40 p-4 text-sm italic text-foreground/80 border border-muted-foreground/10'>
-                                            &ldquo;{h.note}&rdquo;
-                                          </div>
-                                        )}
-                                        <div className='text-[11px] text-muted-foreground font-medium'>
-                                          Mã bản nộp: <span className='text-foreground'>{h.submissionCode}</span>
-                                        </div>
-                                     </div>
-                                  </div>
-                                ))
-                              )}
-                           </div>
-                        </Card>
-                     </div>
-
-                     <div className='space-y-8'>
-                        <Card className='rounded-3xl border border-primary/20 bg-primary/5 p-8 shadow-sm'>
-                           <div className='text-xs font-bold uppercase tracking-widest text-primary mb-6'>Thao tác Admin</div>
-                           <div className='space-y-4'>
-                              <Button 
-                                className='w-full h-12 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all active:scale-95'
-                                onClick={() => {
-                                  const assignment = report.assignments?.find(a => a.id === viewAssignmentId)
-                                  if (assignment?.submissionId) handleApproveDist(assignment.submissionId)
-                                }}
-                                disabled={approveDist.isPending || report.assignments?.find(a => a.id === viewAssignmentId)?.status !== 'DEPARTMENT_APPROVED'}
-                              >
-                                 <Send className='mr-2 size-4' />
-                                 Chốt số liệu (Xã)
-                              </Button>
-                              <Button 
-                                variant='destructive' 
-                                className='w-full h-12 rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all active:scale-95'
-                                onClick={() => {
-                                  const assignment = report.assignments?.find(a => a.id === viewAssignmentId)
-                                  if (assignment?.submissionId) handleRejectDist(assignment.submissionId)
-                                }}
-                                disabled={rejectDist.isPending || report.assignments?.find(a => a.id === viewAssignmentId)?.status !== 'DEPARTMENT_APPROVED'}
-                              >
-                                 <XCircle className='mr-2 size-4' />
-                                 Trả lại phòng
-                              </Button>
-                              <div className='pt-4 border-t border-primary/10 mt-4'>
-                                 <Button variant='outline' className='w-full h-12 rounded-xl font-bold border-primary/20 hover:bg-primary/5' asChild>
-                                    <Link 
-                                      to='/my/assignments/$assignmentId/input' 
-                                      params={{ assignmentId: viewAssignmentId }}
-                                    >
-                                       <Eye className='mr-2 size-4' />
-                                       Xem dữ liệu chi tiết
-                                    </Link>
-                                 </Button>
-                              </div>
-                           </div>
-                        </Card>
-
-                        <Card className='rounded-3xl border p-8 bg-muted/30 shadow-inner'>
-                           <div className='flex items-center gap-2 mb-3'>
-                              <AlertCircle className='size-4 text-muted-foreground' />
-                              <div className='text-[10px] font-bold text-muted-foreground uppercase tracking-widest'>Hướng dẫn</div>
-                           </div>
-                           <p className='text-xs text-muted-foreground leading-relaxed font-medium'>
-                              Nút <strong>"Chốt số liệu"</strong> sẽ chỉ khả dụng sau khi báo cáo đã được cấp Phòng duyệt hoàn tất. Sau khi chốt, số liệu sẽ được đưa vào hệ thống tổng hợp chung.
-                           </p>
-                        </Card>
-                     </div>
-                  </div>
-               )}
+      {/* Approve Modal */}
+      <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
+        <DialogContent className='sm:max-w-[420px] rounded-[2rem] p-8 border-none shadow-2xl'>
+          <DialogHeader>
+            <div className='mx-auto size-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4'>
+              <CheckCircle2 className='size-10' />
             </div>
+            <DialogTitle className='text-2xl font-black text-center text-foreground'>
+              Phê duyệt dữ liệu
+            </DialogTitle>
+            <DialogDescription className='text-sm text-center font-medium leading-relaxed pt-2'>
+              {actionType === 'DEPARTMENT'
+                ? 'Phê duyệt báo cáo này ở cấp phòng ban? Dữ liệu sẽ được chuyển lên cấp xã để chốt số.'
+                : 'Chốt số báo cáo này ở cấp xã? Sau khi chốt, dữ liệu sẽ chính thức được ghi nhận vào báo cáo tổng hợp.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className='mt-8 flex flex-col sm:flex-row gap-3'>
+            <Button
+              variant='ghost'
+              className='flex-1 rounded-xl font-bold h-12'
+              onClick={() => setIsApproveModalOpen(false)}
+            >
+              Xem lại
+            </Button>
+            <Button
+              className='flex-1 rounded-xl font-black h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20'
+              onClick={confirmApprove}
+              disabled={approveDept.isPending || approveDist.isPending}
+            >
+              {approveDept.isPending || approveDist.isPending ? 'Đang xử lý...' : 'Xác nhận duyệt'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-            <DialogFooter className='px-8 py-6 border-t bg-muted/10'>
-               <Button variant='ghost' className='rounded-xl font-bold' onClick={() => setViewAssignmentId(null)}>Đóng cửa sổ</Button>
-            </DialogFooter>
-         </DialogContent>
+      {/* Reject Modal */}
+      <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
+        <DialogContent className='sm:max-w-[500px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl'>
+          <DialogHeader className='px-8 pt-8'>
+            <DialogTitle className='text-2xl font-black flex items-center gap-3 text-destructive'>
+              <XCircle className='size-7' />
+              Từ chối bản nộp
+            </DialogTitle>
+            <DialogDescription className='text-sm pt-2 font-medium leading-relaxed'>
+              Báo cáo này sẽ được gửi trả lại cho cấp dưới để chỉnh sửa. Vui lòng ghi rõ lý do.
+            </DialogDescription>
+          </DialogHeader>
+          <div className='px-8 py-6'>
+            <div className='space-y-3'>
+              <Label htmlFor='reason' className='text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1'>
+                Lý do trả lại chi tiết
+              </Label>
+              <Textarea
+                id='reason'
+                placeholder='Ví dụ: Số liệu doanh thu tháng này chưa khớp với hóa đơn, vui lòng kiểm tra lại...'
+                className='min-h-[140px] rounded-2xl border-muted bg-muted/20 focus-visible:ring-destructive/20 p-4 text-sm'
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className='px-8 pb-8 flex sm:justify-between gap-3'>
+            <Button
+              variant='ghost'
+              className='rounded-xl font-bold px-6'
+              onClick={() => setIsRejectModalOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant='destructive'
+              className='rounded-xl px-8 font-black shadow-lg shadow-destructive/20'
+              onClick={confirmReject}
+              disabled={rejectDept.isPending || rejectDist.isPending}
+            >
+              {rejectDept.isPending || rejectDist.isPending ? 'Đang thực hiện...' : 'Xác nhận trả lại'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   )
