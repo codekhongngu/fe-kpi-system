@@ -376,24 +376,37 @@ export const formManagementApi = {
             ? false
             : undefined
 
-    const requestParams: Record<string, string | number | boolean> = {
+    const requestParams: Record<string, string | number | boolean | string[]> = {
       page: typeof rawParams.page === 'number' ? rawParams.page : 1,
       limit: typeof rawParams.limit === 'number' ? rawParams.limit : 20,
     }
 
+    // Handle search parameters
     if (search) {
       requestParams.q = search
       requestParams.search = search
     }
 
+    // Handle category parameters (try multiple possible field names)
     if (category) {
       requestParams.fieldCategoryId = category
+      requestParams.category = category
+      requestParams.fieldCategory = category
     }
 
+    // Handle period parameters
     if (periodType) {
       requestParams.periodType = periodType
+      requestParams.period = periodType
     }
 
+    // Handle template status (comma-separated for multi-select)
+    const templateStatusRaw = rawParams.template_status || rawParams.templateStatus
+    if (templateStatusRaw && typeof templateStatusRaw === 'string') {
+      requestParams.template_status = templateStatusRaw
+    }
+
+    // Handle legacy status parameter for backward compatibility
     if (statusValue) {
       requestParams.status = statusValue
     }

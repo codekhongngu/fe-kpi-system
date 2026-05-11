@@ -40,7 +40,7 @@ export function FormTemplateListPage() {
   const [search, setSearch] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [editingTemplate, setEditingTemplate] = useState<FormTemplate | null>(
@@ -62,7 +62,7 @@ export function FormTemplateListPage() {
         search,
         page,
         limit,
-        status: selectedStatus,
+        template_status: selectedStatus.length > 0 ? selectedStatus.join(',') : '',
         period: selectedPeriod === 'all' ? '' : selectedPeriod,
         category: selectedCategory === 'all' ? '' : selectedCategory,
       } as any),

@@ -71,8 +71,8 @@ export function TemplateListTable({
   onDelete,
 }: TemplateListTableProps) {
   return (
-    <div className='overflow-hidden rounded-md border bg-card'>
-      <Table>
+    <div className='overflow-auto max-h-[600px] rounded-md border bg-card'>
+      <Table data-slot="table">
         <TableHeader>
           <TableRow>
             <TableHead>Mã biểu mẫu</TableHead>

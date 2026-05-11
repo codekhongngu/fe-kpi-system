@@ -15,13 +15,16 @@ export type CatalogOption = {
 }
 
 export type FormTemplateListParams = {
-  searc?: string
+  q?: string
+  search?: string
+  fieldCategory?: string
+  category?: string
+  fieldCategoryId?: string
+  period?: string
+  periodType?: PeriodType
+  template_status?: string
   page?: number
   limit?: number
-  status?: CatalogStatusFilter
-  templateStatus?: TemplateLifecycleStatus | 'all'
-  period?: string
-  category?: string
 }
 
 export type FormTemplateListMeta = {
