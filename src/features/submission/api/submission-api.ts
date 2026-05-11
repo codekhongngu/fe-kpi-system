@@ -85,6 +85,12 @@ export const submissionApi = {
   // GET /api/v1/submissions/history/:assignmentId
   getHistory: (assignmentId: string) =>
     apiClient
-      .get<ApprovalHistoryItem[]>(`/submissions/history/${assignmentId}`)
+      .get<any[]>(`/submissions/history/${assignmentId}`)
+      .then((r) => r.data),
+
+  // GET /api/v1/submissions/flow-logs/:id
+  getFlowLogDetails: (logId: string) =>
+    apiClient
+      .get<any>(`/submissions/flow-logs/${logId}`)
       .then((r) => r.data),
 }

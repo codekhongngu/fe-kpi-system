@@ -44,13 +44,13 @@ export function SubmitConfirmDialog({
           <DialogHeader className='text-left'>
             <DialogTitle className='text-2xl font-bold text-slate-900'>Xác nhận nộp báo cáo</DialogTitle>
             <DialogDescription className='text-slate-500 mt-2 text-sm leading-relaxed'>
-              Báo cáo của bạn sẽ được chuyển đến cán bộ quản lý đơn vị để kiểm tra và phê duyệt. 
+              Báo cáo của bạn sẽ được chuyển đến cán bộ quản lý đơn vị để kiểm tra và phê duyệt.
               Dữ liệu sẽ được khóa cho đến khi có phản hồi mới.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className='p-8 space-y-6'>
+        <div className='p-0'>
           {!isComplete && (
             <div className='flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800 border border-amber-100'>
               <AlertCircle className='mt-0.5 h-4 w-4 shrink-0 text-amber-600' />
@@ -60,19 +60,6 @@ export function SubmitConfirmDialog({
               </div>
             </div>
           )}
-
-          <div className='space-y-3'>
-            <Label htmlFor='note' className='text-xs font-bold uppercase tracking-widest text-slate-500 ml-1'>
-              Lời nhắn gửi người duyệt (Không bắt buộc)
-            </Label>
-            <Textarea
-              id='note'
-              placeholder='Nhập lời nhắn hoặc ghi chú giải trình nếu cần...'
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className='min-h-[100px] rounded-2xl border-slate-200 focus:border-primary focus:ring-primary/10 transition-all resize-none p-4'
-            />
-          </div>
         </div>
 
         <DialogFooter className='bg-slate-50 p-6 px-8 flex gap-3 sm:gap-0'>
@@ -84,8 +71,8 @@ export function SubmitConfirmDialog({
           >
             Quay lại sửa
           </Button>
-          <Button 
-            onClick={handleConfirm} 
+          <Button
+            onClick={handleConfirm}
             disabled={isSubmitting}
             className='rounded-xl px-8 font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all active:scale-95'
           >
@@ -103,6 +90,6 @@ export function SubmitConfirmDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   )
 }

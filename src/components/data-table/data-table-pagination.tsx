@@ -1,4 +1,4 @@
-﻿import {
+import {
   ChevronLeftIcon,
   ChevronRightIcon,
   DoubleArrowLeftIcon,
@@ -19,6 +19,7 @@ type DataTablePaginationProps = {
   pageSize: number
   total: number
   className?: string
+  variant?: 'default' | 'simple'
   onPageChange: (page: number) => void
   onPageSizeChange: (pageSize: number) => void
 }
@@ -28,12 +29,63 @@ export function DataTablePagination({
   pageSize,
   total,
   className,
+  variant = 'default',
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), totalPages)
   const pageNumbers = getPageNumbers(currentPage, totalPages)
+
+  if (variant === 'simple') {
+    return (
+      <div className={cn('flex items-center justify-between gap-2 px-1', className)}>
+        <div className='flex items-center gap-1'>
+          <Button
+            variant='outline'
+            className='size-7 p-0 rounded-md border-muted/30 hover:bg-muted/10'
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            <ChevronLeftIcon className='h-3.5 w-3.5' />
+          </Button>
+          
+          <div className='flex items-center px-2 py-1 bg-muted/20 rounded-md border border-muted/20 min-w-[60px] justify-center'>
+            <span className='text-[10px] font-black tracking-tight text-foreground/70'>
+              {currentPage} / {totalPages}
+            </span>
+          </div>
+
+          <Button
+            variant='outline'
+            className='size-7 p-0 rounded-md border-muted/30 hover:bg-muted/10'
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            <ChevronRightIcon className='h-3.5 w-3.5' />
+          </Button>
+        </div>
+
+        <div className='flex items-center gap-2'>
+          <Select
+            value={`${pageSize}`}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+          >
+            <SelectTrigger className='h-7 w-[55px] text-[10px] font-bold bg-transparent border-muted/30'>
+              <SelectValue placeholder={pageSize} />
+            </SelectTrigger>
+            <SelectContent side='top'>
+              {[10, 20, 50].map((size) => (
+                <SelectItem key={size} value={`${size}`} className='text-[10px]'>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
