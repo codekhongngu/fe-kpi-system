@@ -60,14 +60,16 @@ export function ReportFilters({
             patchFilters({ templateId: value === 'all' ? '' : value })
           }
         >
-          <SelectTrigger>
-            <SelectValue placeholder='Template' />
+          <SelectTrigger className='min-w-0 max-w-full overflow-hidden'>
+            <SelectValue placeholder='Template' className='truncate' />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value='all'>Tất cả template</SelectItem>
             {references?.templates.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name}
+              <SelectItem key={item.id} value={item.id} className='max-w-full'>
+                <div className='truncate' title={item.name}>
+                  {item.name}
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
