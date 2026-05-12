@@ -278,5 +278,3 @@ export type CampaignDefaultValue = {
   valueText: string | null
   valueNumber: number | null
 }
-
-export type CampaignStatus = 'DRAFT' | 'DISPATCHED' | 'CLOSED' | 'CANCELLED'

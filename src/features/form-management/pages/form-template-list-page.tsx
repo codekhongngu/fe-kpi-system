@@ -276,7 +276,6 @@ export function FormTemplateListPage() {
           total={total}
           page={page}
           pageSize={limit}
-          isLoading={templatesQuery.isLoading || templatesQuery.isFetching}
           onPageChange={setPage}
           onPageSizeChange={(size) => {
             setLimit(size)
