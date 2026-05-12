@@ -119,7 +119,6 @@ export function TemplateListTable({
               <TableCell>
                 <TemplateStatusBadge
                   templateStatus={template.templateStatus}
-                  isActive={template.isActive}
                 />
               </TableCell>
               <TableCell className='text-right'>

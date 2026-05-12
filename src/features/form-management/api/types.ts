@@ -123,7 +123,6 @@ export type CreateTemplateInput = {
   periodType: PeriodType
   templateType: TemplateType
   description: string
-  isActive: boolean
 }
 
 export type UpdateTemplateInput = {
@@ -132,7 +131,6 @@ export type UpdateTemplateInput = {
   periodType: PeriodType
   templateType: TemplateType
   description: string
-  isActive: boolean
 }
 
 export type CreateFieldInput = {

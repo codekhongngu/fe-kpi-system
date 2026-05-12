@@ -23,7 +23,6 @@ const defaultFormModalState: FormModalState = {
   periodType: 'THANG',
   templateType: 'AGGREGATE',
   description: '',
-  isActive: true,
 }
 
 const REPORT_PERIOD_OPTIONS = [
@@ -177,7 +176,6 @@ export function FormTemplateListPage() {
       periodType: template.periodType ?? 'THANG',
       templateType: template.templateType ?? 'AGGREGATE',
       description: template.description,
-      isActive: template.isActive,
     })
     setOpenFormModal(true)
   }
@@ -203,7 +201,6 @@ export function FormTemplateListPage() {
           periodType: formState.periodType,
           templateType: formState.templateType,
           description: formState.description.trim(),
-          isActive: formState.isActive,
         },
       })
       return
@@ -221,7 +218,6 @@ export function FormTemplateListPage() {
       periodType: formState.periodType,
       templateType: formState.templateType,
       description: formState.description.trim(),
-      isActive: formState.isActive,
     })
   }
 

@@ -33,7 +33,6 @@ type FormModalState = {
   periodType: PeriodType
   templateType: TemplateType
   description: string
-  isActive: boolean
 }
 
 type TemplateGeneralInfoDialogProps = {
@@ -154,24 +153,7 @@ export function TemplateGeneralInfoDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className='space-y-2'>
-            <Label>Trạng thái hoạt động</Label>
-            <Select
-              value={formState.isActive ? 'true' : 'false'}
-              onValueChange={(value) =>
-                onFormStateChange({ ...formState, isActive: value === 'true' })
-              }
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='true'>Hoạt động</SelectItem>
-                <SelectItem value='false'>Ngừng hoạt động</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className='space-y-2'>
+                    <div className='space-y-2'>
             <Label>Mô tả</Label>
             <Textarea
               rows={3}

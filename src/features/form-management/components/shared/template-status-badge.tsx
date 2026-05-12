@@ -1,12 +1,10 @@
 import { Badge } from '@/components/ui/badge'
 import type {
-  TemplateActivationStatus,
   TemplateLifecycleStatus,
 } from '../../api/types'
 
 type TemplateStatusBadgeProps = {
   templateStatus?: TemplateLifecycleStatus
-  isActive?: boolean
 }
 
 const lifecycleVariant: Record<
@@ -26,14 +24,8 @@ const lifecycleLabel: Record<TemplateLifecycleStatus, string> = {
   ARCHIVED: 'Đã lưu trữ',
 }
 
-const activationLabel: Record<TemplateActivationStatus, string> = {
-  active: 'Hoạt động',
-  inactive: 'Ngừng hoạt động',
-}
-
 export function TemplateStatusBadge({
   templateStatus,
-  isActive = true,
 }: TemplateStatusBadgeProps) {
   return (
     <div className='flex flex-wrap gap-2'>
@@ -42,9 +34,6 @@ export function TemplateStatusBadge({
           {lifecycleLabel[templateStatus]}
         </Badge>
       )}
-      <Badge variant={isActive ? 'default' : 'secondary'}>
-        {activationLabel[isActive ? 'active' : 'inactive']}
-      </Badge>
     </div>
   )
 }
