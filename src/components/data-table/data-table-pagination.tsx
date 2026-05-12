@@ -36,6 +36,8 @@ export function DataTablePagination({
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const currentPage = Math.min(Math.max(1, page), totalPages)
   const pageNumbers = getPageNumbers(currentPage, totalPages)
+  const startRow = total === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const endRow = Math.min(currentPage * pageSize, total)
 
   if (variant === 'simple') {
     return (
@@ -119,7 +121,7 @@ export function DataTablePagination({
             </SelectContent>
           </Select>
           <p className='hidden text-sm font-medium sm:block'>
-            Số dòng mỗi trang
+            {startRow} – {endRow} của {total.toLocaleString('vi-VN')}
           </p>
         </div>
       </div>

@@ -39,11 +39,7 @@ import { ReportStatusBadge } from './report-status'
 type ReportTableProps = {
   data: ReportListItem[]
   isLoading: boolean
-  total: number
-  page: number
-  pageSize: number
   can: (action: ReportAction) => boolean
-  onPageChange: (page: number) => void
   onView: (report: ReportListItem) => void
   onEdit: (report: ReportListItem) => void
   onDelete: (report: ReportListItem) => void
@@ -60,11 +56,7 @@ function formatDate(value: string | null) {
 export function ReportTable({
   data,
   isLoading,
-  total,
-  page,
-  pageSize,
   can,
-  onPageChange,
   onView,
   onEdit,
   onDelete,
@@ -228,10 +220,9 @@ export function ReportTable({
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
-    <div className='rounded-xl border bg-card'>
+    <div className='overflow-auto max-h-[600px] rounded-md border bg-card'>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -285,35 +276,6 @@ export function ReportTable({
           )}
         </TableBody>
       </Table>
-
-      <div className='flex flex-col gap-3 border-t p-4 sm:flex-row sm:items-center sm:justify-between'>
-        <div className='text-sm text-muted-foreground'>
-          Hiển thị {data.length} / {total} báo cáo
-        </div>
-        <div className='flex items-center gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            disabled={page <= 1}
-            onClick={() => onPageChange(page - 1)}
-          >
-            Trước
-          </Button>
-          <span className='text-sm text-muted-foreground'>
-            Trang {page} / {totalPages}
-          </span>
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            disabled={page >= totalPages}
-            onClick={() => onPageChange(page + 1)}
-          >
-            Sau
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }

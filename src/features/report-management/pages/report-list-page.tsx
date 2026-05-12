@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from '@tanstack/react-router'
-import { Download, FilePlus2, ShieldCheck } from 'lucide-react'
+import { FilePlus2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTablePagination } from '@/components/data-table/data-table-pagination'
+import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { reportCampaignApi } from '../api/report-management-api'
 import type {
   CreateReportInput,
@@ -17,9 +18,7 @@ import { PermissionGuard } from '../components/permission-guard'
 import { ReportConfirmDialog } from '../components/report-confirm-dialog'
 import { ReportFilters as ReportFiltersPanel } from '../components/report-filters'
 import { ReportFormDialog } from '../components/report-form-dialog'
-import { ReportSummaryStrip } from '../components/report-summary-strip'
 import { ReportTable } from '../components/report-table'
-import { ReportTabs } from '../components/report-tabs'
 import { RoleVariantsDialog } from '../components/role-variants-dialog'
 import { usePermission } from '../hooks/use-permission'
 import { useTemplateInfo } from '../hooks/use-template-info'
@@ -143,42 +142,40 @@ export function ReportListPage() {
     },
   })
 
-  const summaryQuery = useQuery({
-    queryKey: reportQueryKeys.summary,
-    queryFn: async () => {
-      const response = await reportCampaignApi.listCampaigns({ limit: 100 })
-      const items = response.items
-      return {
-        total: items.length,
-        unsubmitted: items.filter((i) =>
-          ['DRAFT', 'NOT_STARTED', 'ASSIGNED', 'DRAFTING'].includes(i.status)
-        ).length,
-        pendingApproval: items.filter((i) =>
-          ['SUBMITTED', 'UNDER_REVIEW'].includes(i.status)
-        ).length,
-        approved: items.filter((i) =>
-          ['APPROVED', 'COMPLETED'].includes(i.status)
-        ).length,
-        rejected: items.filter((i) => i.status === 'REJECTED').length,
-        overdue: items.filter((i) => i.status === 'OVERDUE').length,
-      }
-    },
-  })
-
   const listQuery = useQuery({
     queryKey: reportQueryKeys.list(filters),
     queryFn: async () => {
+      // Xây dựng params một cách rõ ràng để tránh undefined
+      const requestParams: Record<string, any> = {
+        page: filters.page,
+        limit: filters.pageSize,
+      }
+      
+      // Chỉ thêm status khi không phải 'all'
+      if (filters.status && filters.status !== 'all') {
+        requestParams.status = filters.status
+      }
+      
+      // Chỉ thêm formId khi có giá trị
+      if (filters.templateId && filters.templateId.trim() !== '') {
+        requestParams.formId = filters.templateId
+      }
+      
+      // Chỉ thêm periodType khi không phải 'all' và có giá trị hợp lệ
+      if (filters.period && filters.period !== 'all') {
+        const validPeriods = ['TUAN', 'THANG', 'QUY', 'NAM']
+        if (validPeriods.includes(filters.period)) {
+          requestParams.periodType = filters.period
+        }
+      }
+
+      console.log('API Request Params:', requestParams)
+
       const response = await apiClient.get<{
         items: ReportListItem[]
-        total: number
-      }>('/report-campaigns', {
-        params: {
-          page: filters.page,
-          limit: filters.pageSize,
-          status: filters.status !== 'all' ? filters.status : undefined,
-          formId: filters.templateId || undefined,
-        },
-      })
+        meta?: { total: number }
+        total?: number
+      }>('/report-campaigns', { params: requestParams })
       return response.data
     },
   })
@@ -267,25 +264,12 @@ export function ReportListPage() {
     onError: (error) => toast.error(getErrorMessage(error)),
   })
 
-  const exportMutation = useMutation({
-    mutationFn: async (format: 'excel' | 'pdf') => {
-      const stamp = new Date().toISOString().slice(0, 10)
-      return {
-        fileName: `quan-ly-bao-cao-${stamp}.${format === 'excel' ? 'xlsx' : 'pdf'}`,
-        format,
-      }
-    },
-    onSuccess: (result) =>
-      toast.success(`Đã chuẩn bị file ${result.fileName}.`),
-    onError: (error) => toast.error(getErrorMessage(error)),
-  })
-
   const confirmCopy = useMemo(
     () => getConfirmCopy(confirmState),
     [confirmState]
   )
   const listData = listQuery.data?.items ?? []
-  const total = listQuery.data?.total ?? 0
+  const total = listQuery.data?.total ?? listQuery.data?.meta?.total ?? 0
 
   // Sử dụng hook để lấy thông tin template
   const { enrichedReports, isLoading: templateLoading } =
@@ -305,97 +289,62 @@ export function ReportListPage() {
 
   return (
     <>
-      <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
-        <div>
-          <div className='inline-flex items-center rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700'>
-            Quản trị đợt báo cáo
-          </div>
-          <h1 className='mt-3 text-2xl font-bold tracking-tight'>
-            Danh sách đợt báo cáo toàn xã
-          </h1>
-          <p className='mt-1 max-w-3xl text-sm text-muted-foreground'>
-            Khởi tạo, cấu hình và theo dõi tiến độ tổng thể của các đợt báo cáo trên toàn địa bàn.
-          </p>
-        </div>
-        <div className='flex flex-wrap gap-2'>
-          <PermissionGuard action='report:role-variants'>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => setRoleVariantsOpen(true)}
-            >
-              <ShieldCheck className='me-2 size-4' />
-              Role/biến thể
-            </Button>
-          </PermissionGuard>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={() => exportMutation.mutate('excel')}
-            disabled={exportMutation.isPending}
-          >
-            <Download className='me-2 size-4' />
-            Xuất Excel
-          </Button>
+      <div className='flex w-full flex-col gap-4'>
+        <PageBreadcrumb
+          title='Danh sách báo cáo'
+          subtitle='Quản lý danh sách báo cáo'
+        >
           <PermissionGuard action='report:create'>
-            <Button type='button' onClick={openCreateForm}>
-              <FilePlus2 className='me-2 size-4' />
-              Tạo đợt báo cáo
+            <Button onClick={openCreateForm}>
+              <FilePlus2 />
+              Tạo báo cáo
             </Button>
           </PermissionGuard>
-        </div>
-      </div>
+        </PageBreadcrumb>
 
-      <ReportSummaryStrip
-        summary={summaryQuery.data}
-        isLoading={summaryQuery.isLoading}
-      />
+        <ReportFiltersPanel
+          filters={filters}
+          references={referencesQuery.data}
+          onChange={setFilters}
+        />
 
-      <Card>
-        <CardHeader className='gap-4'>
-          <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
-            <CardTitle>Danh sách đợt báo cáo</CardTitle>
+        {listQuery.isError ? (
+          <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
+            {getErrorMessage(listQuery.error)}
           </div>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <ReportFiltersPanel
-            filters={filters}
-            references={referencesQuery.data}
-            onChange={setFilters}
+        ) : (
+          <ReportTable
+            data={enrichedReports}
+            isLoading={
+              listQuery.isLoading || listQuery.isFetching || templateLoading
+            }
+            can={permission.can}
+            onView={(report) =>
+              navigate({
+                to: '/report-management/details/$reportId',
+                params: { reportId: report.id },
+              })
+            }
+            onEdit={openEditForm}
+            onDelete={(report) => setConfirmState({ type: 'delete', report })}
+            onAssign={(report) => setConfirmState({ type: 'assign', report })}
+            onApprove={(report) =>
+              setConfirmState({ type: 'approve', report })
+            }
+            onReject={(report) => setConfirmState({ type: 'reject', report })}
           />
+        )}
 
-          {listQuery.isError ? (
-            <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
-              {getErrorMessage(listQuery.error)}
-            </div>
-          ) : (
-            <ReportTable
-              data={enrichedReports}
-              total={total}
-              page={filters.page}
-              pageSize={filters.pageSize}
-              isLoading={
-                listQuery.isLoading || listQuery.isFetching || templateLoading
-              }
-              can={permission.can}
-              onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
-              onView={(report) =>
-                navigate({
-                  to: '/report-management/details/$reportId',
-                  params: { reportId: report.id },
-                })
-              }
-              onEdit={openEditForm}
-              onDelete={(report) => setConfirmState({ type: 'delete', report })}
-              onAssign={(report) => setConfirmState({ type: 'assign', report })}
-              onApprove={(report) =>
-                setConfirmState({ type: 'approve', report })
-              }
-              onReject={(report) => setConfirmState({ type: 'reject', report })}
-            />
-          )}
-        </CardContent>
-      </Card>
+        <DataTablePagination
+          total={total}
+          page={filters.page}
+          pageSize={filters.pageSize}
+          onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+          onPageSizeChange={(size) =>
+            setFilters((prev) => ({ ...prev, pageSize: size, page: 1 }))
+          }
+        />
+      </div>
 
       <ReportFormDialog
         open={formOpen}

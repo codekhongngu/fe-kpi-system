@@ -12,7 +12,7 @@ import type {
   ReportFilters as ReportFiltersType,
   ReportReferences,
 } from '../api/types'
-import { reportStatusOptions } from '../api/types'
+import { campaignStatusOptions } from '../api/types'
 
 type ReportFiltersProps = {
   filters: ReportFiltersType
@@ -43,7 +43,7 @@ export function ReportFilters({
 
   return (
     <div className='rounded-xl border bg-card p-4'>
-      <div className='grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(150px,1fr))_auto]'>
+      <div className='grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_repeat(3,minmax(150px,1fr))_auto]'>
         <div className='relative'>
           <Search className='pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
           <Input
@@ -73,44 +73,22 @@ export function ReportFilters({
           </SelectContent>
         </Select>
 
-        <Select
-          value={filters.unitId || 'all'}
-          onValueChange={(value) =>
-            patchFilters({ unitId: value === 'all' ? '' : value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder='Đơn vị' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='all'>Tất cả đơn vị</SelectItem>
-            {references?.units.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
+        
         <Select
           value={filters.period || 'all'}
-          onValueChange={(value) => {
-            const period = references?.periods.find((item) => item.id === value)
-            patchFilters({
-              period: value === 'all' ? '' : (period?.name ?? ''),
-            })
-          }}
+          onValueChange={(value) =>
+            patchFilters({ period: value === 'all' ? '' : value })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder='Kỳ báo cáo' />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value='all'>Tất cả kỳ</SelectItem>
-            {references?.periods.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name}
-              </SelectItem>
-            ))}
+            <SelectItem value='all'>Tất cả kỳ báo cáo</SelectItem>
+            <SelectItem value='TUAN'>Tuần</SelectItem>
+            <SelectItem value='THANG'>Tháng</SelectItem>
+            <SelectItem value='QUY'>Quý</SelectItem>
+            <SelectItem value='NAM'>Năm</SelectItem>
           </SelectContent>
         </Select>
 
@@ -125,7 +103,7 @@ export function ReportFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value='all'>Tất cả trạng thái</SelectItem>
-            {reportStatusOptions.map((item) => (
+            {campaignStatusOptions.map((item) => (
               <SelectItem key={item.value} value={item.value}>
                 {item.label}
               </SelectItem>

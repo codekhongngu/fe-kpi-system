@@ -56,29 +56,5 @@ export function ReportSummaryStrip({
     },
   ]
 
-  return (
-    <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-6'>
-      {items.map((item) => {
-        const Icon = item.icon
-        return (
-          <div
-            key={item.label}
-            className={`rounded-xl border p-4 ${item.className}`}
-          >
-            <div className='flex items-center justify-between gap-3'>
-              <div>
-                <div className='text-sm font-medium opacity-80'>
-                  {item.label}
-                </div>
-                <div className='mt-1 text-2xl font-semibold'>
-                  {isLoading ? '...' : item.value}
-                </div>
-              </div>
-              <Icon className='size-5 opacity-80' />
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+  return null
 }
