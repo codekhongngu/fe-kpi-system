@@ -38,42 +38,68 @@ const periodTypeLabel: Record<PeriodType, string> = {
 
 const EMPTY_REPORTS: ReportListItem[] = []
 
-const statusLabel: Record<ReportStatus, string> = {
-  NOT_STARTED: 'Chưa nhập',
-  DRAFT: 'Lưu nháp',
-  PENDING: 'Chờ duyệt',
-  APPROVED: 'Đã duyệt',
-  REJECTED: 'Từ chối',
+const _statusLabel: Record<ReportStatus, string> = {
+  NOT_STARTED: 'Chưa bắt đầu',
+  DRAFT: 'Đang nhập',
+  PENDING_DEPARTMENT: 'Chờ phòng duyệt',
+  DEPARTMENT_APPROVED: 'Chờ xã chốt',
+  DISTRICT_APPROVED: 'Đã chốt',
+  REJECTED_DEPARTMENT: 'Phòng trả lại',
+  REJECTED_DISTRICT: 'Xã trả lại',
   OVERDUE: 'Quá hạn',
+  DRAFT: 'Đang nhập',
+  DISPATCHED: 'Đã phát hành',
+  CLOSED: 'Đã đóng',
+  CANCELLED: 'Đã hủy',
 }
 
-function statusVariant(
+function _statusVariant(
   status: ReportStatus
 ): 'default' | 'destructive' | 'secondary' | 'outline' {
-  if (status === 'APPROVED') {
+  if (status === 'DISTRICT_APPROVED' || status === 'CLOSED') {
     return 'default'
   }
-  if (status === 'OVERDUE' || status === 'REJECTED') {
+  if (
+    status === 'OVERDUE' ||
+    status === 'REJECTED_DEPARTMENT' ||
+    status === 'REJECTED_DISTRICT' ||
+    status === 'CANCELLED'
+  ) {
     return 'destructive'
   }
-  if (status === 'PENDING') {
+  if (status === 'PENDING_DEPARTMENT' || status === 'DEPARTMENT_APPROVED' || status === 'DISPATCHED') {
     return 'outline'
   }
   return 'secondary'
 }
 
 function effectiveStatus(report: ReportListItem): ReportStatus {
-  // In real API, status comes directly from BE
-  return report.status as ReportStatus
+  switch (report.status) {
+    case 'DRAFT':
+      return 'NOT_STARTED'
+    case 'DISPATCHED':
+      return 'PENDING_DEPARTMENT'
+    case 'CLOSED':
+      return 'DISTRICT_APPROVED'
+    case 'CANCELLED':
+      return 'REJECTED_DISTRICT'
+    default:
+      return report.status as ReportStatus
+  }
 }
 
 const statusPriority: Record<ReportStatus, number> = {
   OVERDUE: 6,
-  REJECTED: 5,
-  PENDING: 4,
-  DRAFT: 3,
-  NOT_STARTED: 2,
-  APPROVED: 1,
+  REJECTED_DISTRICT: 5,
+  REJECTED_DEPARTMENT: 4,
+  PENDING_DEPARTMENT: 3,
+  DEPARTMENT_APPROVED: 2,
+  DISTRICT_APPROVED: 1,
+  NOT_STARTED: 0,
+  DRAFT: 0,
+  DISPATCHED: 0,
+  CLOSED: 0,
+  CANCELLED: 0,
 }
 
 export function ReportsListTab() {
@@ -138,12 +164,17 @@ export function ReportsListTab() {
 
   const statusCounts = useMemo(() => {
     const initial = {
-      APPROVED: 0,
-      PENDING: 0,
+      PENDING_DEPARTMENT: 0,
+      DEPARTMENT_APPROVED: 0,
+      DISTRICT_APPROVED: 0,
+      REJECTED_DEPARTMENT: 0,
+      REJECTED_DISTRICT: 0,
+      NOT_STARTED: 0,
       DRAFT: 0,
       OVERDUE: 0,
-      REJECTED: 0,
-      NOT_STARTED: 0,
+      DISPATCHED: 0,
+      CLOSED: 0,
+      CANCELLED: 0,
     } satisfies Record<ReportStatus, number>
     const next = { ...initial }
     statusByUnit.forEach((value) => {
@@ -181,40 +212,40 @@ export function ReportsListTab() {
                 </div>
               </div>
               <div className='rounded-xl border bg-background p-4 text-sm'>
-                <p className='text-muted-foreground'>Approved</p>
+                <p className='text-muted-foreground'>Chờ xã</p>
                 <div className='mt-2 flex items-end justify-between'>
                   <p className='text-3xl font-semibold tracking-tight text-primary'>
-                    {statusCounts.APPROVED}
+                    {statusCounts.DEPARTMENT_APPROVED}
                   </p>
                   <span className='rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary'>
-                    {percentOfTotal(statusCounts.APPROVED)}
+                    {percentOfTotal(statusCounts.DEPARTMENT_APPROVED)}
                   </span>
                 </div>
               </div>
               <div className='rounded-xl border bg-background p-4 text-sm'>
-                <p className='text-muted-foreground'>Pending</p>
+                <p className='text-muted-foreground'>Chờ phòng</p>
                 <div className='mt-2 flex items-end justify-between'>
                   <p className='text-3xl font-semibold tracking-tight'>
-                    {statusCounts.PENDING}
+                    {statusCounts.PENDING_DEPARTMENT}
                   </p>
                   <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'>
-                    {percentOfTotal(statusCounts.PENDING)}
+                    {percentOfTotal(statusCounts.PENDING_DEPARTMENT)}
                   </span>
                 </div>
               </div>
               <div className='rounded-xl border bg-background p-4 text-sm'>
-                <p className='text-muted-foreground'>Draft</p>
+                <p className='text-muted-foreground'>Chưa bắt đầu</p>
                 <div className='mt-2 flex items-end justify-between'>
                   <p className='text-3xl font-semibold tracking-tight text-muted-foreground'>
-                    {statusCounts.DRAFT}
+                    {statusCounts.NOT_STARTED}
                   </p>
                   <span className='rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground'>
-                    {percentOfTotal(statusCounts.DRAFT)}
+                    {percentOfTotal(statusCounts.NOT_STARTED)}
                   </span>
                 </div>
               </div>
               <div className='rounded-xl border border-destructive/30 bg-background p-4 text-sm'>
-                <p className='text-destructive'>Overdue</p>
+                <p className='text-destructive'>Quá hạn</p>
                 <div className='mt-2 flex items-end justify-between'>
                   <p className='text-3xl font-semibold tracking-tight text-destructive'>
                     {statusCounts.OVERDUE}
@@ -237,24 +268,37 @@ export function ReportsListTab() {
                 </Button>
                 <Button
                   size='sm'
-                  variant={quickStatus === 'APPROVED' ? 'default' : 'outline'}
-                  onClick={() => setQuickStatus('APPROVED')}
+                  variant={
+                    quickStatus === 'DEPARTMENT_APPROVED' ? 'default' : 'outline'
+                  }
+                  onClick={() => setQuickStatus('DEPARTMENT_APPROVED')}
                 >
-                  Approved ({statusCounts.APPROVED})
+                  Chờ xã ({statusCounts.DEPARTMENT_APPROVED})
                 </Button>
                 <Button
                   size='sm'
-                  variant={quickStatus === 'PENDING' ? 'default' : 'outline'}
-                  onClick={() => setQuickStatus('PENDING')}
+                  variant={
+                    quickStatus === 'PENDING_DEPARTMENT' ? 'default' : 'outline'
+                  }
+                  onClick={() => setQuickStatus('PENDING_DEPARTMENT')}
                 >
-                  Pending ({statusCounts.PENDING})
+                  Chờ phòng ({statusCounts.PENDING_DEPARTMENT})
                 </Button>
                 <Button
                   size='sm'
-                  variant={quickStatus === 'DRAFT' ? 'default' : 'outline'}
-                  onClick={() => setQuickStatus('DRAFT')}
+                  variant={quickStatus === 'NOT_STARTED' ? 'default' : 'outline'}
+                  onClick={() => setQuickStatus('NOT_STARTED')}
                 >
-                  Draft ({statusCounts.DRAFT})
+                  Chưa bắt đầu ({statusCounts.NOT_STARTED})
+                </Button>
+                <Button
+                  size='sm'
+                  variant={
+                    quickStatus === 'DISTRICT_APPROVED' ? 'default' : 'outline'
+                  }
+                  onClick={() => setQuickStatus('DISTRICT_APPROVED')}
+                >
+                  Đã chốt ({statusCounts.DISTRICT_APPROVED})
                 </Button>
                 <Button
                   size='sm'
@@ -263,14 +307,16 @@ export function ReportsListTab() {
                   }
                   onClick={() => setQuickStatus('OVERDUE')}
                 >
-                  Overdue ({statusCounts.OVERDUE})
+                  Quá hạn ({statusCounts.OVERDUE})
                 </Button>
                 <Button
                   size='sm'
-                  variant={quickStatus === 'REJECTED' ? 'default' : 'outline'}
-                  onClick={() => setQuickStatus('REJECTED')}
+                  variant={
+                    quickStatus === 'REJECTED_DEPARTMENT' ? 'default' : 'outline'
+                  }
+                  onClick={() => setQuickStatus('REJECTED_DEPARTMENT')}
                 >
-                  Rejected ({statusCounts.REJECTED})
+                  Phòng trả lại ({statusCounts.REJECTED_DEPARTMENT})
                 </Button>
               </div>
             </div>

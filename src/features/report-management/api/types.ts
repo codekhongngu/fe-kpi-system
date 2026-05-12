@@ -14,16 +14,13 @@ export type CampaignStatus = 'DRAFT' | 'DISPATCHED' | 'CLOSED' | 'CANCELLED'
 
 export type SubmissionStatus =
   | 'NOT_STARTED'
-  | 'DRAFTING'
-  | 'SUBMITTED' // Chờ phòng duyệt
-  | 'PENDING_DEPARTMENT' // Đồng nhất với BE
-  | 'DEPARTMENT_APPROVED' // Chờ xã chốt
-  | 'DISTRICT_APPROVED' // Đã chốt/Publish
+  | 'DRAFT'
+  | 'PENDING_DEPARTMENT'
+  | 'DEPARTMENT_APPROVED'
+  | 'DISTRICT_APPROVED'
   | 'REJECTED_DEPARTMENT'
   | 'REJECTED_DISTRICT'
   | 'OVERDUE'
-  | 'COMPLETED' // Alias cho DISTRICT_APPROVED
-  | 'CANCELLED'
 
 export type ReportStatus = CampaignStatus | SubmissionStatus
 
@@ -69,10 +66,13 @@ export type ReportAssignment = {
   id: string
   orgId: string
   orgName: string
+  submissionId?: string | null
   status: SubmissionStatus
-  completionPercent: number
+  completionPercent: number | null
   submittedAt: string | null
   approvedAt: string | null
+  departmentApprovedAt?: string | null
+  districtApprovedAt?: string | null
   updatedAt: string | null
   assigneeName?: string
 }
@@ -230,9 +230,9 @@ export const submissionStatusOptions: Array<{
   label: string
 }> = [
   { value: 'NOT_STARTED', label: 'Chưa nhập' },
-  { value: 'DRAFTING', label: 'Đang nhập' },
-  { value: 'SUBMITTED', label: 'Đã nộp (Chờ duyệt)' },
-  { value: 'DEPARTMENT_APPROVED', label: 'Phòng đã duyệt' },
+  { value: 'DRAFT', label: 'Đang nhập' },
+  { value: 'PENDING_DEPARTMENT', label: 'Chờ phòng duyệt' },
+  { value: 'DEPARTMENT_APPROVED', label: 'Chờ xã chốt' },
   { value: 'DISTRICT_APPROVED', label: 'Đã chốt (Xã)' },
   { value: 'REJECTED_DEPARTMENT', label: 'Phòng trả lại' },
   { value: 'REJECTED_DISTRICT', label: 'Xã trả lại' },

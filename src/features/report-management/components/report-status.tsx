@@ -9,16 +9,16 @@ import {
 
 const statusClassName: Record<ReportStatus, string> = {
   DRAFT: 'border-slate-200 bg-slate-50 text-slate-700',
-  ASSIGNED: 'border-cyan-200 bg-cyan-50 text-cyan-700',
   NOT_STARTED: 'border-slate-200 bg-slate-50 text-slate-700',
-  DRAFTING: 'border-blue-200 bg-blue-50 text-blue-700',
-  SUBMITTED: 'border-amber-200 bg-amber-50 text-amber-700',
-  UNDER_REVIEW: 'border-amber-200 bg-amber-50 text-amber-700',
-  APPROVED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  REJECTED: 'border-rose-200 bg-rose-50 text-rose-700',
+  PENDING_DEPARTMENT: 'border-amber-200 bg-amber-50 text-amber-700',
+  DEPARTMENT_APPROVED: 'border-blue-200 bg-blue-50 text-blue-700',
+  REJECTED_DEPARTMENT: 'border-rose-200 bg-rose-50 text-rose-700',
   OVERDUE: 'border-red-200 bg-red-50 text-red-700',
-  COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  DISTRICT_APPROVED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  REJECTED_DISTRICT: 'border-rose-200 bg-rose-50 text-rose-700',
+  CLOSED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   CANCELLED: 'border-zinc-200 bg-zinc-50 text-zinc-600',
+  DISPATCHED: 'border-cyan-200 bg-cyan-50 text-cyan-700',
 }
 
 const priorityClassName: Record<ReportPriority, string> = {

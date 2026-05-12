@@ -1,0 +1,604 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Filter,
+  History,
+  Rocket,
+  RotateCcw,
+  Workflow,
+  XCircle,
+  Eye,
+} from 'lucide-react'
+import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
+import { SubmissionTimeline } from '@/components/submission/submission-timeline'
+import { useSubmissionHistory } from '@/features/submission/hooks/use-my-assignments'
+import {
+  useApproveDepartment,
+  useApproveDistrict,
+  useRejectDepartment,
+  useRejectDistrict,
+} from '@/features/submission/hooks/use-approvals'
+import { getSubmissionStatusInfo } from '@/features/submission/utils/submission-status'
+import {
+  normalizeSubmissionStatus,
+} from '@/features/submission/utils/submission-status-rules'
+import { reportCampaignApi } from '../../api/report-management-api'
+import type { ReportAssignment, ReportDetail, SubmissionStatus } from '../../api/types'
+import { reportQueryKeys } from '../../utils/report-query'
+import {
+  createMockReportSummary,
+  recomputeMockReportSummary,
+  type MockReportSummary,
+} from '../../api/report-summary-mock-api'
+
+type ApprovalActionType = 'DEPARTMENT' | 'DISTRICT' | null
+
+type ReportApprovalsTabProps = {
+  reportId: string
+  report: ReportDetail
+  onRefetch?: () => void
+}
+
+type SummaryPreview = MockReportSummary | null
+
+function formatTimeDashDate(value: string | null) {
+  if (!value) return '--'
+  const date = new Date(value)
+  const time = new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+  const day = new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+  return `${time} - ${day}`
+}
+
+function normalizeAssignmentStatus(status: ReportAssignment['status']) {
+  return normalizeSubmissionStatus(status) as SubmissionStatus
+}
+
+export function ReportApprovalsTab({
+  reportId,
+  report,
+  onRefetch,
+}: ReportApprovalsTabProps) {
+  const [assignmentSearch, setAssignmentSearch] = useState('')
+  const [assignmentStatusFilter, setAssignmentStatusFilter] =
+    useState<'all' | SubmissionStatus>('all')
+  const [viewAssignmentId, setViewAssignmentId] = useState<string | null>(null)
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false)
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [actionType, setActionType] = useState<ApprovalActionType>(null)
+  const [summary, setSummary] = useState<SummaryPreview>(null)
+  const [isAggregating, setIsAggregating] = useState(false)
+
+  const approveDept = useApproveDepartment()
+  const rejectDept = useRejectDepartment()
+  const approveDist = useApproveDistrict()
+  const rejectDist = useRejectDistrict()
+
+  const assignmentsQuery = useQuery({
+    queryKey: reportQueryKeys.assignments(reportId),
+    queryFn: () => reportCampaignApi.listCampaignAssignments(reportId),
+    enabled: !!reportId,
+  })
+
+  const normalizedAssignments = useMemo(
+    () =>
+      (assignmentsQuery.data ?? report.assignments ?? []).map((item) => ({
+        ...item,
+        normalizedStatus: normalizeAssignmentStatus(item.status),
+      })),
+    [assignmentsQuery.data, report.assignments]
+  )
+
+  const historyQuery = useSubmissionHistory(viewAssignmentId)
+  const history = historyQuery.data || []
+
+  useEffect(() => {
+    if (!viewAssignmentId && normalizedAssignments.length > 0) {
+      setViewAssignmentId(normalizedAssignments[0].id)
+    }
+  }, [normalizedAssignments, viewAssignmentId])
+
+  const selectedAssignment = useMemo(
+    () => normalizedAssignments.find((item) => item.id === viewAssignmentId) ?? null,
+    [normalizedAssignments, viewAssignmentId]
+  )
+
+  const filteredAssignments = useMemo(() => {
+    const searchTerm = assignmentSearch.trim().toLowerCase()
+    return normalizedAssignments.filter((item) => {
+      const matchesSearch =
+        searchTerm.length === 0 ||
+        item.orgName.toLowerCase().includes(searchTerm) ||
+        item.assigneeName?.toLowerCase().includes(searchTerm)
+      const matchesStatus =
+        assignmentStatusFilter === 'all' ||
+        item.normalizedStatus === assignmentStatusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [assignmentSearch, assignmentStatusFilter, normalizedAssignments])
+
+  const currentStatusInfo = getSubmissionStatusInfo(
+    selectedAssignment?.normalizedStatus ?? null,
+    report.deadlineTo
+  )
+  const CurrentStatusIcon = currentStatusInfo.icon
+
+  const handleApprove = (type: Exclude<ApprovalActionType, null>) => {
+    setActionType(type)
+    setIsApproveModalOpen(true)
+  }
+
+  const handleReject = (type: Exclude<ApprovalActionType, null>) => {
+    setActionType(type)
+    setRejectReason('')
+    setIsRejectModalOpen(true)
+  }
+
+  const closeAndRefresh = () => {
+    setIsApproveModalOpen(false)
+    setIsRejectModalOpen(false)
+    setActionType(null)
+    onRefetch?.()
+  }
+
+  const confirmApprove = () => {
+    if (!selectedAssignment || !actionType) return
+    const submissionId = selectedAssignment.submissionId
+    if (!submissionId) {
+      toast.error('Không tìm thấy bản nộp của đơn vị này')
+      return
+    }
+    const mutation = actionType === 'DEPARTMENT' ? approveDept : approveDist
+    mutation.mutate(submissionId, {
+      onSuccess: closeAndRefresh,
+    })
+  }
+
+  const confirmReject = () => {
+    if (!selectedAssignment || !actionType) return
+    if (!rejectReason.trim()) {
+      toast.error('Vui lòng nhập lý do từ chối')
+      return
+    }
+    const submissionId = selectedAssignment.submissionId
+    if (!submissionId) {
+      toast.error('Không tìm thấy bản nộp của đơn vị này')
+      return
+    }
+    const mutation = actionType === 'DEPARTMENT' ? rejectDept : rejectDist
+    mutation.mutate(
+      { submissionId, reason: rejectReason },
+      {
+        onSuccess: closeAndRefresh,
+      }
+    )
+  }
+
+  const handleAggregate = async () => {
+    setIsAggregating(true)
+    try {
+      const created = await createMockReportSummary(reportId)
+      const recomputed = await recomputeMockReportSummary(created.id)
+      setSummary({
+        ...created,
+        status: 'recomputed',
+        recomputedAt: recomputed.recomputedAt ?? new Date().toISOString(),
+      })
+      toast.success('Đã mô phỏng tổng hợp báo cáo')
+    } catch {
+      toast.error('Không thể mô phỏng tổng hợp báo cáo')
+    } finally {
+      setIsAggregating(false)
+    }
+  }
+
+  return (
+    <div className='flex h-[700px] overflow-hidden rounded-b-3xl border-t bg-background'>
+      <div className='flex w-full flex-col border-e bg-muted/5 md:w-[350px]'>
+        <div className='space-y-3 p-4'>
+          <div className='relative'>
+            <Filter className='absolute top-2.5 left-3 h-4 w-4 text-muted-foreground' />
+            <Input
+              placeholder='Tìm đơn vị...'
+              className='h-9 rounded-xl pl-9 text-xs'
+              value={assignmentSearch}
+              onChange={(e) => setAssignmentSearch(e.target.value)}
+            />
+          </div>
+          <Select
+            value={assignmentStatusFilter}
+            onValueChange={(value) =>
+              setAssignmentStatusFilter(value as 'all' | SubmissionStatus)
+            }
+          >
+            <SelectTrigger className='h-9 rounded-xl border-muted bg-background text-[11px]'>
+              <SelectValue placeholder='Lọc trạng thái' />
+            </SelectTrigger>
+            <SelectContent className='rounded-xl'>
+              <SelectItem value='all'>Tất cả trạng thái</SelectItem>
+              <SelectItem value='NOT_STARTED'>Chưa bắt đầu</SelectItem>
+              <SelectItem value='DRAFT'>Đang nhập</SelectItem>
+              <SelectItem value='PENDING_DEPARTMENT'>Chờ phòng duyệt</SelectItem>
+              <SelectItem value='DEPARTMENT_APPROVED'>Chờ xã chốt</SelectItem>
+              <SelectItem value='DISTRICT_APPROVED'>Đã chốt</SelectItem>
+              <SelectItem value='REJECTED_DEPARTMENT'>Phòng trả lại</SelectItem>
+              <SelectItem value='REJECTED_DISTRICT'>Xã trả lại</SelectItem>
+              <SelectItem value='OVERDUE'>Quá hạn</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <ScrollArea className='flex-1'>
+          <div className='divide-y divide-muted/10'>
+            {filteredAssignments.map((row) => {
+              const isActive = viewAssignmentId === row.id
+              const statusInfo = getSubmissionStatusInfo(
+                row.normalizedStatus,
+                report.deadlineTo
+              )
+              const StatusIcon = statusInfo.icon
+
+              return (
+                <button
+                  key={row.id}
+                  className={cn(
+                    'flex w-full flex-col gap-1.5 p-4 text-left transition-all hover:bg-muted/30',
+                    isActive &&
+                      'bg-primary/5 shadow-[inset_4px_0_0_0_theme(colors.primary.DEFAULT)]'
+                  )}
+                  onClick={() => setViewAssignmentId(row.id)}
+                >
+                  <div className='flex items-center justify-between gap-2'>
+                    <span
+                      className={cn(
+                        'text-sm font-bold truncate',
+                        isActive ? 'text-primary' : 'text-foreground'
+                      )}
+                    >
+                      {row.orgName}
+                    </span>
+                    <Badge
+                      variant='outline'
+                      className={cn(
+                        'shrink-0 h-4 px-1 text-[8px] font-bold uppercase tracking-tighter border-none',
+                        statusInfo.className
+                      )}
+                    >
+                      <StatusIcon className='mr-1 size-2.5' />
+                      {statusInfo.label}
+                    </Badge>
+                  </div>
+                  <div className='flex items-center justify-between text-[10px] text-muted-foreground'>
+                    <span>{row.assigneeName ?? 'Chưa phân công'}</span>
+                    <span>{formatTimeDashDate(row.updatedAt)}</span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </ScrollArea>
+      </div>
+
+      <div className='flex flex-1 flex-col overflow-hidden'>
+        {selectedAssignment ? (
+          <div className='flex flex-1 flex-col overflow-hidden'>
+            <div className='flex items-center justify-between border-b px-6 py-4'>
+              <div>
+                <h3 className='text-lg font-bold text-foreground'>
+                  {selectedAssignment.orgName}
+                </h3>
+                <p className='text-xs text-muted-foreground'>
+                  Chi tiết nhiệm vụ báo cáo và lịch sử phê duyệt
+                </p>
+              </div>
+              <div className='flex items-center gap-2'>
+                <Button variant='outline' size='sm' className='h-9 rounded-xl' asChild>
+                  <Link
+                    to='/my/assignments/$assignmentId/input'
+                    params={{ assignmentId: selectedAssignment.id }}
+                  >
+                    <Eye className='mr-2 size-4' />
+                    Xem dữ liệu
+                  </Link>
+                </Button>
+
+                {selectedAssignment.normalizedStatus === 'PENDING_DEPARTMENT' && (
+                  <>
+                    <Button
+                      size='sm'
+                      className='h-9 rounded-xl bg-green-600 hover:bg-green-700'
+                      onClick={() => handleApprove('DEPARTMENT')}
+                      disabled={approveDept.isPending}
+                    >
+                      <CheckCircle2 className='mr-2 size-4' />
+                      Duyệt phòng
+                    </Button>
+                    <Button
+                      variant='destructive'
+                      size='sm'
+                      className='h-9 rounded-xl'
+                      onClick={() => handleReject('DEPARTMENT')}
+                      disabled={rejectDept.isPending}
+                    >
+                      <XCircle className='mr-2 size-4' />
+                      Từ chối
+                    </Button>
+                  </>
+                )}
+
+                {selectedAssignment.normalizedStatus === 'DEPARTMENT_APPROVED' && (
+                  <>
+                    <Button
+                      size='sm'
+                      className='h-9 rounded-xl'
+                      onClick={() => handleApprove('DISTRICT')}
+                      disabled={approveDist.isPending}
+                    >
+                      <CheckCircle2 className='mr-2 size-4' />
+                      Chốt số (xã)
+                    </Button>
+                    <Button
+                      variant='destructive'
+                      size='sm'
+                      className='h-9 rounded-xl'
+                      onClick={() => handleReject('DISTRICT')}
+                      disabled={rejectDist.isPending}
+                    >
+                      <XCircle className='mr-2 size-4' />
+                      Trả lại
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <ScrollArea className='flex-1 p-6'>
+              <div className='space-y-8'>
+                <div className='grid grid-cols-3 gap-4'>
+                  <Card className='rounded-2xl border-none bg-muted/20 p-0'>
+                    <CardContent className='p-4'>
+                      <p className='text-[10px] font-bold uppercase text-muted-foreground'>
+                        Trạng thái
+                      </p>
+                      <div className='mt-1 flex items-center gap-2'>
+                        <CurrentStatusIcon className={cn('size-4', currentStatusInfo.className.split(' ')[0])} />
+                        <span className='text-sm font-bold'>{currentStatusInfo.label}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className='rounded-2xl border-none bg-muted/20 p-0'>
+                    <CardContent className='p-4'>
+                      <p className='text-[10px] font-bold uppercase text-muted-foreground'>
+                        Tiến độ
+                      </p>
+                      <div className='mt-1 flex items-baseline gap-1'>
+                        <span className='text-xl font-bold'>
+                          {selectedAssignment.completionPercent ?? 0}
+                        </span>
+                        <span className='text-xs font-medium text-muted-foreground'>%</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className='rounded-2xl border-none bg-primary/10 p-0 text-primary'>
+                    <CardContent className='p-4'>
+                      <p className='text-[10px] font-bold uppercase opacity-70'>Hạn chót</p>
+                      <p className='mt-1 text-sm font-bold'>
+                        {formatTimeDashDate(selectedAssignment.updatedAt)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className='space-y-4'>
+                  <div className='flex items-center gap-2 text-sm font-bold'>
+                    <History className='size-4 text-primary' />
+                    Lịch sử quy trình
+                  </div>
+                  <div className='rounded-2xl border bg-muted/5 p-6'>
+                    {historyQuery.isLoading ? (
+                      <div className='py-8 text-center text-xs text-muted-foreground'>
+                        Đang tải lịch sử...
+                      </div>
+                    ) : history.length === 0 ? (
+                      <div className='py-8 text-center text-xs text-muted-foreground'>
+                        Chưa có dữ liệu lịch sử
+                      </div>
+                    ) : (
+                      <SubmissionTimeline history={history} />
+                    )}
+                  </div>
+                </div>
+
+                <Card className='rounded-2xl border-none bg-muted/10'>
+                  <CardHeader className='pb-2'>
+                    <CardTitle className='text-sm font-bold uppercase tracking-widest text-muted-foreground'>
+                      Tổng hợp mô phỏng
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className='space-y-4'>
+                    {summary ? (
+                      <div className='grid gap-3 rounded-2xl border bg-background p-4 md:grid-cols-3'>
+                        <div>
+                          <div className='text-xs text-muted-foreground'>Mã tổng hợp</div>
+                          <div className='font-medium'>{summary.id}</div>
+                        </div>
+                        <div>
+                          <div className='text-xs text-muted-foreground'>Trạng thái</div>
+                          <div className='font-medium capitalize'>{summary.status}</div>
+                        </div>
+                        <div>
+                          <div className='text-xs text-muted-foreground'>Cập nhật lần cuối</div>
+                          <div className='font-medium'>
+                            {summary.recomputedAt ?? summary.createdAt}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className='rounded-2xl border border-dashed bg-background p-4 text-sm text-muted-foreground'>
+                        Chưa tạo bản tổng hợp mô phỏng.
+                      </div>
+                    )}
+                    <div className='flex items-center justify-between gap-3'>
+                      <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                        <AlertCircle className='size-4' />
+                        Luồng tổng hợp hiện chạy bằng mock FE để kiểm thử UI.
+                      </div>
+                      <Button
+                        className='rounded-xl font-bold shadow-lg shadow-primary/20'
+                        onClick={handleAggregate}
+                        disabled={isAggregating}
+                      >
+                        {isAggregating ? (
+                          <>
+                            <RotateCcw className='mr-2 size-4 animate-spin' />
+                            Đang tổng hợp...
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className='mr-2 size-4' />
+                            Tổng hợp báo cáo
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </ScrollArea>
+          </div>
+        ) : (
+          <div className='flex flex-1 flex-col items-center justify-center p-12 text-center text-muted-foreground'>
+            <div className='mb-4 rounded-3xl bg-muted/20 p-6'>
+              <Workflow className='size-10 opacity-20' />
+            </div>
+            <h4 className='font-bold text-foreground/70'>
+              Chọn đơn vị để xem chi tiết
+            </h4>
+            <p className='mt-1 max-w-[250px] text-xs leading-relaxed'>
+              Hãy chọn một đơn vị từ danh sách bên trái để kiểm tra tiến độ và
+              thực hiện phê duyệt.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
+        <DialogContent className='sm:max-w-[420px] rounded-[2rem] p-8 border-none shadow-2xl'>
+          <DialogHeader>
+            <div className='mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary'>
+              <CheckCircle2 className='size-10' />
+            </div>
+            <DialogTitle className='text-center text-2xl font-black text-foreground'>
+              Phê duyệt dữ liệu
+            </DialogTitle>
+            <DialogDescription className='pt-2 text-center text-sm font-medium leading-relaxed'>
+              {actionType === 'DEPARTMENT'
+                ? 'Phê duyệt ở cấp phòng sẽ đẩy thẳng lên cấp xã để chốt số.'
+                : 'Chốt số ở cấp xã là bước cuối, sau đó dữ liệu sẽ được khóa hoàn toàn.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className='mt-8 flex flex-col gap-3 sm:flex-row'>
+            <Button
+              variant='ghost'
+              className='flex-1 rounded-xl font-bold h-12'
+              onClick={() => setIsApproveModalOpen(false)}
+            >
+              Xem lại
+            </Button>
+            <Button
+              className='flex-1 rounded-xl font-black h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20'
+              onClick={confirmApprove}
+              disabled={approveDept.isPending || approveDist.isPending}
+            >
+              {approveDept.isPending || approveDist.isPending
+                ? 'Đang duyệt...'
+                : 'Đồng ý duyệt'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
+        <DialogContent className='sm:max-w-[500px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl'>
+          <DialogHeader className='px-8 pt-8'>
+            <DialogTitle className='text-2xl font-black flex items-center gap-3 text-destructive'>
+              <XCircle className='size-7' />
+              Trả lại bản nộp
+            </DialogTitle>
+            <DialogDescription className='text-sm pt-2 font-medium leading-relaxed'>
+              {actionType === 'DEPARTMENT'
+                ? 'Bản nộp sẽ quay lại vòng nhập liệu để chỉnh sửa theo góp ý của phòng.'
+                : 'Bản nộp sẽ quay lại vòng nhập liệu sau khi xã từ chối chốt số.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='px-8 py-6'>
+            <div className='space-y-3'>
+              <Label
+                htmlFor='reason'
+                className='ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground'
+              >
+                Lý do trả lại chi tiết
+              </Label>
+              <Textarea
+                id='reason'
+                placeholder='Nhập lý do trả lại...'
+                className='min-h-[140px] rounded-2xl border-muted bg-muted/20 p-4 text-sm focus-visible:ring-destructive/20'
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className='flex gap-3 px-8 pb-8 sm:justify-between'>
+            <Button
+              variant='ghost'
+              className='rounded-xl px-6 font-bold'
+              onClick={() => setIsRejectModalOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant='destructive'
+              className='rounded-xl px-8 font-black shadow-lg shadow-destructive/20'
+              onClick={confirmReject}
+              disabled={rejectDept.isPending || rejectDist.isPending}
+            >
+              {rejectDept.isPending || rejectDist.isPending
+                ? 'Đang thực hiện...'
+                : 'Xác nhận trả lại'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Separator className='hidden' />
+    </div>
+  )
+}

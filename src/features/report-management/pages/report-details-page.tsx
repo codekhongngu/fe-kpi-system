@@ -18,7 +18,6 @@ import {
   Settings2,
   Workflow,
   RotateCcw,
-  Send,
   XCircle,
   AlertCircle,
 } from 'lucide-react'
@@ -60,18 +59,16 @@ import { reportCampaignApi } from '../api/report-management-api'
 import type { ReportDetail } from '../api/types'
 import { ReportConfirmDialog } from '../components/report-confirm-dialog'
 import { ReportStatusBadge } from '../components/report-status'
+import { ReportApprovalsTab } from '../components/tabs/report-approvals-tab'
 import { CampaignDefaultValuesTab } from '../components/tabs/campaign-default-values-tab'
 import { CampaignScopesTab } from '../components/tabs/campaign-scopes-tab'
 import { getErrorMessage, reportQueryKeys } from '../utils/report-query'
 import { useSubmissionHistory } from '@/features/submission/hooks/use-my-assignments'
 import { useApproveDistrict, useRejectDistrict, useApproveDepartment, useRejectDepartment } from '@/features/submission/hooks/use-approvals'
 import { getSubmissionStatusInfo } from '@/features/submission/utils/submission-status'
-import { submissionApi } from '@/features/submission/api/submission-api'
 import { SubmissionTimeline } from '@/components/submission/submission-timeline'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 
 type OrganizationTreeNode = {
@@ -130,10 +127,8 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [indicatorSearch, setIndicatorSearch] = useState('')
   const [viewAssignmentId, setViewAssignmentId] = useState<string | null>(null)
-
   const [assignmentSearch, setAssignmentSearch] = useState('')
   const [assignmentStatusFilter, setAssignmentStatusFilter] = useState<string>('all')
-
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false)
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -175,6 +170,8 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
   }
 
   const confirmReject = () => {
+
+
     if (!viewAssignmentId || !actionType || !rejectReason.trim()) {
       if (!rejectReason.trim()) toast.error('Vui lòng nhập lý do từ chối')
       return
@@ -231,6 +228,12 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
     },
   })
 
+  const assignmentsQuery = useQuery({
+    queryKey: reportQueryKeys.assignments(reportId),
+    queryFn: () => reportCampaignApi.listCampaignAssignments(reportId),
+    enabled: !!reportId,
+  })
+
   const orgTreeQuery = useQuery({
     queryKey: ['report-details', 'orgs', { q: unitSearch.trim() }],
     queryFn: async () => {
@@ -244,7 +247,13 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
     retry: false,
   })
 
-  const report = detailQuery.data
+  const report = useMemo(() => {
+    if (!detailQuery.data) return detailQuery.data
+    return {
+      ...detailQuery.data,
+      assignments: assignmentsQuery.data ?? detailQuery.data.assignments,
+    }
+  }, [assignmentsQuery.data, detailQuery.data])
 
   const indicatorsQuery = useQuery({
     queryKey: [
@@ -427,7 +436,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
               .map((w) => w[0].toUpperCase())
               .join('') || 'DV',
           assigneeName: `${org.count} chỉ tiêu đã gán`,
-          status: 'not_started',
+          status: 'NOT_STARTED',
           updatedAt: null,
         }) as const
     )
@@ -937,6 +946,14 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
               </TabsContent>
 
               <TabsContent value='approvals' className='p-0'>
+                <ReportApprovalsTab
+                  reportId={reportId}
+                  report={report}
+                  onRefetch={() => detailQuery.refetch()}
+                />
+              </TabsContent>
+
+              <TabsContent value='approvals-old' className='p-0'>
                 <div className='flex h-[700px] overflow-hidden rounded-b-3xl border-t bg-background'>
                   {/* Master Column */}
                   <div className='flex w-full flex-col border-e bg-muted/5 md:w-[350px]'>
@@ -963,7 +980,8 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                           <SelectItem value='PENDING_DEPARTMENT'>Chờ phòng duyệt</SelectItem>
                           <SelectItem value='DEPARTMENT_APPROVED'>Phòng đã duyệt</SelectItem>
                           <SelectItem value='DISTRICT_APPROVED'>Đã chốt (Xã)</SelectItem>
-                          <SelectItem value='REJECTED'>Bị trả lại</SelectItem>
+                          <SelectItem value='REJECTED_DEPARTMENT'>Phòng trả lại</SelectItem>
+                          <SelectItem value='REJECTED_DISTRICT'>Xã trả lại</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

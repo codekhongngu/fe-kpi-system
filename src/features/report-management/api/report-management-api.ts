@@ -1,11 +1,13 @@
 import { apiClient } from '@/lib/api-client'
 import type { OrgTreeItem } from '@/features/form-management/api/template-management-api'
+import { normalizeSubmissionStatus } from '@/features/submission/utils/submission-status-rules'
 import type {
   CampaignDefaultValue,
   CampaignScope,
   CreateReportInput,
   ReportDetail,
   ReportListItem,
+  ReportAssignment,
 } from './types'
 
 // ── Raw BE shapes ──────────────────────────────────────────────────────────────
@@ -38,10 +40,24 @@ type BeCampaignAssignment = {
   id: string
   orgId: string
   orgName?: string
+  submissionId?: string | null
   status?: string
+  completionPct?: number | string | null
   submittedAt?: string | null
+  approvedAt?: string | null
+  departmentApprovedAt?: string | null
+  districtApprovedAt?: string | null
   updatedAt?: string | null
   assigneeName?: string
+  batchId?: string
+  formId?: string
+  periodType?: string
+  periodCode?: string
+  periodName?: string | null
+  deadlineFrom?: string
+  deadlineTo?: string
+  assignedAt?: string | null
+  assignedBy?: string | null
 }
 
 type BeCampaignScope = {
@@ -94,13 +110,41 @@ const mapCampaignDetail = (item: BeCampaign): ReportDetail => ({
     id: a.id,
     orgId: a.orgId,
     orgName: a.orgName ?? '',
-    status: (a.status as ReportDetail['status']) ?? 'DRAFT',
-    completionPercent: 0,
+    submissionId: a.submissionId ?? null,
+    status:
+      (normalizeSubmissionStatus(a.status) as ReportAssignment['status']) ??
+      'NOT_STARTED',
+    completionPercent:
+      a.completionPct === null || a.completionPct === undefined
+        ? null
+        : Number(a.completionPct),
     submittedAt: a.submittedAt ?? null,
-    approvedAt: null,
+    approvedAt: a.approvedAt ?? a.districtApprovedAt ?? a.departmentApprovedAt ?? null,
+    departmentApprovedAt: a.departmentApprovedAt ?? null,
+    districtApprovedAt: a.districtApprovedAt ?? null,
     updatedAt: a.updatedAt ?? null,
     assigneeName: a.assigneeName,
   })),
+})
+
+const mapCampaignAssignment = (item: BeCampaignAssignment) => ({
+  id: item.id,
+  orgId: item.orgId,
+  orgName: item.orgName ?? '',
+  submissionId: item.submissionId ?? null,
+  status:
+    (normalizeSubmissionStatus(item.status) as ReportAssignment['status']) ??
+    'NOT_STARTED',
+  completionPercent:
+    item.completionPct === null || item.completionPct === undefined
+      ? null
+      : Number(item.completionPct),
+  submittedAt: item.submittedAt ?? null,
+  approvedAt: item.approvedAt ?? item.districtApprovedAt ?? item.departmentApprovedAt ?? null,
+  departmentApprovedAt: item.departmentApprovedAt ?? null,
+  districtApprovedAt: item.districtApprovedAt ?? null,
+  updatedAt: item.updatedAt ?? item.assignedAt ?? null,
+  assigneeName: item.assigneeName,
 })
 
 const mapScope = (item: BeCampaignScope): CampaignScope => ({
@@ -157,6 +201,17 @@ export const reportCampaignApi = {
       `/report-campaigns/${campaignId}`
     )
     return mapCampaignDetail(response.data)
+  },
+
+  listCampaignAssignments: async (
+    campaignId: string
+  ): Promise<ReportDetail['assignments']> => {
+    const response = await apiClient.get<
+      BeCampaignAssignment[] | { items?: BeCampaignAssignment[] }
+    >(`/report-campaigns/${campaignId}/assignments`)
+    const payload = response.data
+    const items = Array.isArray(payload) ? payload : (payload.items ?? [])
+    return items.map(mapCampaignAssignment)
   },
 
   createCampaign: async (input: CreateReportInput): Promise<ReportDetail> => {
@@ -252,16 +307,16 @@ export type { OrgTreeItem }
 
 export function canRunReportAction(report: ReportListItem, action: string) {
   if (action === 'report:update') {
-    return !['APPROVED', 'COMPLETED', 'CANCELLED'].includes(report.status)
+    return !['CLOSED', 'CANCELLED'].includes(report.status)
   }
   if (action === 'report:delete') {
-    return !['APPROVED', 'COMPLETED'].includes(report.status)
+    return !['CLOSED'].includes(report.status)
   }
   if (action === 'report:assign') {
     return ['DRAFT', 'NOT_STARTED'].includes(report.status)
   }
   if (action === 'report:approve' || action === 'report:reject') {
-    return ['SUBMITTED', 'UNDER_REVIEW'].includes(report.status)
+    return ['PENDING_DEPARTMENT', 'DEPARTMENT_APPROVED'].includes(report.status)
   }
   return true
 }

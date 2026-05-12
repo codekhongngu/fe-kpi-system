@@ -48,9 +48,10 @@ export function ReportDetailDialog({
   onReject,
 }: ReportDetailDialogProps) {
   const canReview =
-    report && ['SUBMITTED', 'UNDER_REVIEW'].includes(report.status)
+    report &&
+    ['PENDING_DEPARTMENT', 'DEPARTMENT_APPROVED'].includes(report.status)
   const canEdit =
-    report && !['APPROVED', 'COMPLETED', 'CANCELLED'].includes(report.status)
+    report && !['DISTRICT_APPROVED', 'CLOSED', 'CANCELLED'].includes(report.status)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -7,6 +7,8 @@ export const reportQueryKeys = {
   list: (filters: ReportFilters) =>
     ['report-management', 'list', filters] as const,
   detail: (id: string | null) => ['report-management', 'detail', id] as const,
+  assignments: (id: string | null) =>
+    ['report-management', 'assignments', id] as const,
 }
 
 export const defaultReportFilters: ReportFilters = {
