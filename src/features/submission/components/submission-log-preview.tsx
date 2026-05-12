@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Lock, Calculator, Loader2, AlertCircle, FileText } from 'lucide-react'
+import { Loader2, AlertCircle, FileText } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import { TemplateMatrixGrid } from '@/features/form-management/components/shared/template-matrix-grid'

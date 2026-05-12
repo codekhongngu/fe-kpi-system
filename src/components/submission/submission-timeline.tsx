@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { getSubmissionStatusInfo } from '@/features/submission/utils/submission-status'
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +31,7 @@ export interface SubmissionFlowLog {
   user_name: string
   note?: string | null
   created_at: string
-  snapshot?: any
+  snapshot?: Record<string, unknown> | null
 }
 
 interface SubmissionTimelineProps {
@@ -75,6 +76,11 @@ export function SubmissionTimeline({
   onViewSnapshot,
   onCompare,
 }: SubmissionTimelineProps) {
+  const formatStatusLabel = (status: string | null | undefined) => {
+    if (!status) return 'Khởi tạo'
+    return getSubmissionStatusInfo(status).label
+  }
+
   if (!history || history.length === 0) {
     return (
       <div className='flex flex-col items-center justify-center py-12 text-muted-foreground'>
@@ -89,8 +95,6 @@ export function SubmissionTimeline({
       {history.map((log, idx) => {
         const config = eventConfig[log.event] || eventConfig.SUBMIT
         const Icon = config.icon
-        const isLast = idx === history.length - 1
-
         return (
           <div key={log.id} className='relative pl-12 transition-all duration-300 hover:translate-x-1'>
             {/* Timeline Node */}
@@ -169,9 +173,9 @@ export function SubmissionTimeline({
               )}
 
               <div className='mt-3 flex items-center gap-3 text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider'>
-                <span>{log.from_status || 'KHOI_TAO'}</span>
+                <span>{formatStatusLabel(log.from_status)}</span>
                 <ArrowRight className='size-3' />
-                <span className='text-foreground'>{log.to_status}</span>
+                <span className='text-foreground'>{formatStatusLabel(log.to_status)}</span>
               </div>
             </div>
           </div>

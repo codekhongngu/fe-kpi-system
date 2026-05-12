@@ -2,14 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import {
   AlertCircle,
-  Lock,
-  Calculator,
-  Info,
-  ArrowLeft,
   Clock,
-  CheckCircle2,
   XCircle,
-  FileText,
+  ArrowLeft,
   CalendarDays,
   Save,
   Send,
@@ -22,8 +17,6 @@ import { Progress } from '@/components/ui/progress'
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import type { FormTemplate } from '@/features/form-management/api/types'
@@ -31,40 +24,8 @@ import { SubmissionGrid } from '../components/submission-grid'
 import { SubmitConfirmDialog } from '../components/submit-confirm-dialog'
 import { useMyAssignments } from '../hooks/use-my-assignments'
 import { useSubmission } from '../hooks/use-submission'
-
-const statusConfig: Record<
-  string,
-  {
-    label: string
-    icon: typeof Clock
-    className: string
-  }
-> = {
-  DRAFT: {
-    label: 'Đang nhập (Nháp)',
-    icon: FileText,
-    className:
-      'border-slate-200 bg-slate-50 text-slate-700',
-  },
-  PENDING: {
-    label: 'Chờ phê duyệt',
-    icon: Clock,
-    className:
-      'border-yellow-200 bg-yellow-50 text-yellow-700',
-  },
-  APPROVED: {
-    label: 'Đã phê duyệt',
-    icon: CheckCircle2,
-    className:
-      'border-green-200 bg-green-50 text-green-700',
-  },
-  REJECTED: {
-    label: 'Bị trả lại',
-    icon: XCircle,
-    className:
-      'border-red-200 bg-red-50 text-red-700',
-  },
-}
+import { getSubmissionStatusInfo } from '../utils/submission-status'
+import { isSubmissionReadOnlyStatus, isSubmissionRejectedStatus } from '../utils/submission-status-rules'
 
 export function SubmissionInputPage() {
   const { assignmentId } = useParams({ strict: false }) as {
@@ -108,9 +69,8 @@ export function SubmissionInputPage() {
   const isLoading =
     isLoadingAssignments || isLoadingSubmission || !template || !detail
 
-  const isReadOnly =
-    detail?.status === 'PENDING' || detail?.status === 'APPROVED'
-  const isRejected = detail?.status === 'REJECTED'
+  const isReadOnly = isSubmissionReadOnlyStatus(detail?.status)
+  const isRejected = isSubmissionRejectedStatus(detail?.status)
 
   const handleBack = () => {
     navigate({ to: '/my/assignments' })
@@ -134,7 +94,7 @@ export function SubmissionInputPage() {
     )
   }
 
-  const currentStatus = statusConfig[detail.status] ?? statusConfig.DRAFT
+  const currentStatus = getSubmissionStatusInfo(detail.status)
   const StatusIcon = currentStatus.icon
   const percent = detail.completionPct ?? 0
 

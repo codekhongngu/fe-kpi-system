@@ -2,13 +2,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { approvalApi } from '../api/approval-api'
 import { toast } from 'sonner'
 
+function invalidateSubmissionQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
+  queryClient.invalidateQueries({ queryKey: ['submission'] })
+  queryClient.invalidateQueries({ queryKey: ['submission-history'] })
+}
+
 export function useApproveDepartment() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (submissionId: string) => approvalApi.approveDepartment(submissionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
-      queryClient.invalidateQueries({ queryKey: ['submission-history'] })
+      invalidateSubmissionQueries(queryClient)
       toast.success('Thành công', { description: 'Đã phê duyệt báo cáo cấp phòng.' })
     },
     onError: (error: any) => {
@@ -23,8 +28,7 @@ export function useRejectDepartment() {
     mutationFn: ({ submissionId, reason }: { submissionId: string; reason: string }) =>
       approvalApi.rejectDepartment(submissionId, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
-      queryClient.invalidateQueries({ queryKey: ['submission-history'] })
+      invalidateSubmissionQueries(queryClient)
       toast.success('Thành công', { description: 'Đã trả lại báo cáo.' })
     },
     onError: (error: any) => {
@@ -38,8 +42,7 @@ export function useApproveDistrict() {
   return useMutation({
     mutationFn: (submissionId: string) => approvalApi.approveDistrict(submissionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
-      queryClient.invalidateQueries({ queryKey: ['submission-history'] })
+      invalidateSubmissionQueries(queryClient)
       toast.success('Thành công', { description: 'Đã xác nhận hoàn thành (Publish).' })
     },
     onError: (error: any) => {
@@ -54,8 +57,7 @@ export function useRejectDistrict() {
     mutationFn: ({ submissionId, reason }: { submissionId: string; reason: string }) =>
       approvalApi.rejectDistrict(submissionId, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
-      queryClient.invalidateQueries({ queryKey: ['submission-history'] })
+      invalidateSubmissionQueries(queryClient)
       toast.success('Thành công', { description: 'Đã trả lại báo cáo cấp xã.' })
     },
     onError: (error: any) => {

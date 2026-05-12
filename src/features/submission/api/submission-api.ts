@@ -4,7 +4,6 @@ import type {
   SubmissionDetail,
   CellChange,
   PatchCellsResult,
-  ApprovalHistoryItem,
 } from './types'
 
 export type MyAssignmentsQuery = {

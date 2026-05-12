@@ -10,6 +10,14 @@ import {
 } from '@/components/ui/card'
 import type { MyAssignment } from '../api/types'
 import { AssignmentStatusBadge } from './assignment-status-badge'
+import {
+  getSubmissionStatusInfo,
+} from '../utils/submission-status'
+import {
+  isSubmissionEditableStatus,
+  isSubmissionReadOnlyStatus,
+  isSubmissionRejectedStatus,
+} from '../utils/submission-status-rules'
 
 type AssignmentCardProps = {
   assignment: MyAssignment
@@ -17,26 +25,22 @@ type AssignmentCardProps = {
 
 export function AssignmentCard({ assignment }: AssignmentCardProps) {
   const { form, period, deadlineTo, submission, assignmentId } = assignment
-
   const status = submission?.status
+  const statusInfo = getSubmissionStatusInfo(status)
   const isOverdue =
-    new Date(deadlineTo) < new Date() &&
-    status !== 'APPROVED' &&
-    status !== 'PENDING'
+    new Date(deadlineTo) < new Date() && !isSubmissionReadOnlyStatus(status)
 
-  let actionText = 'Bắt đầu nhập liệu'
+  const actionUrl = `/my/assignments/${assignmentId}/input`
+  let actionText = 'Xem chi tiết'
   let actionVariant: 'default' | 'outline' | 'secondary' | 'destructive' =
-    'default'
-  let actionUrl = `/my/assignments/${assignmentId}/input`
+    'outline'
 
-  if (status === 'DRAFT') {
-    actionText = 'Tiếp tục nhập liệu'
-  } else if (status === 'REJECTED') {
+  if (isSubmissionEditableStatus(status) || status === 'NOT_STARTED') {
+    actionText = 'Nhập báo cáo'
+    actionVariant = 'default'
+  } else if (isSubmissionRejectedStatus(status)) {
     actionText = 'Sửa và nộp lại'
     actionVariant = 'destructive'
-  } else if (status === 'PENDING' || status === 'APPROVED') {
-    actionText = 'Xem chi tiết'
-    actionVariant = 'outline'
   }
 
   return (
@@ -64,6 +68,11 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
           Hạn nộp: {new Date(deadlineTo).toLocaleDateString('vi-VN')}
           {isOverdue && ' (Quá hạn)'}
         </div>
+        {!isSubmissionEditableStatus(status) && statusInfo.label && (
+          <div className='mt-2 text-xs text-muted-foreground'>
+            Trạng thái hiện tại: {statusInfo.label}
+          </div>
+        )}
       </CardContent>
       <CardFooter className='pt-0'>
         <Button asChild variant={actionVariant} className='w-full'>

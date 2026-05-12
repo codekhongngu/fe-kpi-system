@@ -1,4 +1,4 @@
-import { useState } from 'react'
+
 import { Send, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,8 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 
 type SubmitConfirmDialogProps = {
   open: boolean
@@ -27,11 +25,10 @@ export function SubmitConfirmDialog({
   isSubmitting,
   completionPct,
 }: SubmitConfirmDialogProps) {
-  const [note, setNote] = useState('')
   const isComplete = completionPct === 100
 
   const handleConfirm = () => {
-    onConfirm(note)
+    onConfirm('')
   }
 
   return (

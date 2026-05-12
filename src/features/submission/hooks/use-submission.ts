@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { AxiosError } from 'axios'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -104,6 +104,8 @@ export function useSubmission(assignmentId: string) {
 
       // Refetch to sync version
       await refetch()
+      await queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['submission'] })
     },
     onError: async (e) => {
       if (e instanceof AxiosError && e.response?.status === 412) {
@@ -145,6 +147,9 @@ export function useSubmission(assignmentId: string) {
       setHasUnsavedChanges(false)
       toast.success('Nộp báo cáo thành công.')
       refetch()
+      queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['submission'] })
+      queryClient.invalidateQueries({ queryKey: ['submission-history'] })
     },
     onError: (e) => {
       if (e instanceof Error) {

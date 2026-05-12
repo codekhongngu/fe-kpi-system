@@ -17,6 +17,8 @@ export function useCancelSubmit() {
       submissionApi.cancelSubmit(submissionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['submission'] })
+      queryClient.invalidateQueries({ queryKey: ['submission-history'] })
       toast.success('Thành công', {
         description: 'Đã thu hồi báo cáo. Trạng thái đã chuyển về Đang nhập.',
       })

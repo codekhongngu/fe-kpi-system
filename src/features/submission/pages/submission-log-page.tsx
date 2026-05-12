@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useParams, useNavigate } from '@tanstack/react-router'
-import { Lock, Calculator, Loader2, AlertCircle, FileText, ArrowLeft, Download, History } from 'lucide-react'
+import { useParams } from '@tanstack/react-router'
+import { Loader2, AlertCircle, FileText, ArrowLeft, Download, History } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
@@ -12,7 +12,6 @@ import { format } from 'date-fns'
 
 export function SubmissionLogPage() {
   const { logId } = useParams({ strict: false }) as { logId: string }
-  const navigate = useNavigate()
 
   // 1. Fetch flow log details (including snapshot)
   const logQuery = useQuery({

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { ArrowRight, Info } from 'lucide-react'
-import { compareSnapshots, SubmissionSnapshot } from '@/features/submission/utils/data-diff'
+import { compareSnapshots, type SubmissionSnapshot } from '@/features/submission/utils/data-diff'
 
 interface SubmissionDiffModalProps {
   isOpen: boolean

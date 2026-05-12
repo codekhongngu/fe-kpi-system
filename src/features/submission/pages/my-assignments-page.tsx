@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Link, useSearch, useNavigate } from '@tanstack/react-router'
 import {
   Search,
@@ -9,13 +9,10 @@ import {
   Clock,
   AlertCircle,
   FileText,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle,
   XCircle,
   Workflow,
   Calendar,
-  ArrowRight,
   Filter,
   History,
   LayoutDashboard,
@@ -61,12 +58,14 @@ import {
   useSubmissionHistory,
 } from '../hooks/use-my-assignments'
 import { useApproveDepartment, useRejectDepartment } from '../hooks/use-approvals'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DataTablePagination } from '@/components/data-table/data-table-pagination'
 import { getSubmissionStatusInfo } from '../utils/submission-status'
-import { SubmissionTimeline, SubmissionFlowLog } from '@/components/submission/submission-timeline'
+import { isSubmissionReadOnlyStatus, normalizeSubmissionStatus } from '../utils/submission-status-rules'
+import { SubmissionTimeline, type SubmissionFlowLog } from '@/components/submission/submission-timeline'
 import { SubmissionDiffModal } from '@/components/submission/submission-diff-modal'
-import { SubmissionLogPreview } from '../components/submission-log-preview'
 import { submissionApi } from '../api/submission-api'
+import type { SubmissionSnapshot } from '../utils/data-diff'
 
 type AssignmentFilterStatus =
   | 'all'
@@ -79,15 +78,45 @@ type AssignmentFilterStatus =
   | 'REJECTED_DISTRICT'
   | 'OVERDUE'
 
+type AssignmentSearchParams = {
+  assignmentId?: string
+  q?: string
+  status?: string
+  page?: string | number
+  limit?: string | number
+}
+
+type SearchUpdateParams = Partial<AssignmentSearchParams>
+
+const assignmentFilterStatuses = new Set<AssignmentFilterStatus>([
+  'all',
+  'NOT_STARTED',
+  'DRAFT',
+  'PENDING_DEPARTMENT',
+  'DEPARTMENT_APPROVED',
+  'DISTRICT_APPROVED',
+  'REJECTED_DEPARTMENT',
+  'REJECTED_DISTRICT',
+  'OVERDUE',
+])
+
+function isAssignmentFilterStatus(
+  value: string | undefined
+): value is AssignmentFilterStatus {
+  return value !== undefined && assignmentFilterStatuses.has(value as AssignmentFilterStatus)
+}
+
 export function MyAssignmentsPage() {
-  const search = useSearch({ strict: false }) as any
+  const search = useSearch({ strict: false }) as AssignmentSearchParams
   const navigate = useNavigate()
 
   const selectedId = search.assignmentId || null
   const [searchTerm, setSearchTerm] = useState(search.q || '')
   const [debouncedSearch, setDebouncedSearch] = useState(search.q || '')
   const [statusFilter, setStatusFilter] =
-    useState<AssignmentFilterStatus>(search.status || 'all')
+    useState<AssignmentFilterStatus>(
+      isAssignmentFilterStatus(search.status) ? search.status : 'all'
+    )
   const [page, setPage] = useState(Number(search.page) || 1)
   const [limit, setLimit] = useState(Number(search.limit) || 20)
 
@@ -95,30 +124,27 @@ export function MyAssignmentsPage() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [approvingId, setApprovingId] = useState<string | null>(null)
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false)
+  const [cancelSubmitId, setCancelSubmitId] = useState<string | null>(null)
 
   // States for history and diff
   const [isDiffModalOpen, setIsDiffModalOpen] = useState(false)
-  const [oldSnapshot, setOldSnapshot] = useState<any>(null)
-  const [newSnapshot, setNewSnapshot] = useState<any>(null)
-  const [isSnapshotLoading, setIsSnapshotLoading] = useState(false)
+  const [oldSnapshot, setOldSnapshot] = useState<SubmissionSnapshot | null>(null)
+  const [newSnapshot, setNewSnapshot] = useState<SubmissionSnapshot | null>(null)
 
-  // State for preview log
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
-  const [previewLogId, setPreviewLogId] = useState<string | null>(null)
+  const updateUrl = useCallback((params: SearchUpdateParams) => {
+    navigate({
+      to: '.',
+      search: (prev: any) => ({ ...prev, ...params }),
+      replace: true,
+    })
+  }, [navigate])
 
   const handleSearch = useDebounceCallback((val: string) => {
     setDebouncedSearch(val)
     setPage(1)
     updateUrl({ q: val || undefined, page: 1 })
   }, 500)
-
-  const updateUrl = (params: any) => {
-    navigate({
-      to: '.',
-      search: (prev: any) => ({ ...prev, ...params }),
-      replace: true,
-    })
-  }
 
   const { data, isLoading } = useMyAssignments({
     q: debouncedSearch || undefined,
@@ -138,15 +164,15 @@ export function MyAssignmentsPage() {
   const historyQuery = useSubmissionHistory(selectedId)
   const history = historyQuery.data || []
 
-  const items = data?.items || []
-  const total = data?.total || 0
+  const items = useMemo(() => data?.items ?? [], [data?.items])
+  const total = data?.total ?? 0
 
   // Auto-select first item if none selected
   useEffect(() => {
     if (!selectedId && items.length > 0 && !isLoading) {
       updateUrl({ assignmentId: items[0].assignmentId })
     }
-  }, [items, selectedId, isLoading])
+  }, [items, selectedId, isLoading, updateUrl])
 
   const selectedItem = useMemo(() =>
     items.find((i) => i.assignmentId === selectedId),
@@ -194,30 +220,29 @@ export function MyAssignmentsPage() {
   }
 
   const handleCompare = async (log: SubmissionFlowLog, prevLog?: SubmissionFlowLog) => {
-    setIsSnapshotLoading(true)
     try {
-      let currentSnap = log.snapshot
+      let currentSnap: SubmissionSnapshot | null =
+        (log.snapshot as SubmissionSnapshot | null | undefined) ?? null
       if (!currentSnap) {
         const details = await submissionApi.getFlowLogDetails(log.id)
-        currentSnap = details.snapshot
+        currentSnap = (details.snapshot as SubmissionSnapshot | null | undefined) ?? null
       }
 
-      let previousSnap = null
+      let previousSnap: SubmissionSnapshot | null = null
       if (prevLog) {
-        previousSnap = prevLog.snapshot
+        previousSnap =
+          (prevLog.snapshot as SubmissionSnapshot | null | undefined) ?? null
         if (!previousSnap) {
           const details = await submissionApi.getFlowLogDetails(prevLog.id)
-          previousSnap = details.snapshot
+          previousSnap = (details.snapshot as SubmissionSnapshot | null | undefined) ?? null
         }
       }
 
       setNewSnapshot(currentSnap)
       setOldSnapshot(previousSnap)
       setIsDiffModalOpen(true)
-    } catch (error) {
+    } catch {
       toast.error('Không thể tải dữ liệu snapshot')
-    } finally {
-      setIsSnapshotLoading(false)
     }
   }
 
@@ -229,9 +254,19 @@ export function MyAssignmentsPage() {
   }
 
   const handleCancelSubmit = (submissionId: string) => {
-    if (confirm('Bạn có chắc chắn muốn thu hồi báo cáo này để sửa lại?')) {
-      cancelSubmit(submissionId)
-    }
+    setCancelSubmitId(submissionId)
+    setIsCancelConfirmOpen(true)
+  }
+
+  const confirmCancelSubmit = () => {
+    if (!cancelSubmitId) return
+
+    cancelSubmit(cancelSubmitId, {
+      onSuccess: () => {
+        setIsCancelConfirmOpen(false)
+        setCancelSubmitId(null)
+      },
+    })
   }
 
   return (
@@ -364,6 +399,7 @@ export function MyAssignmentsPage() {
 
           <div className='shrink-0 border-t bg-background p-2'>
             <DataTablePagination
+              className='w-full'
               total={total}
               page={page}
               pageSize={limit}
@@ -408,7 +444,7 @@ export function MyAssignmentsPage() {
                       to='/my/assignments/$assignmentId/input'
                       params={{ assignmentId: selectedItem.assignmentId }}
                     >
-                      {['PENDING_DEPARTMENT', 'DEPARTMENT_APPROVED', 'DISTRICT_APPROVED'].includes(selectedItem.submission?.status || '') ? (
+                      {isSubmissionReadOnlyStatus(selectedItem.submission?.status) ? (
                         <>
                           <Eye className='mr-2 h-5 w-5' />
                           Xem dữ liệu
@@ -423,7 +459,7 @@ export function MyAssignmentsPage() {
                   </Button>
 
                   {/* Context Actions */}
-                  {selectedItem.submission?.status === 'PENDING_DEPARTMENT' && (
+                  {normalizeSubmissionStatus(selectedItem.submission?.status) === 'PENDING_DEPARTMENT' && (
                     <div className='flex items-center gap-2 border-l pl-3 ml-1'>
                       <Button
                         size='sm'
@@ -448,16 +484,16 @@ export function MyAssignmentsPage() {
                     </div>
                   )}
 
-                  {selectedItem.submission?.status === 'PENDING_DEPARTMENT' && (
+                  {normalizeSubmissionStatus(selectedItem.submission?.status) === 'PENDING_DEPARTMENT' && (
                     <Button
-                      variant='ghost'
-                      size='icon'
-                      className='rounded-xl text-muted-foreground'
-                      title='Thu hồi báo cáo'
+                      variant='outline'
+                      size='sm'
+                      className='rounded-xl text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700'
                       onClick={() => handleCancelSubmit(selectedItem.submission!.id)}
                       disabled={isCanceling}
                     >
-                      <RotateCcw className='size-5' />
+                      <RotateCcw className='mr-2 h-4 w-4' />
+                      Thu hồi
                     </Button>
                   )}
                 </div>
@@ -741,13 +777,29 @@ export function MyAssignmentsPage() {
         title={oldSnapshot ? 'So sánh thay đổi dữ liệu' : 'Chi tiết dữ liệu tại thời điểm này'}
       />
 
-      <SubmissionLogPreview
-        isOpen={isPreviewModalOpen}
-        onClose={() => setIsPreviewModalOpen(false)}
-        logId={previewLogId}
-        formId={selectedItem?.form.id || null}
+
+      <ConfirmDialog
+        open={isCancelConfirmOpen}
+        onOpenChange={(open) => {
+          setIsCancelConfirmOpen(open)
+          if (!open) {
+            setCancelSubmitId(null)
+          }
+        }}
+        title={
+          <span className='flex items-center gap-2 text-destructive'>
+            <RotateCcw className='size-5' />
+            Thu hồi báo cáo
+          </span>
+        }
+        desc='Báo cáo sẽ được đưa về trạng thái "Đang nhập" để bạn chỉnh sửa lại nội dung trước khi nộp lại.'
+        cancelBtnText='Đóng'
+        confirmText={isCanceling ? 'Đang thu hồi...' : 'Xác nhận thu hồi'}
+        destructive
+        isLoading={isCanceling}
+        handleConfirm={confirmCancelSubmit}
+        className='sm:max-w-[420px]'
       />
     </div>
   )
 }
-

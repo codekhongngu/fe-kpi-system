@@ -14,7 +14,6 @@ export type MyAssignment = {
 export type SubmissionStatus =
   | 'NOT_STARTED'
   | 'DRAFTING'
-  | 'SUBMITTED'
   | 'PENDING_DEPARTMENT'
   | 'DEPARTMENT_APPROVED'
   | 'DISTRICT_APPROVED'

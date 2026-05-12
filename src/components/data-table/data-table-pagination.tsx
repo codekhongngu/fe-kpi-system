@@ -14,6 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+const SIMPLE_PAGE_SIZE_OPTIONS = [10, 20, 30, 50, 100]
+const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50]
+
 type DataTablePaginationProps = {
   page: number
   pageSize: number
@@ -38,46 +41,60 @@ export function DataTablePagination({
   const pageNumbers = getPageNumbers(currentPage, totalPages)
   const startRow = total === 0 ? 0 : (currentPage - 1) * pageSize + 1
   const endRow = Math.min(currentPage * pageSize, total)
+  const pageSizeOptions = Array.from(
+    new Set([
+      ...(variant === 'simple' ? SIMPLE_PAGE_SIZE_OPTIONS : DEFAULT_PAGE_SIZE_OPTIONS),
+      pageSize,
+    ])
+  ).sort((a, b) => a - b)
 
   if (variant === 'simple') {
     return (
-      <div className={cn('flex items-center justify-between gap-2 px-1', className)}>
-        <div className='flex items-center gap-1'>
+      <div
+        className={cn(
+          'flex w-full items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/95 px-3 py-2.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80',
+          className
+        )}
+      >
+        <div className='flex min-w-0 items-center gap-1.5'>
           <Button
             variant='outline'
-            className='size-7 p-0 rounded-md border-muted/30 hover:bg-muted/10'
+            className='size-8 shrink-0 rounded-full border-muted/30 bg-background/80 p-0 shadow-none hover:bg-muted/10'
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage <= 1}
           >
-            <ChevronLeftIcon className='h-3.5 w-3.5' />
+            <ChevronLeftIcon className='h-4 w-4' />
           </Button>
-          
-          <div className='flex items-center px-2 py-1 bg-muted/20 rounded-md border border-muted/20 min-w-[60px] justify-center'>
-            <span className='text-[10px] font-black tracking-tight text-foreground/70'>
+
+          <div className='flex min-w-[78px] items-center justify-center rounded-full border border-muted/20 bg-muted/30 px-3 py-1.5'>
+            <span className='text-[11px] font-bold tabular-nums tracking-tight text-foreground/80'>
               {currentPage} / {totalPages}
             </span>
           </div>
 
           <Button
             variant='outline'
-            className='size-7 p-0 rounded-md border-muted/30 hover:bg-muted/10'
+            className='size-8 shrink-0 rounded-full border-muted/30 bg-background/80 p-0 shadow-none hover:bg-muted/10'
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage >= totalPages}
           >
-            <ChevronRightIcon className='h-3.5 w-3.5' />
+            <ChevronRightIcon className='h-4 w-4' />
           </Button>
         </div>
 
-        <div className='flex items-center gap-2'>
+        <div className='flex shrink-0 items-center gap-2'>
+          <span className='hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:inline'>
+            Mỗi trang
+          </span>
           <Select
             value={`${pageSize}`}
             onValueChange={(value) => onPageSizeChange(Number(value))}
           >
-            <SelectTrigger className='h-7 w-[55px] text-[10px] font-bold bg-transparent border-muted/30'>
-              <SelectValue placeholder={pageSize} />
+            <SelectTrigger className='h-8 min-w-[72px] rounded-full border-muted/30 bg-background/80 px-3 text-xs font-semibold shadow-none'>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent side='top'>
-              {[10, 20, 50].map((size) => (
+              {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={`${size}`} className='text-[10px]'>
                   {size}
                 </SelectItem>
