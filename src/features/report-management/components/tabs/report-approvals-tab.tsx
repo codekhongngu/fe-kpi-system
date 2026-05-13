@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+/* eslint-disable no-irregular-whitespace */
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   AlertCircle,
@@ -32,7 +33,7 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { SubmissionTimeline } from '@/components/submission/submission-timeline'
-import { useSubmissionHistory } from '@/features/submission/hooks/use-my-assignments'
+import { approvalApi } from '@/features/submission/api/approval-api'
 import {
   useApproveDepartment,
   useApproveDistrict,
@@ -43,14 +44,11 @@ import { getSubmissionStatusInfo } from '@/features/submission/utils/submission-
 import {
   normalizeSubmissionStatus,
 } from '@/features/submission/utils/submission-status-rules'
+import type { PeriodType } from '@/features/form-management/api/types'
 import { reportCampaignApi } from '../../api/report-management-api'
+import { reportSummaryApi } from '../../api/report-summary-api'
 import type { ReportAssignment, ReportDetail, SubmissionStatus } from '../../api/types'
 import { reportQueryKeys } from '../../utils/report-query'
-import {
-  createMockReportSummary,
-  recomputeMockReportSummary,
-  type MockReportSummary,
-} from '../../api/report-summary-mock-api'
 
 type ApprovalActionType = 'DEPARTMENT' | 'DISTRICT' | null
 
@@ -59,8 +57,6 @@ type ReportApprovalsTabProps = {
   report: ReportDetail
   onRefetch?: () => void
 }
-
-type SummaryPreview = MockReportSummary | null
 
 function formatTimeDashDate(value: string | null) {
   if (!value) return '--'
@@ -86,6 +82,7 @@ export function ReportApprovalsTab({
   report,
   onRefetch,
 }: ReportApprovalsTabProps) {
+  const queryClient = useQueryClient()
   const [assignmentSearch, setAssignmentSearch] = useState('')
   const [assignmentStatusFilter, setAssignmentStatusFilter] =
     useState<'all' | SubmissionStatus>('all')
@@ -94,8 +91,6 @@ export function ReportApprovalsTab({
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [actionType, setActionType] = useState<ApprovalActionType>(null)
-  const [summary, setSummary] = useState<SummaryPreview>(null)
-  const [isAggregating, setIsAggregating] = useState(false)
 
   const approveDept = useApproveDepartment()
   const rejectDept = useRejectDepartment()
@@ -106,6 +101,43 @@ export function ReportApprovalsTab({
     queryKey: reportQueryKeys.assignments(reportId),
     queryFn: () => reportCampaignApi.listCampaignAssignments(reportId),
     enabled: !!reportId,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const summaryReadinessQuery = useQuery({
+    queryKey: reportQueryKeys.summaryReadiness(reportId),
+    queryFn: () => reportSummaryApi.getCampaignReadiness(reportId),
+    enabled: !!reportId,
+    staleTime: 60 * 1000,
+  })
+
+  const summaryQueryKey = [
+    'report-management',
+    'campaign-summary',
+    report.id,
+    report.formId,
+    report.periodType,
+    report.deadlineFrom,
+    report.deadlineTo,
+    report.periodCode,
+    report.periodName,
+    report.unitId,
+  ] as const
+
+  const summaryQuery = useQuery({
+    queryKey: summaryQueryKey,
+    queryFn: () =>
+      reportSummaryApi.getCampaignSummary({
+        formId: report.formId,
+        periodType: report.periodType as PeriodType,
+        periodFrom: report.deadlineFrom,
+        periodTo: report.deadlineTo,
+        periodCode: report.periodCode,
+        periodName: report.periodName,
+        orgId: report.unitId ?? '',
+      }),
+    enabled: Boolean(reportId && report.unitId),
+    staleTime: 60 * 1000,
   })
 
   const normalizedAssignments = useMemo(
@@ -117,19 +149,25 @@ export function ReportApprovalsTab({
     [assignmentsQuery.data, report.assignments]
   )
 
-  const historyQuery = useSubmissionHistory(viewAssignmentId)
-  const history = historyQuery.data || []
-
-  useEffect(() => {
-    if (!viewAssignmentId && normalizedAssignments.length > 0) {
-      setViewAssignmentId(normalizedAssignments[0].id)
-    }
-  }, [normalizedAssignments, viewAssignmentId])
+  const effectiveViewAssignmentId =
+    viewAssignmentId ?? normalizedAssignments[0]?.id ?? null
 
   const selectedAssignment = useMemo(
-    () => normalizedAssignments.find((item) => item.id === viewAssignmentId) ?? null,
-    [normalizedAssignments, viewAssignmentId]
+    () =>
+      normalizedAssignments.find((item) => item.id === effectiveViewAssignmentId) ??
+      null,
+    [effectiveViewAssignmentId, normalizedAssignments]
   )
+
+  const historyQuery = useQuery({
+    queryKey: reportQueryKeys.approvalHistory(
+      selectedAssignment?.submissionId ?? null
+    ),
+    queryFn: () => approvalApi.getHistory(selectedAssignment!.submissionId!),
+    enabled: Boolean(selectedAssignment?.submissionId),
+    staleTime: 60 * 1000,
+  })
+  const history = historyQuery.data || []
 
   const filteredAssignments = useMemo(() => {
     const searchTerm = assignmentSearch.trim().toLowerCase()
@@ -150,6 +188,12 @@ export function ReportApprovalsTab({
     report.deadlineTo
   )
   const CurrentStatusIcon = currentStatusInfo.icon
+  const summary = summaryQuery.data ?? null
+  const summaryUpdatedAt = summary
+    ? (summary.summaryData?.recomputedAt as string | null | undefined) ??
+    summary.summarizedAt ??
+    summary.createdAt
+    : null
 
   const handleApprove = (type: Exclude<ApprovalActionType, null>) => {
     setActionType(type)
@@ -167,6 +211,15 @@ export function ReportApprovalsTab({
     setIsRejectModalOpen(false)
     setActionType(null)
     onRefetch?.()
+    void queryClient.invalidateQueries({
+      queryKey: reportQueryKeys.assignments(reportId),
+    })
+    void queryClient.invalidateQueries({
+      queryKey: reportQueryKeys.summaryReadiness(reportId),
+    })
+    void queryClient.invalidateQueries({
+      queryKey: summaryQueryKey,
+    })
   }
 
   const confirmApprove = () => {
@@ -202,22 +255,42 @@ export function ReportApprovalsTab({
     )
   }
 
-  const handleAggregate = async () => {
-    setIsAggregating(true)
-    try {
-      const created = await createMockReportSummary(reportId)
-      const recomputed = await recomputeMockReportSummary(created.id)
-      setSummary({
-        ...created,
-        status: 'recomputed',
-        recomputedAt: recomputed.recomputedAt ?? new Date().toISOString(),
+  const aggregateMutation = useMutation({
+    mutationFn: async () => {
+      if (!summaryReadinessQuery.data?.canAggregate) {
+        throw new Error('Campaign chưa đủ điều kiện để tổng hợp')
+      }
+      if (!report.unitId) {
+        throw new Error('Thiếu đơn vị tổng hợp cho báo cáo')
+      }
+      return await reportSummaryApi.aggregateCampaignSummary({
+        formId: report.formId,
+        periodType: report.periodType as PeriodType,
+        periodFrom: report.deadlineFrom,
+        periodTo: report.deadlineTo,
+        periodCode: report.periodCode,
+        periodName: report.periodName,
+        orgId: report.unitId,
       })
-      toast.success('Đã mô phỏng tổng hợp báo cáo')
-    } catch {
-      toast.error('Không thể mô phỏng tổng hợp báo cáo')
-    } finally {
-      setIsAggregating(false)
-    }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: summaryQueryKey,
+      })
+      await queryClient.invalidateQueries({
+        queryKey: reportQueryKeys.summaryReadiness(reportId),
+      })
+      toast.success('Đã tổng hợp báo cáo thành công')
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error ? error.message : 'Không thể tổng hợp báo cáo'
+      )
+    },
+  })
+
+  const handleAggregate = () => {
+    aggregateMutation.mutate()
   }
 
   return (
@@ -272,7 +345,7 @@ export function ReportApprovalsTab({
                   className={cn(
                     'flex w-full flex-col gap-1.5 p-4 text-left transition-all hover:bg-muted/30',
                     isActive &&
-                      'bg-primary/5 shadow-[inset_4px_0_0_0_theme(colors.primary.DEFAULT)]'
+                    'bg-primary/5 shadow-[inset_4px_0_0_0_theme(colors.primary.DEFAULT)]'
                   )}
                   onClick={() => setViewAssignmentId(row.id)}
                 >
@@ -455,10 +528,8 @@ export function ReportApprovalsTab({
                           <div className='font-medium capitalize'>{summary.status}</div>
                         </div>
                         <div>
-                          <div className='text-xs text-muted-foreground'>Cập nhật lần cuối</div>
-                          <div className='font-medium'>
-                            {summary.recomputedAt ?? summary.createdAt}
-                          </div>
+                          <div className='text-xs text-muted-foreground'>Cáº­p nháº­t láº§n cuá»‘i</div>
+                          <div className='font-medium'>{summaryUpdatedAt ?? '--'}</div>
                         </div>
                       </div>
                     ) : (
@@ -469,14 +540,16 @@ export function ReportApprovalsTab({
                     <div className='flex items-center justify-between gap-3'>
                       <div className='flex items-center gap-2 text-xs text-muted-foreground'>
                         <AlertCircle className='size-4' />
-                        Luồng tổng hợp hiện chạy bằng mock FE để kiểm thử UI.
+                        {summaryReadinessQuery.data?.canAggregate
+                          ? 'Đã đủ điều kiện để tổng hợp báo cáo.'
+                          : 'Chỉ khi tất cả đơn vị đã chốt ở cấp xã thì mới có thể tổng hợp.'}
                       </div>
                       <Button
                         className='rounded-xl font-bold shadow-lg shadow-primary/20'
                         onClick={handleAggregate}
-                        disabled={isAggregating}
+                        disabled={aggregateMutation.isPending || !summaryReadinessQuery.data?.canAggregate}
                       >
-                        {isAggregating ? (
+                        {aggregateMutation.isPending ? (
                           <>
                             <RotateCcw className='mr-2 size-4 animate-spin' />
                             Đang tổng hợp...

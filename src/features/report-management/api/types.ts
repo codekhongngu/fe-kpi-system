@@ -278,3 +278,50 @@ export type CampaignDefaultValue = {
   valueText: string | null
   valueNumber: number | null
 }
+
+export type CampaignSummaryReadiness = {
+  campaignId: string
+  totalAssignments: number
+  readyAssignments: number
+  blockedAssignments: Array<{
+    assignmentId: string
+    orgId: string
+    orgName: string
+    submissionId: string | null
+    status: SubmissionStatus
+    updatedAt: string | null
+  }>
+  canAggregate: boolean
+  campaignStatus: string
+}
+
+export type CampaignSummaryDetail = {
+  id: string
+  formId: string
+  periodType: string
+  period: {
+    type: string
+    code: string | null
+    name: string | null
+    dateFrom: string
+    dateTo: string
+  }
+  orgId: string
+  status: string
+  totalUnits: number | null
+  submittedUnits: number | null
+  approvedUnits: number | null
+  summaryData: Record<string, unknown> | null
+  summarizedAt: string | null
+  createdAt: string
+}
+
+export type CreateSummaryInput = {
+  formId: string
+  periodType: PeriodType
+  periodFrom: string
+  periodTo: string
+  periodCode?: string
+  periodName?: string
+  orgId: string
+}

@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client'
+import type { SubmissionFlowLog } from '@/components/submission/submission-timeline'
 
 export const approvalApi = {
   // POST /api/v1/approvals/:id/approve-department
@@ -23,5 +24,11 @@ export const approvalApi = {
   rejectDistrict: (submissionId: string, reason: string) =>
     apiClient
       .post(`/approvals/${submissionId}/reject-district`, { reason })
+      .then((r) => r.data),
+
+  // GET /api/v1/approvals/history/:submissionId
+  getHistory: (submissionId: string) =>
+    apiClient
+      .get<SubmissionFlowLog[]>(`/approvals/history/${submissionId}`)
       .then((r) => r.data),
 }

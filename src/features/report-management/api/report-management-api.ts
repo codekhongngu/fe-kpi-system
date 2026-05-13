@@ -1,8 +1,10 @@
 import { apiClient } from '@/lib/api-client'
 import type { OrgTreeItem } from '@/features/form-management/api/template-management-api'
+import type { SubmissionDetail } from '@/features/submission/api/types'
 import { normalizeSubmissionStatus } from '@/features/submission/utils/submission-status-rules'
 import type {
   CampaignDefaultValue,
+  CampaignSummaryReadiness,
   CampaignScope,
   CreateReportInput,
   ReportDetail,
@@ -77,6 +79,32 @@ type BeCampaignDefaultValue = {
   attributeId: string
   valueText?: string | null
   valueNumber?: number | null
+}
+
+type BeAssignmentAdminView = {
+  id: string
+  code: string
+  assignmentId: string
+  status: string
+  version: number
+  note: string | null
+  rejectReason: string | null
+  completionPct: number | string | null
+  submittedAt: string | null
+  defaultValues: Array<{
+    indicatorId: string
+    attributeId: string
+    valueText: string | null
+    valueNumber: number | null
+  }>
+  cells: Array<{
+    indicatorId: string
+    attributeId: string
+    valueText: string | null
+    valueNumeric: number | string | null
+    updatedBy: string | null
+    updatedAt: string
+  }>
 }
 
 // ── Mapper helpers ─────────────────────────────────────────────────────────────
@@ -171,6 +199,38 @@ const mapDefaultValue = (
       : Number(item.valueNumber),
 })
 
+const mapAssignmentAdminView = (item: BeAssignmentAdminView): SubmissionDetail => ({
+  id: item.id,
+  code: item.code,
+  assignmentId: item.assignmentId,
+  status: normalizeSubmissionStatus(item.status) as SubmissionDetail['status'],
+  version: item.version,
+  note: item.note,
+  rejectReason: item.rejectReason,
+  completionPct:
+    item.completionPct === null || item.completionPct === undefined
+      ? null
+      : Number(item.completionPct),
+  submittedAt: item.submittedAt,
+  defaultValues: item.defaultValues.map((row) => ({
+    indicatorId: row.indicatorId,
+    attributeId: row.attributeId,
+    valueText: row.valueText,
+    valueNumber: row.valueNumber,
+  })),
+  cells: item.cells.map((row) => ({
+    indicatorId: row.indicatorId,
+    attributeId: row.attributeId,
+    valueText: row.valueText,
+    valueNumeric:
+      row.valueNumeric === null || row.valueNumeric === undefined
+        ? null
+        : Number(row.valueNumeric),
+    updatedBy: row.updatedBy,
+    updatedAt: row.updatedAt,
+  })),
+})
+
 // ── API client ─────────────────────────────────────────────────────────────────
 
 export const reportCampaignApi = {
@@ -212,6 +272,16 @@ export const reportCampaignApi = {
     const payload = response.data
     const items = Array.isArray(payload) ? payload : (payload.items ?? [])
     return items.map(mapCampaignAssignment)
+  },
+
+  getAssignmentAdminView: async (
+    campaignId: string,
+    assignmentId: string
+  ): Promise<SubmissionDetail> => {
+    const response = await apiClient.get<BeAssignmentAdminView>(
+      `/report-campaigns/${campaignId}/assignments/${assignmentId}/admin-view`
+    )
+    return mapAssignmentAdminView(response.data)
   },
 
   createCampaign: async (input: CreateReportInput): Promise<ReportDetail> => {
@@ -297,6 +367,15 @@ export const reportCampaignApi = {
     await apiClient.delete(`/report-campaigns/${campaignId}/default-values`, {
       data: { items },
     })
+  },
+
+  getSummaryReadiness: async (
+    campaignId: string
+  ): Promise<CampaignSummaryReadiness> => {
+    const response = await apiClient.get<CampaignSummaryReadiness>(
+      `/report-campaigns/${campaignId}/summary-readiness`
+    )
+    return response.data
   },
 }
 
