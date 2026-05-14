@@ -84,10 +84,10 @@ function humanizePermissionCode(code: string) {
   const resourceLabel =
     resources.length > 0
       ? resources
-          .map(
-            (item) => resourceMap[item] ?? titleize(item.replace(/[-_]/g, ' '))
-          )
-          .join(' / ')
+        .map(
+          (item) => resourceMap[item] ?? titleize(item.replace(/[-_]/g, ' '))
+        )
+        .join(' / ')
       : ''
 
   const actionLabel =
@@ -557,14 +557,14 @@ export const systemAdminMockApi = {
       name?: string
       description?: string | null
       permissions?:
-        | string[]
-        | Array<{
-            id?: string
-            code?: string
-            permissionId?: string
-            permission?: { id?: string; code?: string }
-          }>
-        | { items?: unknown[]; data?: unknown[] }
+      | string[]
+      | Array<{
+        id?: string
+        code?: string
+        permissionId?: string
+        permission?: { id?: string; code?: string }
+      }>
+      | { items?: unknown[]; data?: unknown[] }
       permissionCodes?: string[]
       permissionIds?: string[]
       rolePermissions?: Array<{
@@ -647,10 +647,10 @@ export const systemAdminMockApi = {
         try {
           const response = await apiClient.get<
             | {
-                permissionIds?: string[]
-                permissionCodes?: string[]
-                permissions?: unknown
-              }
+              permissionIds?: string[]
+              permissionCodes?: string[]
+              permissions?: unknown
+            }
             | unknown[]
             | { items?: unknown[]; data?: unknown[] }
           >(`/roles/${roleId}/permissions`)
@@ -673,13 +673,13 @@ export const systemAdminMockApi = {
             }
             const permissionIds = Array.isArray(obj.permissionIds)
               ? obj.permissionIds.filter(
-                  (item): item is string => typeof item === 'string'
-                )
+                (item): item is string => typeof item === 'string'
+              )
               : []
             const permissionCodes = Array.isArray(obj.permissionCodes)
               ? obj.permissionCodes.filter(
-                  (item): item is string => typeof item === 'string'
-                )
+                (item): item is string => typeof item === 'string'
+              )
               : []
 
             return {
@@ -774,11 +774,11 @@ export const systemAdminMockApi = {
     type RolePermissionsItem =
       | string
       | {
-          id?: unknown
-          code?: unknown
-          permissionId?: unknown
-          permission?: { id?: unknown; code?: unknown }
-        }
+        id?: unknown
+        code?: unknown
+        permissionId?: unknown
+        permission?: { id?: unknown; code?: unknown }
+      }
 
     const collect = (
       raw: unknown
@@ -796,30 +796,30 @@ export const systemAdminMockApi = {
               : []
           : []
 
-      ;(arr as RolePermissionsItem[]).forEach((item) => {
-        if (typeof item === 'string') {
-          codes.push(item)
-          return
-        }
-        if (!item || typeof item !== 'object') return
+        ; (arr as RolePermissionsItem[]).forEach((item) => {
+          if (typeof item === 'string') {
+            codes.push(item)
+            return
+          }
+          if (!item || typeof item !== 'object') return
 
-        const asAny = item as {
-          id?: unknown
-          code?: unknown
-          permissionId?: unknown
-          permission?: { id?: unknown; code?: unknown }
-        }
+          const asAny = item as {
+            id?: unknown
+            code?: unknown
+            permissionId?: unknown
+            permission?: { id?: unknown; code?: unknown }
+          }
 
-        if (typeof asAny.id === 'string') ids.push(asAny.id)
-        if (typeof asAny.code === 'string') codes.push(asAny.code)
-        if (typeof asAny.permissionId === 'string') ids.push(asAny.permissionId)
-        if (asAny.permission && typeof asAny.permission === 'object') {
-          if (typeof asAny.permission.id === 'string')
-            ids.push(asAny.permission.id)
-          if (typeof asAny.permission.code === 'string')
-            codes.push(asAny.permission.code)
-        }
-      })
+          if (typeof asAny.id === 'string') ids.push(asAny.id)
+          if (typeof asAny.code === 'string') codes.push(asAny.code)
+          if (typeof asAny.permissionId === 'string') ids.push(asAny.permissionId)
+          if (asAny.permission && typeof asAny.permission === 'object') {
+            if (typeof asAny.permission.id === 'string')
+              ids.push(asAny.permission.id)
+            if (typeof asAny.permission.code === 'string')
+              codes.push(asAny.permission.code)
+          }
+        })
 
       return {
         permissionIds: ids.filter(Boolean),
@@ -836,13 +836,13 @@ export const systemAdminMockApi = {
         }
         const permissionIds = Array.isArray(obj.permissionIds)
           ? obj.permissionIds.filter(
-              (item): item is string => typeof item === 'string'
-            )
+            (item): item is string => typeof item === 'string'
+          )
           : []
         const permissionCodes = Array.isArray(obj.permissionCodes)
           ? obj.permissionCodes.filter(
-              (item): item is string => typeof item === 'string'
-            )
+            (item): item is string => typeof item === 'string'
+          )
           : []
 
         const fromPermissions = collect(obj.permissions)
@@ -1097,9 +1097,9 @@ export const systemAdminMockApi = {
 
     let response: {
       data:
-        | { items?: BeReportPeriod[] }
-        | { data?: BeReportPeriod[] }
-        | BeReportPeriod[]
+      | { items?: BeReportPeriod[] }
+      | { data?: BeReportPeriod[] }
+      | BeReportPeriod[]
     }
     try {
       response = await apiClient.get<
@@ -1290,7 +1290,7 @@ export const organizationsApi = {
   create: async (input: CreateUnitInput) => {
     const description =
       typeof input.description === 'string' &&
-      input.description.trim().length > 0
+        input.description.trim().length > 0
         ? input.description.trim()
         : null
 
@@ -1314,7 +1314,7 @@ export const organizationsApi = {
   update: async (id: string, input: UpdateUnitInput) => {
     const description =
       typeof input.description === 'string' &&
-      input.description.trim().length > 0
+        input.description.trim().length > 0
         ? input.description.trim()
         : null
 

@@ -40,7 +40,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { reportCampaignApi } from '../../api/report-management-api'
-import type { ReportDetail, UpdateReportInput } from '../../api/types'
+import type { CampaignScope, ReportDetail, UpdateReportInput } from '../../api/types'
 import { getErrorMessage, reportQueryKeys } from '../../utils/report-query'
 import { ReportConfirmDialog } from '../report-confirm-dialog'
 import { ReportStatusBadge } from '../report-status'
@@ -74,6 +74,14 @@ type EditCampaignDialogProps = {
   onSave: (input: UpdateReportInput) => void
 }
 
+function getInitialEditForm(report: ReportDetail): UpdateReportInput {
+  return {
+    periodName: report.periodName ?? '',
+    deadlineFrom: report.deadlineFrom?.split('T')[0] ?? '',
+    deadlineTo: report.deadlineTo?.split('T')[0] ?? '',
+  }
+}
+
 export function EditCampaignDialog({
   open,
   onOpenChange,
@@ -81,11 +89,9 @@ export function EditCampaignDialog({
   isLoading,
   onSave,
 }: EditCampaignDialogProps) {
-  const [form, setForm] = useState<UpdateReportInput>({
-    periodName: report?.periodName ?? '',
-    deadlineFrom: report?.deadlineFrom?.split('T')[0] ?? '',
-    deadlineTo: report?.deadlineTo?.split('T')[0] ?? '',
-  })
+  const [form, setForm] = useState<UpdateReportInput>(() =>
+    getInitialEditForm(report)
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -152,6 +158,37 @@ function formatPeriodType(type: string) {
   return map[type] || type
 }
 
+type IndicatorScopeByUnit = {
+  orgId: string
+  orgName: string
+  indicators: string[]
+}
+
+function buildIndicatorScopesByUnit(
+  scopes: CampaignScope[]
+) {
+  const unitMap = new Map<string, IndicatorScopeByUnit>()
+
+  scopes.forEach((scope) => {
+    const existing = unitMap.get(scope.orgId)
+
+    if (existing) {
+      if (scope.indicatorName) {
+        existing.indicators.push(scope.indicatorName)
+      }
+      return
+    }
+
+    unitMap.set(scope.orgId, {
+      orgId: scope.orgId,
+      orgName: scope.orgName || 'Đơn vị không tên',
+      indicators: scope.indicatorName ? [scope.indicatorName] : [],
+    })
+  })
+
+  return Array.from(unitMap.values())
+}
+
 export function ReportGeneralTab({
   reportId,
   report,
@@ -198,32 +235,20 @@ export function ReportGeneralTab({
   })
 
   const indicatorScopesByUnit = useMemo(() => {
-    const scopes = scopesQuery.data ?? []
-    const unitMap = new Map<string, { orgId: string; orgName: string; indicators: string[] }>()
-
-    scopes.forEach(s => {
-      if (!unitMap.has(s.orgId)) {
-        unitMap.set(s.orgId, {
-          orgId: s.orgId,
-          orgName: s.orgName || 'Đơn vị không tên',
-          indicators: []
-        })
-      }
-      if (s.indicatorName) {
-        unitMap.get(s.orgId)!.indicators.push(s.indicatorName)
-      }
-    })
-
-    return Array.from(unitMap.values())
+    return buildIndicatorScopesByUnit(scopesQuery.data ?? [])
   }, [scopesQuery.data])
 
-  const assignments = assignmentsQuery.data ?? []
-  const paginatedAssignments = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return assignments.slice(start, start + pageSize)
-  }, [assignments, currentPage])
-
+  const assignments = useMemo(
+    () => assignmentsQuery.data ?? [],
+    [assignmentsQuery.data]
+  )
   const totalPages = Math.ceil(assignments.length / pageSize)
+  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
+
+  const paginatedAssignments = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize
+    return assignments.slice(start, start + pageSize)
+  }, [assignments, safeCurrentPage])
 
   return (
     <div className='space-y-6 px-4 pt-6 pb-6 lg:px-6'>
@@ -453,9 +478,9 @@ export function ReportGeneralTab({
                     Chưa có nhiệm vụ nào được khởi tạo.
                   </TableCell>
                 </TableRow>
-              ) : (
+                ) : (
                 paginatedAssignments.map((row, index) => {
-                  const stt = (currentPage - 1) * pageSize + index + 1
+                  const stt = (safeCurrentPage - 1) * pageSize + index + 1
                   return (
                     <TableRow key={row.id}>
                       <TableCell className='font-medium'>{stt}</TableCell>
@@ -494,19 +519,21 @@ export function ReportGeneralTab({
             <Button
               variant='outline'
               size='sm'
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
+              disabled={safeCurrentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
             >
               Trước
             </Button>
             <div className='text-xs font-medium'>
-              Trang {currentPage} / {totalPages}
+              Trang {safeCurrentPage} / {totalPages}
             </div>
             <Button
               variant='outline'
               size='sm'
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={safeCurrentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
             >
               Sau
             </Button>
@@ -535,4 +562,3 @@ export function ReportGeneralTab({
     </div>
   )
 }
-

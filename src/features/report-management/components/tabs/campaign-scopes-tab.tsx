@@ -11,10 +11,8 @@ import {
   AlertCircle,
   Maximize2,
   Minimize2,
-  RefreshCcw,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { apiClient } from '@/lib/api-client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -78,15 +76,14 @@ export function CampaignScopesTab({
   templateId,
 }: CampaignScopesTabProps) {
   const queryClient = useQueryClient()
-  const [rows, setRows] = useState<CampaignScope[]>([])
+  const [draftRows, setDraftRows] = useState<CampaignScope[] | null>(null)
   const [orgSearch, setOrgSearch] = useState('')
   const [indicatorSearch, setIndicatorSearch] = useState('')
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
+  const [selectedOrgIdState, setSelectedOrgId] = useState<string | null>(null)
   const [selectedAvailableIds, setSelectedAvailableIds] = useState<string[]>([])
   const [selectedAssignedIds, setSelectedAssignedIds] = useState<string[]>([])
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // Close fullscreen on escape key
   useEffect(() => {
     if (!isFullscreen) return
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -108,6 +105,11 @@ export function CampaignScopesTab({
     enabled: Boolean(campaignId),
   })
 
+  const initialRows = useMemo(
+    () => dedupeScopes(scopesQuery.data ?? []),
+    [scopesQuery.data]
+  )
+
   const templateQuery = useQuery({
     queryKey: ['form-management', 'template', templateId, 'scopes-tab'],
     queryFn: () => formManagementApi.getTemplate(templateId),
@@ -128,9 +130,8 @@ export function CampaignScopesTab({
   const canEdit = Boolean(campaign && campaign.status === 'DRAFT')
   const isUnique = template?.templateType === 'UNIQUE'
 
-  const orgTree = orgTreeQuery.data ?? []
-
   const flatOrgs = useMemo(() => {
+    const orgTree = orgTreeQuery.data ?? []
     const result: OrgTreeItem[] = []
     const traverse = (nodes: OrgTreeItem[]) => {
       for (const node of nodes) {
@@ -140,27 +141,23 @@ export function CampaignScopesTab({
     }
     traverse(orgTree)
     return result
-  }, [orgTree])
+  }, [orgTreeQuery.data])
 
-  useEffect(() => {
-    setRows(dedupeScopes(scopesQuery.data ?? []))
-  }, [scopesQuery.data])
-
-  useEffect(() => {
-    if (flatOrgs.length === 0) {
-      setSelectedOrgId(null)
-      return
-    }
+  const selectedOrgId = useMemo(() => {
+    if (flatOrgs.length === 0) return null
     if (
-      !selectedOrgId ||
-      !flatOrgs.some(
-        (item) => item.id === selectedOrgId && item.canAssignReports
+      selectedOrgIdState &&
+      flatOrgs.some(
+        (item) => item.id === selectedOrgIdState && item.canAssignReports
       )
     ) {
-      const firstValid = flatOrgs.find((o) => o.canAssignReports)
-      setSelectedOrgId(firstValid ? firstValid.id : null)
+      return selectedOrgIdState
     }
-  }, [flatOrgs, selectedOrgId])
+    const firstValid = flatOrgs.find((o) => o.canAssignReports)
+    return firstValid ? firstValid.id : null
+  }, [flatOrgs, selectedOrgIdState])
+
+  const rows = draftRows ?? initialRows
 
   const selectedOrgSummary = useMemo(
     () => flatOrgs.find((item) => item.id === selectedOrgId) ?? null,
@@ -282,18 +279,18 @@ export function CampaignScopesTab({
     : 0
 
   const hasChanges = useMemo(() => {
-    const initial = dedupeScopes(scopesQuery.data ?? [])
+    const initial = initialRows
       .map((s) => `${s.orgId}::${s.indicatorId}`)
       .sort()
     const current = dedupeScopes(rows)
       .map((s) => `${s.orgId}::${s.indicatorId}`)
       .sort()
     return JSON.stringify(initial) !== JSON.stringify(current)
-  }, [scopesQuery.data, rows])
+  }, [initialRows, rows])
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const initial = dedupeScopes(scopesQuery.data ?? [])
+      const initial = initialRows
       const current = dedupeScopes(rows).filter(
         (item) => item.orgId.trim() && item.indicatorId.trim()
       )
@@ -327,42 +324,15 @@ export function CampaignScopesTab({
     },
     onSuccess: async () => {
       toast.success('Đã lưu phạm vi phân bổ chỉ tiêu.')
+      setDraftRows(null)
+      setSelectedAvailableIds([])
+      setSelectedAssignedIds([])
       await queryClient.invalidateQueries({
         queryKey: ['report-management', 'campaign', campaignId, 'scopes'],
       })
     },
     onError: (error: Error) => toast.error(error.message),
   })
-
-  const snapshotMutation = useMutation({
-    mutationFn: () =>
-      apiClient.get<{ items: { orgId: string; indicatorId: string }[] }>(
-        `/forms/${templateId}/template-scopes`
-      ),
-    onSuccess: (response) => {
-      const templateScopes = response.data.items || []
-      if (templateScopes.length === 0) {
-        toast.info('Template này chưa cấu hình phạm vi mặc định.')
-        return
-      }
-      setRows(
-        dedupeScopes(
-          templateScopes.map((s) => ({
-            orgId: s.orgId,
-            indicatorId: s.indicatorId,
-          }))
-        )
-      )
-      toast.success(
-        `Đã lấy snapshot từ template (${templateScopes.length} bản ghi). Hãy nhấn Lưu để xác nhận.`
-      )
-    },
-    onError: (error: any) => toast.error(getErrorMessage(error)),
-  })
-
-  function getErrorMessage(error: any) {
-    return error.response?.data?.message || error.message || 'Có lỗi xảy ra'
-  }
 
   function handleAssignSelected() {
     if (!selectedOrgId) {
@@ -371,8 +341,8 @@ export function CampaignScopesTab({
     }
     if (selectedAvailableIds.length === 0) return
 
-    setRows((current) => {
-      const next = [...dedupeScopes(current)]
+    setDraftRows((current) => {
+      const next = [...dedupeScopes(current ?? initialRows)]
       selectedAvailableIds.forEach((indicatorId) => {
         if (
           next.some(
@@ -394,8 +364,8 @@ export function CampaignScopesTab({
 
   function handleUnassignSelected() {
     if (!selectedOrgId || selectedAssignedIds.length === 0) return
-    setRows((current) =>
-      current.filter(
+    setDraftRows((current) =>
+      (current ?? initialRows).filter(
         (item) =>
           !(
             item.orgId === selectedOrgId &&
@@ -485,20 +455,6 @@ export function CampaignScopesTab({
             </Button>
             <Button
               type='button'
-              variant='outline'
-              className='gap-2 rounded-xl text-xs font-bold'
-              onClick={() => snapshotMutation.mutate()}
-              disabled={!canEdit || snapshotMutation.isPending}
-            >
-              <RefreshCcw
-                className={
-                  snapshotMutation.isPending ? 'size-4 animate-spin' : 'size-4'
-                }
-              />
-              Snapshot từ Template
-            </Button>
-            <Button
-              type='button'
               className='gap-2 rounded-xl text-xs font-bold'
               onClick={() => saveMutation.mutate()}
               disabled={!canEdit || !hasChanges || saveMutation.isPending}
@@ -581,7 +537,10 @@ export function CampaignScopesTab({
                                   : 'cursor-not-allowed opacity-40',
                             ].join(' ')}
                             onClick={() => {
-                              if (canAssign) setSelectedOrgId(item.id)
+                              if (!canAssign) return
+                              setSelectedOrgId(item.id)
+                              setSelectedAvailableIds([])
+                              setSelectedAssignedIds([])
                             }}
                           >
                             <div

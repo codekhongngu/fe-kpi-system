@@ -142,7 +142,9 @@ export function createApiClient(): AxiosInstance {
         if (typeof window !== 'undefined') {
           const currentPath = window.location.pathname
           if (!currentPath.startsWith('/sign-in')) {
-            const redirectTo = encodeURIComponent(window.location.href)
+            const redirectTo = encodeURIComponent(
+              window.location.pathname + window.location.search
+            )
             window.location.assign(`/sign-in?redirect=${redirectTo}`)
           }
         }
@@ -167,7 +169,9 @@ export function createApiClient(): AxiosInstance {
         if (typeof window !== 'undefined') {
           const currentPath = window.location.pathname
           if (!currentPath.startsWith('/sign-in')) {
-            const redirectTo = encodeURIComponent(window.location.href)
+            const redirectTo = encodeURIComponent(
+              window.location.pathname + window.location.search
+            )
             window.location.assign(`/sign-in?redirect=${redirectTo}`)
           }
         }

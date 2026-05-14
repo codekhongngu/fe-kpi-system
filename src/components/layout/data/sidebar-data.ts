@@ -152,14 +152,9 @@ function buildNavGroups(): NavGroup[] {
         },
         {
           title: 'Quản trị đợt báo cáo',
-          url: '/report-management?tab=list',
+          url: '/report-management',
           icon: SearchCheck,
-        },
-        {
-          title: 'Tổng hợp báo cáo',
-          url: '/report-management?tab=analytics',
-          icon: ChartColumnBig,
-        },
+        }
       ],
     },
     {
