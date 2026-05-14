@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle2,
   Eye,
@@ -16,13 +16,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import type {
   FormTemplate,
   TemplateCellConfig,
   TemplateField,
   TemplateIndicator,
-  PeriodType,
 } from '@/features/form-management/api/types'
 import {
   buildHeaderMatrix,
@@ -37,7 +37,6 @@ import type {
   ReportDetail,
 } from '../../api/types'
 import { reportCampaignApi } from '../../api/report-management-api'
-import { reportSummaryApi } from '../../api/report-summary-api'
 import { reportQueryKeys } from '../../utils/report-query'
 import { ReportStatusBadge } from '../report-status'
 
@@ -360,7 +359,7 @@ function buildSubmissionCellMap(pairs: ApprovedAssignmentDetail[]) {
 function getApprovedAssignments(assignments: ReportAssignment[]) {
   return assignments
     .filter((assignment) =>
-      ['DISTRICT_APPROVED', 'DEPARTMENT_APPROVED'].includes(assignment.status)
+      assignment.status === 'DISTRICT_APPROVED'
     )
     .sort((a, b) => a.orgName.localeCompare(b.orgName, 'vi-VN'))
 }
@@ -514,6 +513,7 @@ export function ReportCampaignSummaryPage({
   reportId,
   report,
 }: ReportCampaignSummaryPageProps) {
+  const queryClient = useQueryClient()
   const templateId = report.formId || report.templateId || ''
 
   const templateQuery = useQuery({
@@ -559,23 +559,36 @@ export function ReportCampaignSummaryPage({
     report.deadlineTo,
     report.periodCode,
     report.periodName,
-    report.unitId,
   ] as const
 
   const summaryQuery = useQuery({
     queryKey: campaignSummaryQueryKey,
-    queryFn: () =>
-      reportSummaryApi.getCampaignSummary({
-        formId: report.formId,
-        periodType: report.periodType as PeriodType,
-        periodFrom: report.deadlineFrom,
-        periodTo: report.deadlineTo,
-        periodCode: report.periodCode,
-        periodName: report.periodName,
-        orgId: report.unitId ?? '',
-      }),
-    enabled: Boolean(reportId && report.unitId),
+    queryFn: () => reportCampaignApi.getCampaignSummaryPreview(reportId),
+    enabled: Boolean(reportId),
     staleTime: 60 * 1000,
+  })
+
+  const recomputeMutation = useMutation({
+    mutationFn: async () => {
+      if (!summaryReadinessQuery.data?.canAggregate) {
+        throw new Error('Campaign chưa đủ điều kiện để tổng hợp')
+      }
+      return await reportCampaignApi.recomputeCampaignSummary(reportId)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: campaignSummaryQueryKey,
+      })
+      await queryClient.invalidateQueries({
+        queryKey: reportQueryKeys.summaryReadiness(reportId),
+      })
+      toast.success('Đã tổng hợp báo cáo thành công')
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof Error ? error.message : 'Không thể tổng hợp báo cáo'
+      )
+    },
   })
 
   const approvedAssignments = useMemo(
@@ -608,7 +621,10 @@ export function ReportCampaignSummaryPage({
   )
   const summary = summaryQuery.data ?? null
   const readiness = summaryReadinessQuery.data ?? null
-  const summaryExists = Boolean(summary)
+  const summaryIndicatorCount = Object.keys(
+    getSummaryIndicators(summary?.summaryData ?? null)
+  ).length
+  const summaryExists = summaryIndicatorCount > 0
   const summaryUpdatedAt = getSummaryUpdatedAt(summary)
   const summaryLabel = summaryExists
     ? 'Đã có bản tổng hợp'
@@ -764,6 +780,32 @@ export function ReportCampaignSummaryPage({
           </CardContent>
         </Card>
       </section>
+
+      <div className='flex flex-col gap-3 rounded-2xl border bg-card px-4 py-4 lg:flex-row lg:items-center lg:justify-between'>
+        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+          <Workflow className='size-4 text-primary' />
+          {readiness?.canAggregate
+            ? 'Đã đủ điều kiện để tổng hợp báo cáo.'
+            : 'Chỉ khi tất cả đơn vị đã chốt ở cấp xã thì mới có thể tổng hợp.'}
+        </div>
+        <Button
+          className='rounded-xl font-bold shadow-lg shadow-primary/20'
+          onClick={() => recomputeMutation.mutate()}
+          disabled={recomputeMutation.isPending || !readiness?.canAggregate}
+        >
+          {recomputeMutation.isPending ? (
+            <>
+              <Workflow className='mr-2 size-4 animate-spin' />
+              Đang tổng hợp...
+            </>
+          ) : (
+            <>
+              <Workflow className='mr-2 size-4' />
+              Tổng hợp báo cáo
+            </>
+          )}
+        </Button>
+      </div>
 
       {!templateId ? (
         <div className='rounded-2xl border border-dashed bg-card p-6 text-sm text-muted-foreground'>

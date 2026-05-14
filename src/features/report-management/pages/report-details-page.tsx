@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import {
   ArrowLeft,
@@ -149,6 +149,7 @@ function renderReportDetailsTabContent(
 export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as ReportDetailsSearch
+  const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
   const [confirmDispatchOpen, setConfirmDispatchOpen] = useState(false)
 
@@ -178,18 +179,19 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
     }
   }, [assignmentsQuery.data, detailQuery.data])
 
-  const scopesQuery = useQuery({
-    queryKey: ['report-campaign-scopes', reportId],
-    queryFn: () => reportCampaignApi.listScopes(reportId),
-    enabled: !!reportId,
-  })
-
   const dispatchMutation = useMutation({
     mutationFn: () => reportCampaignApi.confirmDispatch(reportId),
     onSuccess: () => {
       toast.success('Đã phát hành báo cáo thành công.')
-      detailQuery.refetch()
-      scopesQuery.refetch()
+      void queryClient.invalidateQueries({ queryKey: reportQueryKeys.detail(reportId) })
+      void queryClient.invalidateQueries({ queryKey: reportQueryKeys.assignments(reportId) })
+      void queryClient.invalidateQueries({ queryKey: reportQueryKeys.scopes(reportId) })
+      void queryClient.invalidateQueries({
+        queryKey: reportQueryKeys.summaryReadiness(reportId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: reportQueryKeys.campaignSummary(reportId),
+      })
       setConfirmDispatchOpen(false)
     },
     onError: (error) => toast.error(getErrorMessage(error)),
@@ -200,7 +202,10 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
       apiClient.patch(`/report-campaigns/${reportId}`, input),
     onSuccess: () => {
       toast.success('Đã cập nhật thông tin báo cáo.')
-      detailQuery.refetch()
+      void queryClient.invalidateQueries({ queryKey: reportQueryKeys.detail(reportId) })
+      void queryClient.invalidateQueries({
+        queryKey: reportQueryKeys.campaignSummary(reportId),
+      })
       setEditOpen(false)
     },
     onError: (error) => toast.error(getErrorMessage(error)),
@@ -212,13 +217,24 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
 
     navigate({
       to: '.',
-      search: (prev: any) => ({ ...prev, tab: normalizedTab }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, tab: normalizedTab }),
       replace: true,
     })
   }
 
   const handleRefetch = () => {
-    detailQuery.refetch()
+    void queryClient.invalidateQueries({ queryKey: reportQueryKeys.detail(reportId) })
+    void queryClient.invalidateQueries({ queryKey: reportQueryKeys.assignments(reportId) })
+    void queryClient.invalidateQueries({ queryKey: reportQueryKeys.scopes(reportId) })
+    void queryClient.invalidateQueries({
+      queryKey: reportQueryKeys.defaultValues(reportId),
+    })
+    void queryClient.invalidateQueries({
+      queryKey: reportQueryKeys.summaryReadiness(reportId),
+    })
+    void queryClient.invalidateQueries({
+      queryKey: reportQueryKeys.campaignSummary(reportId),
+    })
   }
 
   const isApprovalsDisabled = report?.status !== 'DISPATCHED'
@@ -251,7 +267,7 @@ export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
                   Quay lại
                 </Link>
               </Button>
-              <Button type='button' onClick={() => detailQuery.refetch()}>
+              <Button type='button' onClick={handleRefetch}>
                 Tải lại
               </Button>
             </div>

@@ -1,22 +1,19 @@
-/* eslint-disable no-irregular-whitespace */
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
-  AlertCircle,
   CheckCircle2,
+  Eye,
   Filter,
   History,
-  Rocket,
-  RotateCcw,
   Workflow,
   XCircle,
-  Eye,
 } from 'lucide-react'
 import { toast } from 'sonner'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -41,12 +38,8 @@ import {
   useRejectDistrict,
 } from '@/features/submission/hooks/use-approvals'
 import { getSubmissionStatusInfo } from '@/features/submission/utils/submission-status'
-import {
-  normalizeSubmissionStatus,
-} from '@/features/submission/utils/submission-status-rules'
-import type { PeriodType } from '@/features/form-management/api/types'
+import { normalizeSubmissionStatus } from '@/features/submission/utils/submission-status-rules'
 import { reportCampaignApi } from '../../api/report-management-api'
-import { reportSummaryApi } from '../../api/report-summary-api'
 import type { ReportAssignment, ReportDetail, SubmissionStatus } from '../../api/types'
 import { reportQueryKeys } from '../../utils/report-query'
 
@@ -104,42 +97,6 @@ export function ReportApprovalsTab({
     staleTime: 5 * 60 * 1000,
   })
 
-  const summaryReadinessQuery = useQuery({
-    queryKey: reportQueryKeys.summaryReadiness(reportId),
-    queryFn: () => reportSummaryApi.getCampaignReadiness(reportId),
-    enabled: !!reportId,
-    staleTime: 60 * 1000,
-  })
-
-  const summaryQueryKey = [
-    'report-management',
-    'campaign-summary',
-    report.id,
-    report.formId,
-    report.periodType,
-    report.deadlineFrom,
-    report.deadlineTo,
-    report.periodCode,
-    report.periodName,
-    report.unitId,
-  ] as const
-
-  const summaryQuery = useQuery({
-    queryKey: summaryQueryKey,
-    queryFn: () =>
-      reportSummaryApi.getCampaignSummary({
-        formId: report.formId,
-        periodType: report.periodType as PeriodType,
-        periodFrom: report.deadlineFrom,
-        periodTo: report.deadlineTo,
-        periodCode: report.periodCode,
-        periodName: report.periodName,
-        orgId: report.unitId ?? '',
-      }),
-    enabled: Boolean(reportId && report.unitId),
-    staleTime: 60 * 1000,
-  })
-
   const normalizedAssignments = useMemo(
     () =>
       (assignmentsQuery.data ?? report.assignments ?? []).map((item) => ({
@@ -167,6 +124,7 @@ export function ReportApprovalsTab({
     enabled: Boolean(selectedAssignment?.submissionId),
     staleTime: 60 * 1000,
   })
+
   const history = historyQuery.data || []
 
   const filteredAssignments = useMemo(() => {
@@ -188,23 +146,6 @@ export function ReportApprovalsTab({
     report.deadlineTo
   )
   const CurrentStatusIcon = currentStatusInfo.icon
-  const summary = summaryQuery.data ?? null
-  const summaryUpdatedAt = summary
-    ? (summary.summaryData?.recomputedAt as string | null | undefined) ??
-    summary.summarizedAt ??
-    summary.createdAt
-    : null
-
-  const handleApprove = (type: Exclude<ApprovalActionType, null>) => {
-    setActionType(type)
-    setIsApproveModalOpen(true)
-  }
-
-  const handleReject = (type: Exclude<ApprovalActionType, null>) => {
-    setActionType(type)
-    setRejectReason('')
-    setIsRejectModalOpen(true)
-  }
 
   const closeAndRefresh = () => {
     setIsApproveModalOpen(false)
@@ -218,7 +159,7 @@ export function ReportApprovalsTab({
       queryKey: reportQueryKeys.summaryReadiness(reportId),
     })
     void queryClient.invalidateQueries({
-      queryKey: summaryQueryKey,
+      queryKey: reportQueryKeys.campaignSummary(reportId),
     })
   }
 
@@ -253,44 +194,6 @@ export function ReportApprovalsTab({
         onSuccess: closeAndRefresh,
       }
     )
-  }
-
-  const aggregateMutation = useMutation({
-    mutationFn: async () => {
-      if (!summaryReadinessQuery.data?.canAggregate) {
-        throw new Error('Campaign chưa đủ điều kiện để tổng hợp')
-      }
-      if (!report.unitId) {
-        throw new Error('Thiếu đơn vị tổng hợp cho báo cáo')
-      }
-      return await reportSummaryApi.aggregateCampaignSummary({
-        formId: report.formId,
-        periodType: report.periodType as PeriodType,
-        periodFrom: report.deadlineFrom,
-        periodTo: report.deadlineTo,
-        periodCode: report.periodCode,
-        periodName: report.periodName,
-        orgId: report.unitId,
-      })
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: summaryQueryKey,
-      })
-      await queryClient.invalidateQueries({
-        queryKey: reportQueryKeys.summaryReadiness(reportId),
-      })
-      toast.success('Đã tổng hợp báo cáo thành công')
-    },
-    onError: (error: unknown) => {
-      toast.error(
-        error instanceof Error ? error.message : 'Không thể tổng hợp báo cáo'
-      )
-    },
-  })
-
-  const handleAggregate = () => {
-    aggregateMutation.mutate()
   }
 
   return (
@@ -352,7 +255,7 @@ export function ReportApprovalsTab({
                   <div className='flex items-center justify-between gap-2'>
                     <span
                       className={cn(
-                        'text-sm font-bold truncate',
+                        'truncate text-sm font-bold',
                         isActive ? 'text-primary' : 'text-foreground'
                       )}
                     >
@@ -361,7 +264,7 @@ export function ReportApprovalsTab({
                     <Badge
                       variant='outline'
                       className={cn(
-                        'shrink-0 h-4 px-1 text-[8px] font-bold uppercase tracking-tighter border-none',
+                        'shrink-0 border-none px-1 text-[8px] font-bold uppercase tracking-tighter',
                         statusInfo.className
                       )}
                     >
@@ -408,7 +311,10 @@ export function ReportApprovalsTab({
                     <Button
                       size='sm'
                       className='h-9 rounded-xl bg-green-600 hover:bg-green-700'
-                      onClick={() => handleApprove('DEPARTMENT')}
+                      onClick={() => {
+                        setActionType('DEPARTMENT')
+                        setIsApproveModalOpen(true)
+                      }}
                       disabled={approveDept.isPending}
                     >
                       <CheckCircle2 className='mr-2 size-4' />
@@ -418,7 +324,11 @@ export function ReportApprovalsTab({
                       variant='destructive'
                       size='sm'
                       className='h-9 rounded-xl'
-                      onClick={() => handleReject('DEPARTMENT')}
+                      onClick={() => {
+                        setActionType('DEPARTMENT')
+                        setRejectReason('')
+                        setIsRejectModalOpen(true)
+                      }}
                       disabled={rejectDept.isPending}
                     >
                       <XCircle className='mr-2 size-4' />
@@ -432,7 +342,10 @@ export function ReportApprovalsTab({
                     <Button
                       size='sm'
                       className='h-9 rounded-xl'
-                      onClick={() => handleApprove('DISTRICT')}
+                      onClick={() => {
+                        setActionType('DISTRICT')
+                        setIsApproveModalOpen(true)
+                      }}
                       disabled={approveDist.isPending}
                     >
                       <CheckCircle2 className='mr-2 size-4' />
@@ -442,7 +355,11 @@ export function ReportApprovalsTab({
                       variant='destructive'
                       size='sm'
                       className='h-9 rounded-xl'
-                      onClick={() => handleReject('DISTRICT')}
+                      onClick={() => {
+                        setActionType('DISTRICT')
+                        setRejectReason('')
+                        setIsRejectModalOpen(true)
+                      }}
                       disabled={rejectDist.isPending}
                     >
                       <XCircle className='mr-2 size-4' />
@@ -462,7 +379,12 @@ export function ReportApprovalsTab({
                         Trạng thái
                       </p>
                       <div className='mt-1 flex items-center gap-2'>
-                        <CurrentStatusIcon className={cn('size-4', currentStatusInfo.className.split(' ')[0])} />
+                        <CurrentStatusIcon
+                          className={cn(
+                            'size-4',
+                            currentStatusInfo.className.split(' ')[0]
+                          )}
+                        />
                         <span className='text-sm font-bold'>{currentStatusInfo.label}</span>
                       </div>
                     </CardContent>
@@ -509,61 +431,6 @@ export function ReportApprovalsTab({
                     )}
                   </div>
                 </div>
-
-                <Card className='rounded-2xl border-none bg-muted/10'>
-                  <CardHeader className='pb-2'>
-                    <CardTitle className='text-sm font-bold uppercase tracking-widest text-muted-foreground'>
-                      Tổng hợp mô phỏng
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className='space-y-4'>
-                    {summary ? (
-                      <div className='grid gap-3 rounded-2xl border bg-background p-4 md:grid-cols-3'>
-                        <div>
-                          <div className='text-xs text-muted-foreground'>Mã tổng hợp</div>
-                          <div className='font-medium'>{summary.id}</div>
-                        </div>
-                        <div>
-                          <div className='text-xs text-muted-foreground'>Trạng thái</div>
-                          <div className='font-medium capitalize'>{summary.status}</div>
-                        </div>
-                        <div>
-                          <div className='text-xs text-muted-foreground'>Cáº­p nháº­t láº§n cuá»‘i</div>
-                          <div className='font-medium'>{summaryUpdatedAt ?? '--'}</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className='rounded-2xl border border-dashed bg-background p-4 text-sm text-muted-foreground'>
-                        Chưa tạo bản tổng hợp mô phỏng.
-                      </div>
-                    )}
-                    <div className='flex items-center justify-between gap-3'>
-                      <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-                        <AlertCircle className='size-4' />
-                        {summaryReadinessQuery.data?.canAggregate
-                          ? 'Đã đủ điều kiện để tổng hợp báo cáo.'
-                          : 'Chỉ khi tất cả đơn vị đã chốt ở cấp xã thì mới có thể tổng hợp.'}
-                      </div>
-                      <Button
-                        className='rounded-xl font-bold shadow-lg shadow-primary/20'
-                        onClick={handleAggregate}
-                        disabled={aggregateMutation.isPending || !summaryReadinessQuery.data?.canAggregate}
-                      >
-                        {aggregateMutation.isPending ? (
-                          <>
-                            <RotateCcw className='mr-2 size-4 animate-spin' />
-                            Đang tổng hợp...
-                          </>
-                        ) : (
-                          <>
-                            <Rocket className='mr-2 size-4' />
-                            Tổng hợp báo cáo
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </ScrollArea>
           </div>
@@ -601,13 +468,13 @@ export function ReportApprovalsTab({
           <DialogFooter className='mt-8 flex flex-col gap-3 sm:flex-row'>
             <Button
               variant='ghost'
-              className='flex-1 rounded-xl font-bold h-12'
+              className='flex-1 h-12 rounded-xl font-bold'
               onClick={() => setIsApproveModalOpen(false)}
             >
               Xem lại
             </Button>
             <Button
-              className='flex-1 rounded-xl font-black h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20'
+              className='h-12 flex-1 rounded-xl font-black shadow-lg shadow-primary/20'
               onClick={confirmApprove}
               disabled={approveDept.isPending || approveDist.isPending}
             >
@@ -622,11 +489,11 @@ export function ReportApprovalsTab({
       <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
         <DialogContent className='sm:max-w-[500px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl'>
           <DialogHeader className='px-8 pt-8'>
-            <DialogTitle className='text-2xl font-black flex items-center gap-3 text-destructive'>
+            <DialogTitle className='flex items-center gap-3 text-2xl font-black text-destructive'>
               <XCircle className='size-7' />
               Trả lại bản nộp
             </DialogTitle>
-            <DialogDescription className='text-sm pt-2 font-medium leading-relaxed'>
+            <DialogDescription className='pt-2 text-sm font-medium leading-relaxed'>
               {actionType === 'DEPARTMENT'
                 ? 'Bản nộp sẽ quay lại vòng nhập liệu để chỉnh sửa theo góp ý của phòng.'
                 : 'Bản nộp sẽ quay lại vòng nhập liệu sau khi xã từ chối chốt số.'}

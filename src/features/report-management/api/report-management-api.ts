@@ -4,6 +4,7 @@ import type { SubmissionDetail } from '@/features/submission/api/types'
 import { normalizeSubmissionStatus } from '@/features/submission/utils/submission-status-rules'
 import type {
   CampaignDefaultValue,
+  CampaignSummaryDetail,
   CampaignSummaryReadiness,
   CampaignScope,
   CreateReportInput,
@@ -105,6 +106,24 @@ type BeAssignmentAdminView = {
     updatedBy: string | null
     updatedAt: string
   }>
+}
+
+type BeCampaignSummaryPreview = {
+  id: string
+  formId: string
+  periodType: string
+  periodCode: string | null
+  periodName: string | null
+  periodFrom: string
+  periodTo: string
+  orgId: string
+  status: string
+  totalUnits: number | null
+  submittedUnits: number | null
+  approvedUnits: number | null
+  summaryData: Record<string, unknown> | null
+  summarizedAt: string | null
+  createdAt: string
 }
 
 // ── Mapper helpers ─────────────────────────────────────────────────────────────
@@ -376,6 +395,62 @@ export const reportCampaignApi = {
       `/report-campaigns/${campaignId}/summary-readiness`
     )
     return response.data
+  },
+
+  getCampaignSummaryPreview: async (
+    campaignId: string
+  ): Promise<CampaignSummaryDetail> => {
+    const response = await apiClient.get<BeCampaignSummaryPreview>(
+      `/report-campaigns/${campaignId}/summary-preview`
+    )
+    const item = response.data
+    return {
+      id: item.id,
+      formId: item.formId,
+      periodType: item.periodType,
+      period: {
+        type: item.periodType,
+        code: item.periodCode,
+        name: item.periodName,
+        dateFrom: item.periodFrom,
+        dateTo: item.periodTo,
+      },
+      orgId: item.orgId,
+      status: item.status,
+      totalUnits: item.totalUnits,
+      submittedUnits: item.submittedUnits,
+      approvedUnits: item.approvedUnits,
+      summaryData: item.summaryData,
+      summarizedAt: item.summarizedAt,
+      createdAt: item.createdAt,
+    }
+  },
+
+  recomputeCampaignSummary: async (campaignId: string): Promise<CampaignSummaryDetail> => {
+    const response = await apiClient.post<BeCampaignSummaryPreview>(
+      `/report-campaigns/${campaignId}/summary/recompute`
+    )
+    const item = response.data
+    return {
+      id: item.id,
+      formId: item.formId,
+      periodType: item.periodType,
+      period: {
+        type: item.periodType,
+        code: item.periodCode,
+        name: item.periodName,
+        dateFrom: item.periodFrom,
+        dateTo: item.periodTo,
+      },
+      orgId: item.orgId,
+      status: item.status,
+      totalUnits: item.totalUnits,
+      submittedUnits: item.submittedUnits,
+      approvedUnits: item.approvedUnits,
+      summaryData: item.summaryData,
+      summarizedAt: item.summarizedAt,
+      createdAt: item.createdAt,
+    }
   },
 }
 
