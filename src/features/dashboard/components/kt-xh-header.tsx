@@ -8,12 +8,14 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { cn } from '@/lib/utils'
 
 interface KtXhHeaderProps {
   title: string
+  className?: string
 }
 
-export function KtXhHeader({ title }: KtXhHeaderProps) {
+export function KtXhHeader({ title, className }: KtXhHeaderProps) {
   const navigate = useNavigate()
 
   const ktXhPages = [
@@ -44,7 +46,12 @@ export function KtXhHeader({ title }: KtXhHeaderProps) {
   const [selectedYear, setSelectedYear] = useState('2024')
 
   return (
-    <header className="sticky top-0 z-30 h-[60px] bg-orange-50 border-b border-orange-200/50 flex flex-col justify-center px-6">
+    <header
+      className={cn(
+        'sticky top-0 z-30 flex h-[60px] flex-col justify-center border-b border-orange-200/50 bg-orange-50 px-6',
+        className
+      )}
+    >
       <div className="flex justify-between items-center w-full max-w-7xl mx-auto">
         <div className="flex items-center gap-4">
           <Button 
@@ -93,7 +100,7 @@ export function KtXhHeader({ title }: KtXhHeaderProps) {
         <h1 className="text-3xl font-bold text-orange-800 uppercase tracking-tight">{title}</h1>
         
         <div className="flex items-center gap-4">
-          <div className="flex gap-2 items-center bg-white px-4 py-2 rounded-xl border border-orange-200/30">
+          <div className="flex gap-2 items-center rounded-xl border border-orange-200/30 bg-white/85 px-4 py-2 backdrop-blur-sm">
             <label className="text-xs font-bold text-orange-600">Kỳ</label>
             <select 
               className="bg-transparent border-none p-0 focus:ring-0 text-green-700 font-bold text-sm"
@@ -109,7 +116,7 @@ export function KtXhHeader({ title }: KtXhHeaderProps) {
               <option value="12">12</option>
             </select>
           </div>
-          <div className="flex gap-2 items-center bg-white px-4 py-2 rounded-xl border border-orange-200/30">
+          <div className="flex gap-2 items-center rounded-xl border border-orange-200/30 bg-white/85 px-4 py-2 backdrop-blur-sm">
             <label className="text-xs font-bold text-orange-600">Năm</label>
             <select 
               className="bg-transparent border-none p-0 focus:ring-0 text-green-700 font-bold text-sm"

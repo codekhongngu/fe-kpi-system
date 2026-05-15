@@ -26,10 +26,10 @@ export function LivestockPage() {
         <section>
           <div className="flex items-center gap-4 mb-6">
             <div className="h-[2px] flex-1 bg-orange-200/50"></div>
-            <h2 className="text-xl font-bold text-green-700 uppercase tracking-wider px-4">TỔNG ĐÀN VẬT NUÔI</h2>
+            <h2 className="text-xl font-bold text-green-700 uppercase tracking-wider px-4">SỐ LƯỢNG GIA SÚC, GIA CẦM TRONG CHĂN NUÔI</h2>
             <div className="h-[2px] flex-1 bg-orange-200/50"></div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* Tổng đàn Bò */}
             <Card data-slot="card" className="border-orange-200/50 hover:border-green-300/30 transition-all">
               <CardContent className="p-6">
@@ -88,25 +88,6 @@ export function LivestockPage() {
               </CardContent>
             </Card>
 
-            {/* Tổng đàn Trâu */}
-            <Card data-slot="card" className="border-orange-200/50 hover:border-green-300/30 transition-all">
-              <CardContent className="p-6">
-                <p className="text-xs font-bold text-orange-600 uppercase mb-4">TỔNG ĐÀN TRÂU</p>
-                <div className="flex items-end justify-between">
-                  <ShoppingCart className="text-yellow-600 text-5xl opacity-40" />
-                  <div className="text-right">
-                    <p className="text-3xl font-bold text-green-700 flex items-center justify-end gap-2">
-                      0,0 
-                      <span className="text-gray-400">
-                        <TrendingUp size={16} />
-                      </span>
-                    </p>
-                    <p className="text-xs text-orange-600">nghìn con</p>
-                    <p className="text-xs text-orange-600">So với cùng kỳ (%): 0</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </section>
 
@@ -177,6 +158,18 @@ export function LivestockPage() {
                 <p className="text-xs font-bold text-orange-600 uppercase mt-4">Thịt bò hơi</p>
               </CardContent>
             </Card>
+            </div>
+          </section>
+
+
+          
+        <section>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-[2px] flex-1 bg-orange-200/50"></div>
+            <h2 className="text-xl font-bold text-green-700 uppercase tracking-wider px-4">SỐ TRANG TRẠI QUY MÔ VỪA, QUY MÔ LỚN</h2>
+            <div className="h-[2px] flex-1 bg-orange-200/50"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
             {/* Thịt gia cầm */}
             <Card data-slot="card" className="border-orange-200/50 hover:border-green-300/30 transition-all">

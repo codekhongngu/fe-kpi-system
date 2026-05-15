@@ -1,9 +1,8 @@
-import {
+﻿import {
   Card,
   CardContent,
 } from '@/components/ui/card'
 import { Main } from '@/components/layout/main'
-import { Badge } from '@/components/ui/badge'
 import { KtXhHeader } from '../../components/kt-xh-header';
 import { 
   Sprout, 
@@ -97,38 +96,38 @@ export function AgriculturePage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Seasonal Card 1 */}
             <Card className="border-l-4 border-l-green-600 border-orange-200/50 overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-green-700 mb-4">LÚA VỤ ĐÔNG XUÂN</h3>
-                <div className="space-y-4">
-                  <img 
-                    className="w-full h-48 object-cover rounded-lg mb-4" 
+              <CardContent className="p-4 sm:p-5">
+                <h3 className="text-lg font-bold text-green-700 sm:text-xl mb-3">LÚA VỤ ĐÔNG XUÂN</h3>
+                <div className="flex flex-row gap-3 sm:gap-4 items-start">
+                  <img
+                    className="h-24 w-24 shrink-0 rounded-lg object-cover sm:h-28 sm:w-28"
                     alt="Lúa vụ đông xuân"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQ8RdB4PkkHnt_3lsbGq8eAigRwT3gSw1Y-EUUJQODFa55hbHAbDM9FkQjuwzvVldkzIP81FgLDML0_8_4l0juSHwb9yjO2ENA4uWeit56ssGHtT2G4F0wOMJnWkIuu8pHNfyNDNBm4bXIXJWkDNl9gN-BR01Fc_KpQqH04JqNLv4Qi2qxyfr0DDWUGkJQdgARFuz2g8hvjRcIvPQQv3mgDu2MQ9jgQliRRNh3FA1gPRMTOpRqbe77CwgmYKmZHhyAO4oUCkqELQ"
                   />
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Diện tích (ha)</span>
+                  <div className="min-w-0 flex-1 space-y-1.5 text-right">
+                    <div className="flex flex-wrap items-end justify-end gap-2 border-b border-orange-200/20 pb-1.5">
+                      <div className="flex flex-col items-end leading-tight">
+                        <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">46.788,0</span>
+                        <span className="text-[11px] text-green-600 sm:text-xs">+99,8%</span>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-green-700">46.788,0</p>
-                        <p className="text-xs text-green-600">+99,8%</p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Diện tích (ha)</span>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Sản lượng (tấn)</span>
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-orange-200/20 pb-1.5">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Sản lượng (tấn)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Năng suất (tạ/ha)</span>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0,0</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Năng suất (tạ/ha)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0,0</p>
                     </div>
                   </div>
                 </div>
@@ -137,35 +136,35 @@ export function AgriculturePage() {
 
             {/* Seasonal Card 2 */}
             <Card className="border-l-4 border-l-yellow-600 border-orange-200/50 overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-green-700 mb-4">LÚA VỤ HÈ THU</h3>
-                <div className="space-y-4">
-                  <img 
-                    className="w-full h-48 object-cover rounded-lg mb-4" 
+              <CardContent className="p-4 sm:p-5">
+                <h3 className="text-lg font-bold text-green-700 sm:text-xl mb-3">LÚA VỤ HÈ THU</h3>
+                <div className="flex flex-row gap-3 sm:gap-4 items-start">
+                  <img
+                    className="h-24 w-24 shrink-0 rounded-lg object-cover sm:h-28 sm:w-28"
                     alt="Lúa vụ hè thu"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwCpIKPnDIu8RykiA-DDe9GdBrz7mwFVaTNK4Me9pCq7nFbUZc_YlzufN1Ym5AjaSUHPEF3n8zAXRNWq5rps9rFR8-8zo4MadWes8KN1d3OrJG8TL7-Dz4RW6ZhsX-_cqDYqobw_S6oRydgvUwbf9GfVhmqPKXiGxlM7zsKKeTBRspdVaaHnB-M84dlCLiCZJokgTC9i91O7QnEWaV74fqd0VfyflCGR2kPez-HQ0Ye0_HkHw8V4dVywfCsd9R9oP67O2oEczdjA"
                   />
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Diện tích (ha)</span>
+                  <div className="min-w-0 flex-1 space-y-1.5 text-right">
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-orange-200/20 pb-1.5">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0,00</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Diện tích (ha)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0,00</p>
                     </div>
-                    <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Sản lượng (tấn)</span>
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-orange-200/20 pb-1.5">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0,00</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Sản lượng (tấn)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0,00</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Năng suất (tạ/ha)</span>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0,00</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Năng suất (tạ/ha)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0,00</p>
                     </div>
                   </div>
                 </div>
@@ -174,68 +173,40 @@ export function AgriculturePage() {
 
             {/* Seasonal Card 3 */}
             <Card className="border-l-4 border-l-orange-600 border-orange-200/50 overflow-hidden">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-green-700 mb-4">LÚA VỤ MÙA</h3>
-                <div className="space-y-4">
-                  <img 
-                    className="w-full h-48 object-cover rounded-lg mb-4" 
+              <CardContent className="p-4 sm:p-5">
+                <h3 className="text-lg font-bold text-green-700 sm:text-xl mb-3">LÚA VỤ MÙA</h3>
+                <div className="flex flex-row gap-3 sm:gap-4 items-start">
+                  <img
+                    className="h-24 w-24 shrink-0 rounded-lg object-cover sm:h-28 sm:w-28"
                     alt="Lúa vụ mùa"
                     src="https://lh3.googleusercontent.com/aida-public/AB6AXuCl4uRXrdcvi_UnW48QhcXcZWGxUtAlZkIoo3heaJ39jKLodvPHoYi7Ezzg4dOSdpfENmNnfCzGWWJfAsaYHlc4hMFwRqCi0zqY7JBSO9rVeZwr2BFS8UZ-JrKDK3kouxv_ylqHnro0azeAgA6EbxOyjrit3SffkcVDkzG6CYqyFfDAmcv_G8jSMmrvWZa4H97LbfoeQl-erQOe_w58dr487PGzpewBYB9QKDKyTNLdPFNwEFYOzH2zJ4oA_hqaI-xbe1zaGj0sLQ"
                   />
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Diện tích (ha)</span>
+                  <div className="min-w-0 flex-1 space-y-1.5 text-right">
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-orange-200/20 pb-1.5">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0,00</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Diện tích (ha)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0,00</p>
                     </div>
-                    <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Sản lượng (tấn)</span>
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-orange-200/20 pb-1.5">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0,00</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Sản lượng (tấn)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0,00</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-600"></div>
-                        <span className="text-sm font-bold text-orange-600">Năng suất (tạ/ha)</span>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className="text-base font-bold tabular-nums text-green-700 sm:text-lg">0,00</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-600" />
+                        <span className="text-xs font-bold text-orange-600 sm:text-sm">Năng suất (tạ/ha)</span>
                       </div>
-                      <p className="text-xl font-bold text-green-700">0,00</p>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </section>
-
-        {/* Additional Agriculture Metrics */}
-        <section>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-[2px] flex-1 bg-orange-200/50"></div>
-            <h2 className="text-xl font-bold text-green-700 uppercase tracking-wider px-4">CÁC LOẠI CÂY TRỒNG KHÁC</h2>
-            <div className="h-[2px] flex-1 bg-orange-200/50"></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { name: "Cây công nghiệp", area: "1,234 ha", growth: "+5.2%", icon: "🌾" },
-              { name: "Cây ăn quả", area: "856 ha", growth: "+3.8%", icon: "🍎" },
-              { name: "Rau màu", area: "432 ha", growth: "+12.1%", icon: "🥬" },
-              { name: "Cây khác", area: "267 ha", growth: "+2.3%", icon: "🌱" },
-            ].map((item, index) => (
-              <Card key={index} className="border-orange-200/50 hover:border-green-300/30 transition-all">
-                <CardContent className="p-4 text-center">
-                  <div className="text-4xl mb-2">{item.icon}</div>
-                  <h4 className="font-bold text-green-700 mb-2">{item.name}</h4>
-                  <p className="text-lg font-bold text-orange-600">{item.area}</p>
-                  <Badge variant="secondary" className="text-xs mt-2">
-                    {item.growth}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </section>
       </div>
