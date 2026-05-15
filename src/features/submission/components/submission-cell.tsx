@@ -60,7 +60,7 @@ export function SubmissionCellComponent({
   if (config.formula) {
     // For now, display formula or calculated value (if any)
     const displayValue =
-      currentValue?.valueNumeric ?? currentValue?.valueText ?? ''
+      currentValue?.valueNumber ?? currentValue?.valueText ?? ''
     return (
       <div className='relative'>
         <Input
@@ -79,7 +79,7 @@ export function SubmissionCellComponent({
   const isNumber = config.dataType === 'number'
   const val = currentValue
     ? isNumber
-      ? currentValue.valueNumeric
+      ? currentValue.valueNumber
       : currentValue.valueText
     : ''
   const displayVal = val ?? ''
@@ -106,7 +106,7 @@ export function SubmissionCellComponent({
         onChange({
           indicatorId: indicator.id,
           attributeId: field.id,
-          valueNumeric: numericVal,
+          valueNumber: numericVal,
           valueText: textVal,
         })
       }}

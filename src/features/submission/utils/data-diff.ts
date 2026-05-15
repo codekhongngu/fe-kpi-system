@@ -2,7 +2,7 @@ export interface DataCell {
   indicatorId: string;
   attributeId: string;
   value: string | null;
-  valueNumeric: number | null;
+  valueNumber: number | null;
 }
 
 export interface SubmissionSnapshot {
@@ -38,8 +38,8 @@ export function compareSnapshots(
     const key = `${newCell.indicatorId}:${newCell.attributeId}`;
     const oldCell = oldMap.get(key);
 
-    const oldVal = oldCell ? (oldCell.valueNumeric ?? oldCell.value) : null;
-    const newVal = newCell.valueNumeric ?? newCell.value;
+    const oldVal = oldCell ? (oldCell.valueNumber ?? oldCell.value) : null;
+    const newVal = newCell.valueNumber ?? newCell.value;
 
     if (oldVal !== newVal) {
       diffs.push({

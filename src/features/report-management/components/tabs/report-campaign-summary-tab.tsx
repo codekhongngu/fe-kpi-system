@@ -322,10 +322,10 @@ function buildSubmissionCellMap(pairs: ApprovedAssignmentDetail[]) {
     for (const cell of pair.detail.cells ?? []) {
       const key = cellKey(cell.indicatorId, cell.attributeId)
       const existing = map.get(key)
-      const nextValueNumber =
-        cell.valueNumeric === null || cell.valueNumeric === undefined
-          ? null
-          : Number(cell.valueNumeric)
+        const nextValueNumber =
+          cell.valueNumber === null || cell.valueNumber === undefined
+            ? null
+            : Number(cell.valueNumber)
 
       if (!existing) {
         map.set(key, {

@@ -52,7 +52,7 @@ export function useSubmission(assignmentId: string) {
         indicatorId: change.indicatorId,
         attributeId: change.attributeId,
         valueText: change.valueText ?? null,
-        valueNumeric: change.valueNumeric ?? null,
+        valueNumber: change.valueNumber ?? null,
         updatedAt: new Date().toISOString(),
         updatedBy: 'me',
       }

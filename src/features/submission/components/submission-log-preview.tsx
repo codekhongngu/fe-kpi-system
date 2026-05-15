@@ -52,13 +52,13 @@ export function SubmissionLogPreview({
   const snapshot = log?.snapshot
 
   const cellValuesMap = useMemo(() => {
-    const map = new Map<string, { valueText: string | null; valueNumeric: number | null }>()
+    const map = new Map<string, { valueText: string | null; valueNumber: number | null }>()
     if (!snapshot?.cells) return map
 
     for (const item of snapshot.cells) {
       map.set(cellKey(item.indicatorId, item.attributeId), {
         valueText: item.value,
-        valueNumeric: item.valueNumeric != null ? Number(item.valueNumeric) : null,
+        valueNumber: item.valueNumber != null ? Number(item.valueNumber) : null,
       })
     }
     return map
@@ -80,7 +80,7 @@ export function SubmissionLogPreview({
     const isNumber = indicator.dataType === 'number'
 
     const displayVal = isNumber
-      ? (val?.valueNumeric ?? '')
+      ? (val?.valueNumber ?? '')
       : (val?.valueText ?? '')
 
     return (

@@ -297,7 +297,7 @@ Ngoài ra theo Postman có các endpoint theo user:
         {
           "indicatorId": "<indicatorId>",
           "attributeId": "<attributeId>",
-          "valueNumeric": "123.45"
+          "valueNumber": 123.45
         }
       ]
     }

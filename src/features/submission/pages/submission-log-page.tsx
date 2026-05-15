@@ -54,7 +54,7 @@ export function SubmissionLogPage() {
     const isNumber = indicator.dataType === 'number'
 
     const displayVal = isNumber 
-      ? (val?.valueNumeric ?? '') 
+      ? (val?.valueNumber ?? '') 
       : (val?.valueText ?? '')
 
     return (

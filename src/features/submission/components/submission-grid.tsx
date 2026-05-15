@@ -66,12 +66,12 @@ export function SubmissionGrid({
   }, [detail.defaultValues])
 
   const cellValuesMap = useMemo(() => {
-    const map = new Map<string, { valueText: string | null; valueNumeric: number | null }>()
+    const map = new Map<string, { valueText: string | null; valueNumber: number | null }>()
     for (const item of detail.cells ?? []) {
       map.set(cellKey(item.indicatorId, item.attributeId), {
         valueText: item.valueText,
-        valueNumeric:
-          item.valueNumeric != null ? Number(item.valueNumeric) : null,
+        valueNumber:
+          item.valueNumber != null ? Number(item.valueNumber) : null,
       })
     }
     return map
@@ -87,7 +87,7 @@ export function SubmissionGrid({
       indicatorId,
       attributeId,
       valueText: dataType === 'text' ? value || null : null,
-      valueNumeric:
+      valueNumber:
         dataType === 'number'
           ? value === ''
             ? null
@@ -121,7 +121,7 @@ export function SubmissionGrid({
     if (cellConfig?.formula) {
       const currentVal = cellValuesMap.get(key)
       const displayValue =
-        currentVal?.valueNumeric ?? currentVal?.valueText ?? ''
+        currentVal?.valueNumber ?? currentVal?.valueText ?? ''
       return (
         <div className='relative w-full min-w-[120px]'>
           <Input
@@ -163,7 +163,7 @@ export function SubmissionGrid({
     if (cellConfig?.readOnly) {
       const currentVal = cellValuesMap.get(key)
       const displayValue = isNumber
-        ? (currentVal?.valueNumeric ?? '')
+        ? (currentVal?.valueNumber ?? '')
         : (currentVal?.valueText ?? '')
       return (
         <div className='relative w-full min-w-[120px]'>
@@ -181,7 +181,7 @@ export function SubmissionGrid({
     // 5. Normal editable input (allow if it's an INPUT indicator even if no cellConfig exists)
     const currentVal = cellValuesMap.get(key)
     const displayVal = isNumber
-      ? (currentVal?.valueNumeric ?? '')
+      ? (currentVal?.valueNumber ?? '')
       : (currentVal?.valueText ?? '')
 
     return (

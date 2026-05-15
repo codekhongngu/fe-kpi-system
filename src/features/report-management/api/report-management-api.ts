@@ -103,7 +103,7 @@ type BeAssignmentAdminView = {
     indicatorId: string
     attributeId: string
     valueText: string | null
-    valueNumeric: number | string | null
+    valueNumber: number | string | null
     updatedBy: string | null
     updatedAt: string
   }>
@@ -242,10 +242,10 @@ const mapAssignmentAdminView = (item: BeAssignmentAdminView): SubmissionDetail =
     indicatorId: row.indicatorId,
     attributeId: row.attributeId,
     valueText: row.valueText,
-    valueNumeric:
-      row.valueNumeric === null || row.valueNumeric === undefined
+    valueNumber:
+      row.valueNumber === null || row.valueNumber === undefined
         ? null
-        : Number(row.valueNumeric),
+        : Number(row.valueNumber),
     updatedBy: row.updatedBy,
     updatedAt: row.updatedAt,
   })),

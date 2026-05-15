@@ -60,8 +60,7 @@ export const submissionApi = {
           indicatorId: c.indicatorId,
           attributeId: c.attributeId,
           valueText: c.valueText ?? null,
-          valueNumeric:
-            c.valueNumeric != null ? String(c.valueNumeric) : null,
+          valueNumber: c.valueNumber ?? null,
         })),
       })
       .then((r) => r.data),

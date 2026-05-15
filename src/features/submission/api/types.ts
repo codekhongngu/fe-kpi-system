@@ -62,7 +62,7 @@ export type SubmissionCell = {
   indicatorId: string
   attributeId: string
   valueText: string | null
-  valueNumeric: number | null
+  valueNumber: number | null
   updatedBy: string | null
   updatedAt: string
 }
@@ -71,7 +71,7 @@ export type CellChange = {
   indicatorId: string
   attributeId: string
   valueText?: string | null
-  valueNumeric?: number | null
+  valueNumber?: number | null
 }
 
 export type PatchCellsResult = {
