@@ -9,6 +9,16 @@ export function sleep(ms: number = 100) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+export function triggerBrowserFileDownload(url: string, filename: string) {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
 /**
  * Generates page numbers for pagination with ellipsis
  * @param currentPage - Current page number (1-based)
