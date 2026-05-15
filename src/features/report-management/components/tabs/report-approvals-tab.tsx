@@ -298,14 +298,13 @@ export function ReportApprovalsTab({
               <div className='flex items-center gap-2'>
                 <Button variant='outline' size='sm' className='h-9 rounded-xl' asChild>
                   <Link
-                    to='/my/assignments/$assignmentId/input'
-                    params={{ assignmentId: selectedAssignment.id }}
+                    to='/report-management/admin-view/$reportId/$assignmentId'
+                    params={{ reportId, assignmentId: selectedAssignment.id }}
                   >
                     <Eye className='mr-2 size-4' />
                     Xem dữ liệu
                   </Link>
                 </Button>
-
                 {selectedAssignment.normalizedStatus === 'PENDING_DEPARTMENT' && (
                   <>
                     <Button

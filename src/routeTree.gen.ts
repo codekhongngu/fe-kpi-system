@@ -54,8 +54,10 @@ import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenti
 import { Route as AuthenticatedMyAssignmentsIndexRouteImport } from './routes/_authenticated/my/assignments/index'
 import { Route as AuthenticatedReportManagementDetailsReportIdRouteImport } from './routes/_authenticated/report-management/details.$reportId'
 import { Route as AuthenticatedFormManagementDetailsTemplateIdRouteImport } from './routes/_authenticated/form-management/details.$templateId'
+import { Route as AuthenticatedReportManagementAdminViewReportIdAssignmentIdRouteImport } from './routes/_authenticated/report-management/admin-view.$reportId.$assignmentId'
 import { Route as AuthenticatedMySubmissionsFlowLogsLogIdRouteImport } from './routes/_authenticated/my/submissions/flow-logs/$logId'
 import { Route as AuthenticatedMyAssignmentsAssignmentIdInputRouteImport } from './routes/_authenticated/my/assignments/$assignmentId.input'
+import { Route as AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRouteImport } from './routes/_authenticated/report-management/details.$reportId.assignments.$assignmentId'
 
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
@@ -299,6 +301,12 @@ const AuthenticatedFormManagementDetailsTemplateIdRoute =
     path: '/details/$templateId',
     getParentRoute: () => AuthenticatedFormManagementRouteRoute,
   } as any)
+const AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute =
+  AuthenticatedReportManagementAdminViewReportIdAssignmentIdRouteImport.update({
+    id: '/report-management/admin-view/$reportId/$assignmentId',
+    path: '/report-management/admin-view/$reportId/$assignmentId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMySubmissionsFlowLogsLogIdRoute =
   AuthenticatedMySubmissionsFlowLogsLogIdRouteImport.update({
     id: '/my/submissions/flow-logs/$logId',
@@ -311,6 +319,14 @@ const AuthenticatedMyAssignmentsAssignmentIdInputRoute =
     path: '/my/assignments/$assignmentId/input',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute =
+  AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRouteImport.update(
+    {
+      id: '/assignments/$assignmentId',
+      path: '/assignments/$assignmentId',
+      getParentRoute: () => AuthenticatedReportManagementDetailsReportIdRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -353,10 +369,12 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
-  '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
+  '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   '/my/assignments/': typeof AuthenticatedMyAssignmentsIndexRoute
   '/my/assignments/$assignmentId/input': typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
   '/my/submissions/flow-logs/$logId': typeof AuthenticatedMySubmissionsFlowLogsLogIdRoute
+  '/report-management/admin-view/$reportId/$assignmentId': typeof AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute
+  '/report-management/details/$reportId/assignments/$assignmentId': typeof AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
@@ -397,10 +415,12 @@ export interface FileRoutesByTo {
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
-  '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
+  '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   '/my/assignments': typeof AuthenticatedMyAssignmentsIndexRoute
   '/my/assignments/$assignmentId/input': typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
   '/my/submissions/flow-logs/$logId': typeof AuthenticatedMySubmissionsFlowLogsLogIdRoute
+  '/report-management/admin-view/$reportId/$assignmentId': typeof AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute
+  '/report-management/details/$reportId/assignments/$assignmentId': typeof AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -447,10 +467,12 @@ export interface FileRoutesById {
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
   '/_authenticated/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
-  '/_authenticated/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRoute
+  '/_authenticated/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   '/_authenticated/my/assignments/': typeof AuthenticatedMyAssignmentsIndexRoute
   '/_authenticated/my/assignments/$assignmentId/input': typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
   '/_authenticated/my/submissions/flow-logs/$logId': typeof AuthenticatedMySubmissionsFlowLogsLogIdRoute
+  '/_authenticated/report-management/admin-view/$reportId/$assignmentId': typeof AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute
+  '/_authenticated/report-management/details/$reportId/assignments/$assignmentId': typeof AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -499,6 +521,8 @@ export interface FileRouteTypes {
     | '/my/assignments/'
     | '/my/assignments/$assignmentId/input'
     | '/my/submissions/flow-logs/$logId'
+    | '/report-management/admin-view/$reportId/$assignmentId'
+    | '/report-management/details/$reportId/assignments/$assignmentId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -543,6 +567,8 @@ export interface FileRouteTypes {
     | '/my/assignments'
     | '/my/assignments/$assignmentId/input'
     | '/my/submissions/flow-logs/$logId'
+    | '/report-management/admin-view/$reportId/$assignmentId'
+    | '/report-management/details/$reportId/assignments/$assignmentId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -592,6 +618,8 @@ export interface FileRouteTypes {
     | '/_authenticated/my/assignments/'
     | '/_authenticated/my/assignments/$assignmentId/input'
     | '/_authenticated/my/submissions/flow-logs/$logId'
+    | '/_authenticated/report-management/admin-view/$reportId/$assignmentId'
+    | '/_authenticated/report-management/details/$reportId/assignments/$assignmentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -927,6 +955,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFormManagementDetailsTemplateIdRouteImport
       parentRoute: typeof AuthenticatedFormManagementRouteRoute
     }
+    '/_authenticated/report-management/admin-view/$reportId/$assignmentId': {
+      id: '/_authenticated/report-management/admin-view/$reportId/$assignmentId'
+      path: '/report-management/admin-view/$reportId/$assignmentId'
+      fullPath: '/report-management/admin-view/$reportId/$assignmentId'
+      preLoaderRoute: typeof AuthenticatedReportManagementAdminViewReportIdAssignmentIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/my/submissions/flow-logs/$logId': {
       id: '/_authenticated/my/submissions/flow-logs/$logId'
       path: '/my/submissions/flow-logs/$logId'
@@ -940,6 +975,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/my/assignments/$assignmentId/input'
       preLoaderRoute: typeof AuthenticatedMyAssignmentsAssignmentIdInputRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/report-management/details/$reportId/assignments/$assignmentId': {
+      id: '/_authenticated/report-management/details/$reportId/assignments/$assignmentId'
+      path: '/assignments/$assignmentId'
+      fullPath: '/report-management/details/$reportId/assignments/$assignmentId'
+      preLoaderRoute: typeof AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRouteImport
+      parentRoute: typeof AuthenticatedReportManagementDetailsReportIdRoute
     }
   }
 }
@@ -985,6 +1027,21 @@ const AuthenticatedSettingsRouteRouteWithChildren =
     AuthenticatedSettingsRouteRouteChildren,
   )
 
+interface AuthenticatedReportManagementDetailsReportIdRouteChildren {
+  AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute: typeof AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute
+}
+
+const AuthenticatedReportManagementDetailsReportIdRouteChildren: AuthenticatedReportManagementDetailsReportIdRouteChildren =
+  {
+    AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute:
+      AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute,
+  }
+
+const AuthenticatedReportManagementDetailsReportIdRouteWithChildren =
+  AuthenticatedReportManagementDetailsReportIdRoute._addFileChildren(
+    AuthenticatedReportManagementDetailsReportIdRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedFormManagementRouteRoute: typeof AuthenticatedFormManagementRouteRouteWithChildren
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
@@ -1004,10 +1061,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSystemAdminIndexRoute: typeof AuthenticatedSystemAdminIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
-  AuthenticatedReportManagementDetailsReportIdRoute: typeof AuthenticatedReportManagementDetailsReportIdRoute
+  AuthenticatedReportManagementDetailsReportIdRoute: typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   AuthenticatedMyAssignmentsIndexRoute: typeof AuthenticatedMyAssignmentsIndexRoute
   AuthenticatedMyAssignmentsAssignmentIdInputRoute: typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
   AuthenticatedMySubmissionsFlowLogsLogIdRoute: typeof AuthenticatedMySubmissionsFlowLogsLogIdRoute
+  AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute: typeof AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1033,12 +1091,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedReportManagementDetailsReportIdRoute:
-    AuthenticatedReportManagementDetailsReportIdRoute,
+    AuthenticatedReportManagementDetailsReportIdRouteWithChildren,
   AuthenticatedMyAssignmentsIndexRoute: AuthenticatedMyAssignmentsIndexRoute,
   AuthenticatedMyAssignmentsAssignmentIdInputRoute:
     AuthenticatedMyAssignmentsAssignmentIdInputRoute,
   AuthenticatedMySubmissionsFlowLogsLogIdRoute:
     AuthenticatedMySubmissionsFlowLogsLogIdRoute,
+  AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute:
+    AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
