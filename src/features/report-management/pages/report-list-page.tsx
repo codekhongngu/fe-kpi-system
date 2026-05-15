@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { FilePlus2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { DataTablePagination } from '@/components/data-table/data-table-pagination'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
+import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import { reportCampaignApi } from '../api/report-management-api'
 import type {
   CreateReportInput,
+  CampaignStatus,
   ReportFilters,
   ReportListItem,
   UpdateReportInput,
@@ -29,24 +31,16 @@ import {
 } from '../utils/report-query'
 
 type ConfirmState = {
-  type: 'delete' | 'assign' | 'approve' | 'reject'
+  type: 'cancel' | 'assign' | 'approve' | 'reject'
   report: ReportListItem
 } | null
 
-function getInitialTab(href: string, defaultTab: ReportFilters['tab']) {
-  const url = new URL(href, window.location.origin)
-  const tab = url.searchParams.get('tab')
-  if (
-    tab === 'unsubmitted' ||
-    tab === 'pending_approval' ||
-    tab === 'approved' ||
-    tab === 'rejected' ||
-    tab === 'overdue' ||
-    tab === 'all'
-  ) {
-    return tab
-  }
-  return defaultTab
+type CampaignListParams = {
+  page: number
+  limit: number
+  status?: CampaignStatus
+  formId?: string
+  periodType?: string
 }
 
 function getConfirmCopy(confirmState: ConfirmState) {
@@ -61,11 +55,11 @@ function getConfirmCopy(confirmState: ConfirmState) {
   }
 
   const reportName = confirmState.report.name
-  if (confirmState.type === 'delete') {
+  if (confirmState.type === 'cancel') {
     return {
-      title: 'Xóa báo cáo',
-      description: `Báo cáo "${reportName}" sẽ bị xóa khỏi danh sách quản lý.`,
-      confirmLabel: 'Xóa báo cáo',
+      title: 'Hủy báo cáo',
+      description: `Báo cáo "${reportName}" sẽ bị hủy khỏi danh sách quản lý.`,
+      confirmLabel: 'Hủy báo cáo',
       destructive: true,
       requireReason: false,
     }
@@ -100,16 +94,8 @@ function getConfirmCopy(confirmState: ConfirmState) {
 export function ReportListPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const href = useLocation({ select: (location) => location.href })
   const permission = usePermission()
-  const initialTab = useMemo(
-    () => getInitialTab(href, permission.defaultTab),
-    [href, permission.defaultTab]
-  )
-  const [filters, setFilters] = useState<ReportFilters>({
-    ...defaultReportFilters,
-    tab: initialTab,
-  })
+  const [filters, setFilters] = useState<ReportFilters>(defaultReportFilters)
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
   const [editingReport, setEditingReport] = useState<ReportListItem | null>(
@@ -118,24 +104,42 @@ export function ReportListPage() {
   const [confirmState, setConfirmState] = useState<ConfirmState>(null)
   const [roleVariantsOpen, setRoleVariantsOpen] = useState(false)
 
+  const campaignListParams = useMemo<CampaignListParams>(() => {
+    const params: CampaignListParams = {
+      page: filters.page,
+      limit: filters.pageSize,
+    }
+
+    if (filters.status !== 'all') {
+      params.status = filters.status
+    }
+
+    if (filters.templateId.trim()) {
+      params.formId = filters.templateId.trim()
+    }
+
+    if (filters.period && filters.period !== 'all') {
+      params.periodType = filters.period
+    }
+
+    return params
+  }, [filters.page, filters.pageSize, filters.period, filters.status, filters.templateId])
+
   const referencesQuery = useQuery({
     queryKey: reportQueryKeys.references,
     queryFn: async () => {
-      // References come from template API now
-      const response = await apiClient.get<{
-        items?: Array<{ id: string; code: string; name: string }>
-      }>('/forms', { params: { limit: 200 } })
-      const templates = Array.isArray(response.data)
-        ? response.data
-        : (response.data.items ?? [])
+      const response = await formManagementApi.listTemplates({
+        page: 1,
+        limit: 200,
+        template_status: 'READY,IN_USE',
+      })
+
       return {
-        templates: templates.map(
-          (t: { id: string; code: string; name: string }) => ({
-            id: t.id,
-            code: t.code,
-            name: t.name,
-          })
-        ),
+        templates: response.items.map((item) => ({
+          id: item.id,
+          code: item.code,
+          name: item.name,
+        })),
         units: [],
         periods: [],
       }
@@ -143,41 +147,12 @@ export function ReportListPage() {
   })
 
   const listQuery = useQuery({
-    queryKey: reportQueryKeys.list(filters),
-    queryFn: async () => {
-      // Xây dựng params một cách rõ ràng để tránh undefined
-      const requestParams: Record<string, any> = {
-        page: filters.page,
-        limit: filters.pageSize,
-      }
-      
-      // Chỉ thêm status khi không phải 'all'
-      if (filters.status && filters.status !== 'all') {
-        requestParams.status = filters.status
-      }
-      
-      // Chỉ thêm formId khi có giá trị
-      if (filters.templateId && filters.templateId.trim() !== '') {
-        requestParams.formId = filters.templateId
-      }
-      
-      // Chỉ thêm periodType khi không phải 'all' và có giá trị hợp lệ
-      if (filters.period && filters.period !== 'all') {
-        const validPeriods = ['TUAN', 'THANG', 'QUY', 'NAM']
-        if (validPeriods.includes(filters.period)) {
-          requestParams.periodType = filters.period
-        }
-      }
-
-      console.log('API Request Params:', requestParams)
-
-      const response = await apiClient.get<{
-        items: ReportListItem[]
-        meta?: { total: number }
-        total?: number
-      }>('/report-campaigns', { params: requestParams })
-      return response.data
-    },
+    queryKey: reportQueryKeys.list({
+      ...filters,
+      keyword: '',
+      unitId: '',
+    }),
+    queryFn: () => reportCampaignApi.listCampaigns(campaignListParams),
   })
 
   const invalidateReports = async () => {
@@ -193,17 +168,8 @@ export function ReportListPage() {
   }
 
   const createMutation = useMutation({
-    mutationFn: async (input: CreateReportInput) => {
-      await apiClient.post('/report-campaigns', {
-        formId: input.templateId,
-        periodType: input.periodType,
-        periodCode: input.periodCode,
-        periodName: input.periodName,
-        deadlineFrom: input.openDate,
-        deadlineTo: input.closeDate,
-      })
-      return true
-    },
+    mutationFn: async (input: CreateReportInput) =>
+      await reportCampaignApi.createCampaign(input),
     onSuccess: async () => {
       toast.success('Đã tạo báo cáo thành công.')
       setFormOpen(false)
@@ -219,10 +185,7 @@ export function ReportListPage() {
     }: {
       id: string
       input: UpdateReportInput
-    }) => {
-      await apiClient.patch(`/report-campaigns/${id}`, input)
-      return true
-    },
+    }) => await reportCampaignApi.updateCampaign(id, input),
     onSuccess: async () => {
       toast.success('Đã cập nhật báo cáo.')
       setFormOpen(false)
@@ -237,10 +200,8 @@ export function ReportListPage() {
       if (!confirmState) {
         throw new Error('Chưa chọn báo cáo.')
       }
-      if (confirmState.type === 'delete') {
-        return await apiClient.delete(
-          `/report-campaigns/${confirmState.report.id}`
-        )
+      if (confirmState.type === 'cancel') {
+        return await reportCampaignApi.cancelCampaign(confirmState.report.id)
       }
       if (confirmState.type === 'assign') {
         return await reportCampaignApi.confirmDispatch(confirmState.report.id)
@@ -269,9 +230,8 @@ export function ReportListPage() {
     [confirmState]
   )
   const listData = listQuery.data?.items ?? []
-  const total = listQuery.data?.total ?? listQuery.data?.meta?.total ?? 0
+  const total = listQuery.data?.total ?? 0
 
-  // Sử dụng hook để lấy thông tin template
   const { enrichedReports, isLoading: templateLoading } =
     useTemplateInfo(listData)
 
@@ -326,7 +286,7 @@ export function ReportListPage() {
               })
             }
             onEdit={openEditForm}
-            onDelete={(report) => setConfirmState({ type: 'delete', report })}
+            onCancel={(report) => setConfirmState({ type: 'cancel', report })}
             onAssign={(report) => setConfirmState({ type: 'assign', report })}
             onApprove={(report) =>
               setConfirmState({ type: 'approve', report })

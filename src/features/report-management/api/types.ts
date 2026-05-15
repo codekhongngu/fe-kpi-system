@@ -29,7 +29,7 @@ export type ReportPriority = 'low' | 'normal' | 'high'
 export type ReportAction =
   | 'report:create'
   | 'report:update'
-  | 'report:delete'
+  | 'report:cancel'
   | 'report:assign'
   | 'report:input'
   | 'report:submit'
@@ -148,7 +148,7 @@ export type ReportFilters = {
   keyword: string
   templateId: string
   unitId: string
-  status: ReportStatus | 'all'
+  status: CampaignStatus | 'all'
   period: string
   page: number
   pageSize: number

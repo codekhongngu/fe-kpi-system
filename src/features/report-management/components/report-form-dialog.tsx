@@ -1,8 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState, type UIEvent } from 'react'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { apiClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -21,7 +31,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import type { PeriodType } from '@/features/form-management/api/types'
+import { formManagementApi } from '@/features/form-management/api/template-management-api'
+import type {
+  FormTemplate,
+  PeriodType,
+} from '@/features/form-management/api/types'
 import type {
   CreateReportInput,
   ReportListItem,
@@ -56,12 +70,25 @@ const emptyForm = {
 
 type PeriodKind = 'week' | 'month' | 'quarter' | 'year'
 
-type FormItem = {
-  id: string
-  code?: string
-  name?: string
-  periodType?: PeriodType
-  period_type?: PeriodType
+type FormOption = Pick<FormTemplate, 'id' | 'code' | 'name' | 'periodType'>
+
+const formPageSize = 20
+const periodTypes: PeriodType[] = ['TUAN', 'THANG', 'QUY', 'NAM']
+
+function isPeriodType(value: string | undefined): value is PeriodType {
+  return (
+    value === 'TUAN' ||
+    value === 'THANG' ||
+    value === 'QUY' ||
+    value === 'NAM'
+  )
+}
+
+function formatFormLabel(form: { code?: string; name?: string }) {
+  const code = form.code?.trim() ?? ''
+  const name = form.name?.trim() ?? ''
+  if (code && name) return `${code} - ${name}`
+  return code || name || ''
 }
 
 function todayISO() {
@@ -156,9 +183,7 @@ function buildAssignmentPeriod(periodType: PeriodType, periodCode: string) {
     return { periodCode: `KBCW${ww}`, periodName: `Kỳ báo cáo tuần ${ww}` }
   }
   if (periodType === 'QUY') {
-    const q = periodCode.startsWith('Q')
-      ? periodCode.slice(1).split('-')[0]
-      : ''
+    const q = periodCode.startsWith('Q') ? periodCode.slice(1).split('-')[0] : ''
     return { periodCode: `KBCQ${q}`, periodName: `Kỳ báo cáo quý ${q}` }
   }
   const year = periodCode.split('-').slice(-1)[0] ?? ''
@@ -169,7 +194,6 @@ export function ReportFormDialog({
   open,
   mode,
   report,
-  references,
   isSubmitting,
   onOpenChange,
   onCreate,
@@ -192,7 +216,6 @@ export function ReportFormDialog({
           active={open}
           mode={mode}
           report={report}
-          references={references}
           isSubmitting={isSubmitting}
           onCancel={() => onOpenChange(false)}
           onCreate={onCreate}
@@ -207,7 +230,6 @@ export function ReportForm({
   active,
   mode,
   report,
-  references,
   isSubmitting,
   onCancel,
   onCreate,
@@ -221,64 +243,92 @@ export function ReportForm({
   const [openDate, setOpenDate] = useState(todayISO())
   const [closeDate, setCloseDate] = useState(todayISO())
   const [autoAssignNextPeriod, setAutoAssignNextPeriod] = useState(false)
+  const [selectedFormInfo, setSelectedFormInfo] = useState<FormOption | null>(
+    null
+  )
+  const [formPickerOpen, setFormPickerOpen] = useState(false)
+  const [formSearch, setFormSearch] = useState('')
+  const [debouncedFormSearch, setDebouncedFormSearch] = useState('')
 
-  const formsQuery = useQuery({
-    queryKey: ['report-management', 'forms', 'list'],
-    queryFn: async () => {
-      const response = await apiClient.get<{ items: FormItem[] } | FormItem[]>(
-        '/forms',
-        {
-          params: { page: 1, limit: 200 },
-        }
-      )
-      const payload = response.data
-      return Array.isArray(payload) ? payload : (payload.items ?? [])
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFormSearch(formSearch.trim())
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [formSearch])
+
+  const formsQuery = useInfiniteQuery({
+    queryKey: ['report-management', 'forms', { search: debouncedFormSearch }],
+    queryFn: async ({ pageParam = 1 }) => {
+      return formManagementApi.listTemplates({
+        search: debouncedFormSearch || undefined,
+        page: pageParam,
+        limit: formPageSize,
+        template_status: 'READY,IN_USE',
+      })
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const { page, limit, total } = lastPage.meta
+      return page * limit < total ? page + 1 : undefined
     },
     retry: false,
     enabled: active,
   })
 
   const forms = useMemo(() => {
-    return (formsQuery.data ?? []).map((item) => ({
-      id: item.id,
-      code: item.code ?? '',
-      name: item.name ?? '',
-      periodType: item.periodType ?? item.period_type,
-    }))
+    const pages = formsQuery.data?.pages ?? []
+    return pages.flatMap((page) => page.items)
   }, [formsQuery.data])
 
-  const selectedForm = useMemo(() => {
+  const selectedFormFromList = useMemo(() => {
     return forms.find((item) => item.id === form.templateId)
   }, [form.templateId, forms])
+
+  const selectedForm = selectedFormFromList ?? selectedFormInfo
+  const selectedPeriodType = selectedForm?.periodType
 
   useEffect(() => {
     if (!active) {
       return
     }
-    if (mode === 'edit' && report) {
-      setForm({
-        name: report.name,
-        templateId: report.templateId,
-        deadline: report.deadline,
-        priority: report.priority,
-        note: report.note ?? '',
-      })
+    const resetCommonState = () => {
       setPeriodType('THANG')
       setPeriodCode(defaultPeriodCode(toPeriodKind('THANG'), new Date()))
       setOpenDate(todayISO())
       setCloseDate(todayISO())
       setAutoAssignNextPeriod(false)
+      setFormPickerOpen(false)
+      setFormSearch('')
+      setDebouncedFormSearch('')
+    }
+
+    if (mode === 'edit' && report) {
+      const reportTemplateCode = report.templateCode ?? report.code ?? ''
+      const reportTemplateName = report.templateName ?? report.name ?? ''
+      setForm({
+        name: report.name ?? '',
+        templateId: report.formId,
+        deadline: report.deadline ?? report.closeDate ?? todayISO(),
+        priority: emptyForm.priority,
+        note: '',
+      })
+      setSelectedFormInfo({
+        id: report.formId,
+        code: reportTemplateCode,
+        name: reportTemplateName,
+        periodType: isPeriodType(report.periodType) ? report.periodType : undefined,
+      })
+      resetCommonState()
       return
     }
+
     setForm({
       ...emptyForm,
       deadline: todayISO(),
     })
-    setPeriodType('THANG')
-    setPeriodCode(defaultPeriodCode(toPeriodKind('THANG'), new Date()))
-    setOpenDate(todayISO())
-    setCloseDate(todayISO())
-    setAutoAssignNextPeriod(false)
+    setSelectedFormInfo(null)
+    resetCommonState()
   }, [active, mode, report])
 
   const periodKind = useMemo(() => toPeriodKind(periodType), [periodType])
@@ -290,32 +340,14 @@ export function ReportForm({
   useEffect(() => {
     if (!active) return
     if (mode !== 'create') return
-    if (form.templateId) return
-    if (forms.length === 0) return
-    setForm((prev) => ({ ...prev, templateId: forms[0].id }))
-  }, [active, form.templateId, forms, mode])
-
-  useEffect(() => {
-    if (!active) return
-    if (mode !== 'create') return
-    if (!selectedForm) return
-    const nextName = (selectedForm.name ?? '').trim()
-    setForm((prev) =>
-      prev.name === nextName ? prev : { ...prev, name: nextName }
-    )
-  }, [active, mode, selectedForm])
-
-  useEffect(() => {
-    if (!active) return
-    if (mode !== 'create') return
-    const nextType = selectedForm?.periodType
+    const nextType = selectedPeriodType
     if (!nextType) return
     setPeriodType((prev) => (prev === nextType ? prev : nextType))
     setPeriodCode((prev) => {
       const nextCode = defaultPeriodCode(toPeriodKind(nextType), new Date())
       return prev === nextCode ? prev : nextCode
     })
-  }, [active, mode, selectedForm?.periodType])
+  }, [active, mode, selectedPeriodType])
 
   useEffect(() => {
     if (!active) return
@@ -326,8 +358,43 @@ export function ReportForm({
     })
   }, [active, closeDate, mode])
 
+  const selectedFormLabel = selectedForm
+    ? formatFormLabel(selectedForm)
+    : mode === 'edit'
+      ? formatFormLabel({
+        code: report?.templateCode ?? report?.code ?? '',
+        name: report?.templateName ?? report?.name ?? '',
+      })
+      : ''
+  const formsLoading = formsQuery.isLoading && forms.length === 0
+
+  const handleSelectForm = (item: FormOption) => {
+    setForm((prev) => ({
+      ...prev,
+      templateId: item.id,
+      name: item.name.trim(),
+    }))
+    setSelectedFormInfo(item)
+    if (item.periodType) {
+      setPeriodType(item.periodType)
+      setPeriodCode(defaultPeriodCode(toPeriodKind(item.periodType), new Date()))
+    }
+    setFormPickerOpen(false)
+    setFormSearch('')
+    setDebouncedFormSearch('')
+  }
+
+  const handleFormListScroll = (event: UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget
+    const remaining = target.scrollHeight - target.scrollTop - target.clientHeight
+    if (remaining > 24) return
+    if (!formsQuery.hasNextPage || formsQuery.isFetchingNextPage) return
+    void formsQuery.fetchNextPage()
+  }
+
   const submit = () => {
     const reportName = (selectedForm?.name ?? form.name).trim()
+    const note = form.note.trim()
     if (!reportName) {
       toast.error('Tên biểu mẫu là bắt buộc.')
       return
@@ -359,7 +426,7 @@ export function ReportForm({
         deadline: closeDate,
         autoAssignNextPeriod,
         priority: form.priority,
-        note: form.note.trim() || null,
+        note: note || null,
       })
       return
     }
@@ -373,7 +440,7 @@ export function ReportForm({
       name: reportName,
       deadline: form.deadline,
       priority: form.priority,
-      note: form.note.trim() || null,
+      note: note || null,
     })
   }
 
@@ -385,46 +452,107 @@ export function ReportForm({
             <div className='flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary'>
               1
             </div>
-            <div className='text-sm font-semibold'>
-              Cấu hình Biểu mẫu &amp; Kỳ
-            </div>
+            <div className='text-sm font-semibold'>Cấu hình Biểu mẫu &amp; Kỳ</div>
           </div>
 
           <div className='mt-4 grid gap-5'>
             <div className='grid gap-2'>
               <Label>Biểu mẫu</Label>
-              <Select
-                value={form.templateId}
-                disabled={mode === 'edit'}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, templateId: value }))
-                }
+              <Popover
+                open={formPickerOpen && mode !== 'edit'}
+                onOpenChange={(open) => {
+                  setFormPickerOpen(open)
+                  if (!open) {
+                    setFormSearch('')
+                    setDebouncedFormSearch('')
+                  }
+                }}
               >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='Chọn biểu mẫu' />
-                </SelectTrigger>
-                <SelectContent>
-                  {formsQuery.isLoading ? (
-                    <div className='px-2 py-1.5 text-sm text-muted-foreground'>
-                      Đang tải biểu mẫu...
-                    </div>
-                  ) : formsQuery.isError ? (
-                    <div className='px-2 py-1.5 text-sm text-destructive'>
-                      Không tải được biểu mẫu.
-                    </div>
-                  ) : forms.length === 0 ? (
-                    <div className='px-2 py-1.5 text-sm text-muted-foreground'>
-                      Chưa có biểu mẫu.
-                    </div>
-                  ) : (
-                    forms.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.code} - {item.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    role='combobox'
+                    disabled={mode === 'edit'}
+                    className='w-full justify-between'
+                  >
+                    <span className='truncate text-left'>
+                      {formsLoading
+                        ? 'Đang tải biểu mẫu...'
+                        : selectedFormLabel || 'Chọn biểu mẫu'}
+                    </span>
+                    {formsLoading ? (
+                      <Loader2 className='ml-2 h-4 w-4 shrink-0 animate-spin opacity-50' />
+                    ) : (
+                      <CaretSortIcon className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className='w-[36rem] max-w-[calc(100vw-2rem)] p-0'
+                  align='start'
+                >
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder='Tìm biểu mẫu...'
+                      value={formSearch}
+                      onValueChange={setFormSearch}
+                    />
+                    <CommandList onScroll={handleFormListScroll}>
+                      {formsQuery.isLoading ? (
+                        <div className='px-3 py-2 text-sm text-muted-foreground'>
+                          Đang tải biểu mẫu...
+                        </div>
+                      ) : formsQuery.isError ? (
+                        <div className='px-3 py-2 text-sm text-destructive'>
+                          Không tải được biểu mẫu.
+                        </div>
+                      ) : forms.length === 0 ? (
+                        <CommandEmpty>
+                          {debouncedFormSearch
+                            ? 'Không tìm thấy biểu mẫu.'
+                            : 'Chưa có biểu mẫu.'}
+                        </CommandEmpty>
+                      ) : (
+                        <>
+                          <CommandGroup>
+                            {forms.map((item) => (
+                              <CommandItem
+                                key={item.id}
+                                value={`${item.code} ${item.name}`}
+                                onSelect={() => handleSelectForm(item)}
+                              >
+                                <CheckIcon
+                                  className={
+                                    form.templateId === item.id
+                                      ? 'mr-2 h-4 w-4 opacity-100'
+                                      : 'mr-2 h-4 w-4 opacity-0'
+                                  }
+                                />
+                                <span className='truncate'>
+                                  {formatFormLabel(item)}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          <div className='flex items-center justify-between gap-3 border-t px-3 py-2 text-xs text-muted-foreground'>
+                            <span>
+                              {formsQuery.isFetchingNextPage
+                                ? 'Đang tải thêm...'
+                                : formsQuery.hasNextPage
+                                  ? 'Cuộn xuống để tải thêm.'
+                                  : 'Đã tải hết biểu mẫu.'}
+                            </span>
+                            {formsQuery.isFetchingNextPage ? (
+                              <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                            ) : null}
+                          </div>
+                        </>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className='grid gap-4 sm:grid-cols-2'>
@@ -432,7 +560,7 @@ export function ReportForm({
                 <Label>Kỳ báo cáo</Label>
                 <Select
                   value={periodType}
-                  disabled={Boolean(selectedForm?.periodType)}
+                  disabled={Boolean(selectedPeriodType)}
                   onValueChange={(value: PeriodType) => {
                     const nextKind = toPeriodKind(value)
                     setPeriodType(value)
@@ -443,7 +571,7 @@ export function ReportForm({
                     <SelectValue placeholder='Chọn kỳ báo cáo' />
                   </SelectTrigger>
                   <SelectContent>
-                    {(['TUAN', 'THANG', 'QUY', 'NAM'] as const).map((item) => (
+                    {periodTypes.map((item) => (
                       <SelectItem key={item} value={item}>
                         {item === 'TUAN'
                           ? 'Tuần'

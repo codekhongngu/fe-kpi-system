@@ -33,7 +33,7 @@ const roleVariants: RoleVariant[] = [
         condition: 'Chưa chốt',
       },
       {
-        action: 'report:delete',
+        action: 'report:cancel',
         label: 'Xóa báo cáo',
         condition: 'Chưa duyệt',
       },

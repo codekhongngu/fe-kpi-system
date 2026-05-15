@@ -11,6 +11,7 @@ import type {
   ReportDetail,
   ReportListItem,
   ReportAssignment,
+  UpdateReportInput,
 } from './types'
 
 // ── Raw BE shapes ──────────────────────────────────────────────────────────────
@@ -260,6 +261,7 @@ export const reportCampaignApi = {
     limit?: number
     status?: string
     formId?: string
+    periodType?: string
   }): Promise<{ items: ReportListItem[]; total: number }> => {
     const response = await apiClient.get<
       | BeCampaign[]
@@ -314,6 +316,17 @@ export const reportCampaignApi = {
     })
     const id = (response.data as { id?: string }).id ?? response.data?.id
     if (id) return reportCampaignApi.getCampaign(id)
+    return mapCampaignDetail(response.data)
+  },
+
+  updateCampaign: async (
+    campaignId: string,
+    input: UpdateReportInput
+  ): Promise<ReportDetail> => {
+    const response = await apiClient.patch<BeCampaign>(
+      `/report-campaigns/${campaignId}`,
+      input
+    )
     return mapCampaignDetail(response.data)
   },
 
@@ -461,13 +474,13 @@ export type { OrgTreeItem }
 
 export function canRunReportAction(report: ReportListItem, action: string) {
   if (action === 'report:update') {
-    return !['CLOSED', 'CANCELLED'].includes(report.status)
+    return report.status === 'DRAFT'
   }
-  if (action === 'report:delete') {
-    return !['CLOSED'].includes(report.status)
+  if (action === 'report:cancel') {
+    return report.status === 'DRAFT'
   }
   if (action === 'report:assign') {
-    return ['DRAFT', 'NOT_STARTED'].includes(report.status)
+    return report.status === 'DRAFT'
   }
   if (action === 'report:approve' || action === 'report:reject') {
     return ['PENDING_DEPARTMENT', 'DEPARTMENT_APPROVED'].includes(report.status)

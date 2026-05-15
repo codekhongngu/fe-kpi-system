@@ -42,7 +42,7 @@ type ReportTableProps = {
   can: (action: ReportAction) => boolean
   onView: (report: ReportListItem) => void
   onEdit: (report: ReportListItem) => void
-  onDelete: (report: ReportListItem) => void
+  onCancel: (report: ReportListItem) => void
   onAssign: (report: ReportListItem) => void
   onApprove: (report: ReportListItem) => void
   onReject: (report: ReportListItem) => void
@@ -59,7 +59,7 @@ export function ReportTable({
   can,
   onView,
   onEdit,
-  onDelete,
+  onCancel,
   onAssign,
   onApprove,
   onReject,
@@ -192,16 +192,16 @@ export function ReportTable({
                         Trả lại
                       </DropdownMenuItem>
                     )}
-                  {can('report:delete') &&
-                    canRunReportAction(report, 'report:delete') && (
+                  {can('report:cancel') &&
+                    canRunReportAction(report, 'report:cancel') && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className='text-destructive focus:text-destructive'
-                          onClick={() => onDelete(report)}
+                          onClick={() => onCancel(report)}
                         >
                           <Trash2 className='me-2 size-4' />
-                          Xóa
+                          Hủy
                         </DropdownMenuItem>
                       </>
                     )}
@@ -212,7 +212,7 @@ export function ReportTable({
         },
       },
     ],
-    [can, onApprove, onAssign, onDelete, onEdit, onReject, onView]
+    [can, onApprove, onAssign, onCancel, onEdit, onReject, onView]
   )
 
   const table = useReactTable({
