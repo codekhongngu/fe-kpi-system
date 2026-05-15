@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   ChevronDown,
   ChevronRight,
+  Download,
   FileUp,
   GripVertical,
   PlusCircle,
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { triggerBrowserFileDownload } from '@/lib/utils'
 import {
   Card,
   CardContent,
@@ -62,6 +64,11 @@ import {
 } from '@/components/ui/select'
 import { formManagementApi } from '../../api/template-management-api'
 import { type TemplateField } from '../../api/types'
+import {
+  FORM_IMPORT_TEMPLATE_DOWNLOAD_NAMES,
+  FORM_IMPORT_TEMPLATE_URLS,
+} from '../../constants/form-import-templates'
+import { ExcelImportPreviewDialog } from '../shared/excel-import-preview-dialog'
 import {
   buildTree,
   flattenTree,
@@ -249,6 +256,9 @@ export function TemplateAttributesTab({
   const [editingField, setEditingField] = useState<TemplateField | null>(null)
   const [draftFields, setDraftFields] = useState<TemplateField[]>([])
   const [hasPendingReorder, setHasPendingReorder] = useState(false)
+  const excelInputRef = useRef<HTMLInputElement>(null)
+  const [excelImportOpen, setExcelImportOpen] = useState(false)
+  const [excelImportFile, setExcelImportFile] = useState<File | null>(null)
 
   const templateQuery = useQuery({
     queryKey: ['form-management', 'template', templateId, 'attributes-tab'],
@@ -364,13 +374,33 @@ export function TemplateAttributesTab({
   })
 
   const importMutation = useMutation({
-    mutationFn: () => formManagementApi.importFieldsFromExcel(templateId),
+    mutationFn: (file: File) =>
+      formManagementApi.importFieldsFromExcel(templateId, file),
     onSuccess: async () => {
       toast.success('Đã nhập thuộc tính từ Excel.')
+      setExcelImportOpen(false)
+      setExcelImportFile(null)
       await refreshTemplate()
     },
     onError: (error: Error) => toast.error(error.message),
   })
+
+  function openExcelPicker() {
+    excelInputRef.current?.click()
+  }
+
+  function onExcelFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const picked = event.target.files?.[0]
+    event.target.value = ''
+    if (!picked) return
+    setExcelImportFile(picked)
+    setExcelImportOpen(true)
+  }
+
+  function closeExcelImport() {
+    setExcelImportOpen(false)
+    setExcelImportFile(null)
+  }
 
   function openCreateDialog(parentId: string | null = null) {
     setEditingField(null)
@@ -445,9 +475,30 @@ export function TemplateAttributesTab({
               Cập nhật vị trí
             </Button>
             <Button
+              type='button'
               size='sm'
               variant='outline'
-              onClick={() => importMutation.mutate()}
+              onClick={() =>
+                triggerBrowserFileDownload(
+                  FORM_IMPORT_TEMPLATE_URLS.attributes,
+                  FORM_IMPORT_TEMPLATE_DOWNLOAD_NAMES.attributes
+                )
+              }
+            >
+              <Download className='size-4' />
+              Tải mẫu
+            </Button>
+            <input
+              ref={excelInputRef}
+              type='file'
+              className='sr-only'
+              accept='.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel'
+              onChange={onExcelFileSelected}
+            />
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={openExcelPicker}
               disabled={!canEdit || importMutation.isPending}
             >
               <FileUp className='size-4' />
@@ -593,6 +644,20 @@ export function TemplateAttributesTab({
           </Form>
         </DialogContent>
       </Dialog>
+
+      <ExcelImportPreviewDialog
+        open={excelImportOpen}
+        onOpenChange={(next) => {
+          if (!next) closeExcelImport()
+          else setExcelImportOpen(true)
+        }}
+        file={excelImportFile}
+        title='Nhập thuộc tính từ Excel'
+        isConfirming={importMutation.isPending}
+        onConfirm={() => {
+          if (excelImportFile) importMutation.mutate(excelImportFile)
+        }}
+      />
     </Card>
   )
 }

@@ -622,8 +622,10 @@ export const formManagementApi = {
     return true
   },
 
-  importFieldsFromExcel: async (templateId: string) => {
-    await apiClient.post(`/forms/${templateId}/attributes/import`)
+  importFieldsFromExcel: async (templateId: string, file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    await apiClient.post(`/forms/${templateId}/import/attributes`, body)
     return true
   },
 
@@ -670,8 +672,10 @@ export const formManagementApi = {
     return true
   },
 
-  importIndicatorsFromExcel: async (templateId: string) => {
-    await apiClient.post(`/forms/${templateId}/indicators/import`)
+  importIndicatorsFromExcel: async (templateId: string, file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    await apiClient.post(`/forms/${templateId}/import/indicators`, body)
     return true
   },
 
