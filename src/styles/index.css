@@ -139,6 +139,21 @@
     color: #0c447c;
   }
 
+  .hub-item-sm {
+    width: 108px;
+  }
+
+  .hub-item-icon-sm {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .hub-item-label-sm {
+    margin-top: 0.35rem;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
   @media screen and (max-width: 1024px) {
     .hub-container {
       height: 480px;
