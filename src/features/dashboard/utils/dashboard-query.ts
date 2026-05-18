@@ -29,6 +29,21 @@ export function buildFieldDashboardSearch(
   }
 }
 
+export type KtXhDashboardRouteSearch = FieldDashboardSearch & {
+  fieldCategoryId: string
+}
+
+export function buildKtXhDashboardRouteSearch(
+  fieldCategoryId: string,
+  templateId: string,
+  overrides?: Partial<Omit<FieldDashboardSearch, 'templateId'>>
+): KtXhDashboardRouteSearch {
+  return {
+    fieldCategoryId,
+    ...buildFieldDashboardSearch(templateId, overrides),
+  }
+}
+
 /** Build periodCode for monthly dashboard filter (matches report assignment convention). */
 export function buildMonthlyPeriodCode(month: string, _year: string) {
   const mm = month.padStart(2, '0')

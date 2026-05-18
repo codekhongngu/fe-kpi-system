@@ -12,6 +12,10 @@ import type {
   DashboardSchemaIndicator,
   DashboardTemplateRef,
 } from './types'
+import {
+  readDashboardCellAttributeName,
+  readDashboardCellCode,
+} from '../utils/parse-dashboard-cell'
 
 type BeTemplate = {
   id: string
@@ -32,7 +36,10 @@ type BeFieldCategoryHub = {
 
 type BeCell = {
   indicatorId: string
+  code?: string
   attributeId: string
+  attributeName?: string
+  attribute_name?: string
   valueText?: string | null
   valueNumber?: number | string | null
 }
@@ -61,6 +68,7 @@ type BeSchemaAttribute = {
   id: string
   key?: string
   label?: string
+  name?: string
   order?: number
   parentId?: string | null
   level?: number
@@ -119,7 +127,9 @@ const mapFieldCategoryHub = (item: BeFieldCategoryHub): DashboardFieldCategoryHu
 
 const mapCell = (cell: BeCell): DashboardReportCell => ({
   indicatorId: cell.indicatorId,
+  code: readDashboardCellCode(cell),
   attributeId: cell.attributeId,
+  attributeName: readDashboardCellAttributeName(cell),
   valueText: cell.valueText ?? null,
   valueNumber: cell.valueNumber ?? null,
 })
@@ -147,7 +157,7 @@ const mapIndicator = (item: BeSchemaIndicator): DashboardSchemaIndicator => ({
 const mapAttribute = (item: BeSchemaAttribute): DashboardSchemaAttribute => ({
   id: item.id,
   key: item.key,
-  label: item.label ?? '',
+  label: item.label ?? item.name ?? '',
   order: item.order,
   parentId: item.parentId ?? null,
   level: item.level,
@@ -168,6 +178,7 @@ const mapTemplateRef = (raw: Record<string, unknown>): DashboardTemplateRef => (
 const mapContext = (raw: Record<string, unknown>): DashboardReportsContext => {
   const fieldCategory = raw.fieldCategory as Record<string, unknown> | undefined
   const template = raw.template as Record<string, unknown> | undefined
+  const period = raw.period as Record<string, unknown> | undefined
 
   return {
     fieldCategory: {
@@ -176,8 +187,8 @@ const mapContext = (raw: Record<string, unknown>): DashboardReportsContext => {
       name: String(fieldCategory?.name ?? ''),
     },
     template: mapTemplateRef(template ?? {}),
-    periodCode: String(raw.periodCode ?? ''),
-    periodType: raw.periodType as DashboardReportsContext['periodType'],
+    periodCode: String(raw.periodCode ?? period?.code ?? ''),
+    periodType: (raw.periodType ?? period?.type) as DashboardReportsContext['periodType'],
     periodName: typeof raw.periodName === 'string' ? raw.periodName : undefined,
     status: typeof raw.status === 'string' ? raw.status : undefined,
     orgId:

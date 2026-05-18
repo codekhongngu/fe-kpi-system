@@ -1,205 +1,361 @@
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card'
+import { useEffect } from 'react'
+import { getRouteApi } from '@tanstack/react-router'
+import { Card, CardContent } from '@/components/ui/card'
 import { Main } from '@/components/layout/main'
+import { DashboardReportsDebugPanel } from '../../components/dashboard-reports-debug-panel'
+import { GrdpColumnLineChart } from '../../components/grdp-column-line-chart'
 import { KtXhHeader } from '../../components/kt-xh-header'
+import { useDashboardFieldReports } from '../../hooks/use-dashboard-field-reports'
+import { normalizeDashboardPeriodType } from '../../utils/dashboard-period'
+import { DEFAULT_PERIOD_CODE } from '../../utils/dashboard-query'
+import { buildCellsLogPayload } from '../../utils/map-cells-for-log'
+import { useGrdpDisplayValues } from '../../utils/use-grdp-display-values'
+
+const routeApi = getRouteApi('/_authenticated/grdp')
 
 export function GrdpPage() {
+  const search = routeApi.useSearch()
+
+  const navigate = routeApi.useNavigate()
+
+  const reportsQuery = useDashboardFieldReports({
+    fieldCategoryId: search.fieldCategoryId,
+
+    templateId: search.templateId,
+
+    periodCode: search.periodCode,
+
+    periodType: search.periodType,
+  })
+
+  const display = useGrdpDisplayValues(reportsQuery.data)
+
+  const requestLabel =
+    search.fieldCategoryId && search.templateId
+      ? `GET /dashboard/field-categories/${search.fieldCategoryId}/reports?templateId=${search.templateId}&periodCode=${search.periodCode ?? 'KBCT06'}&periodType=${search.periodType ?? 'THANG'}`
+      : undefined
+
+  const periodType = normalizeDashboardPeriodType(
+    reportsQuery.data?.context.periodType ?? search.periodType
+  )
+
+  const periodCode =
+    search.periodCode ??
+    reportsQuery.data?.context.periodCode ??
+    DEFAULT_PERIOD_CODE
+
+  const handlePeriodChange = (nextPeriodCode: string) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+
+        periodCode: nextPeriodCode,
+
+        periodType,
+      }),
+    })
+  }
+
+  useEffect(() => {
+    if (!reportsQuery.data) return
+
+    console.log('[GRDP] cells:', buildCellsLogPayload(reportsQuery.data))
+  }, [reportsQuery.data])
+
+  useEffect(() => {
+    if (reportsQuery.error) {
+      console.error('[GRDP] Dashboard field reports error:', reportsQuery.error)
+    }
+  }, [reportsQuery.error])
 
   return (
     <Main fluid>
-      <div className="w-full max-w-7xl mx-auto space-y-6">
-        {/* Top App Bar */}
-        <KtXhHeader title="GRDP" />
+      <div className='mx-auto w-full max-w-7xl space-y-6'>
+        <KtXhHeader
+          title='GRDP'
+          periodType={periodType}
+          periodCode={periodCode}
+          onPeriodChange={handlePeriodChange}
+        />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                {/* Card 1: Tổng sản phẩm trên địa bàn theo giá so sánh */}
-                <Card className="h-full w-full min-w-0 border-l-4 border-l-red-600 border-r border-orange-200/50 border-b border-orange-200/50 overflow-hidden">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-red-800 mb-4">Tổng sản phẩm trên địa bàn theo giá so sánh</h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                        <div>
-                          <span className="text-2xl font-bold text-red-800">27.696.355,8</span>
-                          <span className="text-xs text-gray-500 italic ml-2">(Triệu đồng)</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs text-gray-600 uppercase block">So với cùng kỳ:</span>
-                          <span className="text-xl font-bold text-red-800">107,2%</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
-                        <div className="flex min-w-0 flex-col gap-4 justify-center sm:shrink-0 sm:basis-[42%]">
-                          <div className="text-left">
-                            <p className="text-xs font-bold text-gray-600 uppercase mb-1">Tổng giá trị tăng thêm</p>
-                            <p className="text-lg font-bold text-red-800">26.518.811</p>
-                            <p className="text-xs text-green-600 font-bold">107,3%</p>
-                          </div>
-                          <div className="text-left">
-                            <p className="text-xs font-bold text-gray-600 uppercase mb-1">Thuế SP trừ trợ cấp</p>
-                            <p className="text-lg font-bold text-red-800">1.177.544,97</p>
-                            <p className="text-xs text-green-600 font-bold">105,2%</p>
-                          </div>
-                        </div>
-                        {/* Mini Chart */}
-                        <div className="relative h-28 min-h-0 flex-1 bg-gray-50 rounded-lg border border-gray-200/20 sm:min-h-24">
-                        <div className="absolute bottom-2 left-2 right-2 flex items-end justify-around">
-                          <div className="w-4 bg-red-600 h-[90%] rounded-t-sm"></div>
-                          <div className="w-4 bg-red-600 h-[70%] rounded-t-sm"></div>
-                          <div className="w-4 bg-red-600 h-[60%] rounded-t-sm"></div>
-                        </div>
-                        <div className="absolute bottom-0 left-2 right-2 flex justify-around text-[6px] font-bold text-gray-600">
-                          <span>KV III</span>
-                          <span>KV II</span>
-                          <span>KV I</span>
-                        </div>
-                        </div>
+        <div className='grid grid-cols-1 items-stretch gap-4 md:grid-cols-2'>
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-red-600'>
+            <CardContent className='p-6'>
+              <h3 className='mb-4 text-xl font-bold text-red-800'>
+                Tổng sản phẩm trên địa bàn theo giá so sánh
+              </h3>
+
+              <div className='space-y-4'>
+                <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                  <div>
+                    <span className='text-2xl font-bold text-red-800'>
+                      {display.card1Total}
+                    </span>
+
+                    <span className='ml-2 text-xs text-gray-500 italic'>
+                      (Triệu đồng)
+                    </span>
+                  </div>
+
+                  <div className='text-right'>
+                    <span className='block text-xs text-gray-600 uppercase'>
+                      So với cùng kỳ:
+                    </span>
+
+                    <span className='text-xl font-bold text-red-800'>
+                      {display.card1YoY}
+                    </span>
+                  </div>
+                </div>
+
+                <div className='flex flex-col gap-4 sm:flex-row sm:items-stretch'>
+                  <div className='flex min-w-0 flex-col justify-center gap-4 sm:shrink-0 sm:basis-[42%]'>
+                    <div className='text-left'>
+                      <p className='mb-1 text-xs font-bold text-gray-600 uppercase'>
+                        Tổng giá trị tăng thêm
+                      </p>
+
+                      <p className='text-lg font-bold text-red-800'>
+                        {display.card1ValueAdded}
+                      </p>
+
+                      <p className='text-xs font-bold text-green-600'>
+                        {display.card1ValueAddedYoY}
+                      </p>
+                    </div>
+
+                    <div className='text-left'>
+                      <p className='mb-1 text-xs font-bold text-gray-600 uppercase'>
+                        Thuế SP trừ trợ cấp
+                      </p>
+
+                      <p className='text-lg font-bold text-red-800'>
+                        {display.card1TaxNet}
+                      </p>
+
+                      <p className='text-xs font-bold text-green-600'>
+                        {display.card1TaxNetYoY}
+                      </p>
+                    </div>
+                  </div>
+
+                  <GrdpColumnLineChart
+                    data={display.card1Chart}
+                    barColor='#DC2626'
+                    lineColor='#991B1B'
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-orange-600'>
+            <CardContent className='p-6'>
+              <h3 className='mb-4 text-xl font-bold text-orange-800'>
+                Tổng sản phẩm trên địa bàn theo giá hiện hành
+              </h3>
+
+              <div className='space-y-4'>
+                <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                  <div>
+                    <span className='text-2xl font-bold text-orange-800'>
+                      {display.card2Total}
+                    </span>
+
+                    <span className='ml-2 text-xs text-gray-500 italic'>
+                      (Triệu đồng)
+                    </span>
+                  </div>
+
+                  <div className='text-right'>
+                    <span className='block text-xs text-gray-600 uppercase'>
+                      So với cùng kỳ:
+                    </span>
+
+                    <span className='text-xl font-bold text-orange-800'>
+                      {display.card2YoY}
+                    </span>
+                  </div>
+                </div>
+
+                <div className='flex flex-col gap-4 sm:flex-row sm:items-stretch'>
+                  <div className='flex min-w-0 flex-col justify-center gap-4 sm:shrink-0 sm:basis-[42%]'>
+                    <div className='text-left'>
+                      <p className='mb-1 text-xs font-bold text-gray-600 uppercase'>
+                        Tổng giá trị tăng thêm
+                      </p>
+
+                      <p className='text-lg font-bold text-orange-800'>
+                        {display.card2ValueAdded}
+                      </p>
+
+                      <p className='text-xs font-bold text-orange-600'>
+                        {display.card2ValueAddedYoY}
+                      </p>
+                    </div>
+
+                    <div className='text-left'>
+                      <p className='mb-1 text-xs font-bold text-gray-600 uppercase'>
+                        Thuế SP trừ trợ cấp
+                      </p>
+
+                      <p className='text-lg font-bold text-orange-800'>
+                        {display.card2TaxNet}
+                      </p>
+
+                      <p className='text-xs font-bold text-orange-600'>
+                        {display.card2TaxNetYoY}
+                      </p>
+                    </div>
+                  </div>
+
+                  <GrdpColumnLineChart
+                    data={display.card2Chart}
+                    barColor='#EA580C'
+                    lineColor='#9A3412'
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-green-600'>
+            <CardContent className='p-6'>
+              <h3 className='mb-4 text-xl font-bold text-green-700'>
+                Tốc độ tăng GRDP
+              </h3>
+
+              <div className='space-y-4'>
+                <div className='flex flex-col gap-4 sm:flex-row sm:items-stretch'>
+                  <div className='flex min-w-0 flex-col justify-center gap-4 sm:shrink-0 sm:basis-[42%]'>
+                    <div className='text-left'>
+                      <p className='mb-1 text-xs font-bold text-gray-600 uppercase'>
+                        Tổng giá trị tăng thêm
+                      </p>
+
+                      <p className='text-2xl font-bold text-green-700'>
+                        {display.card3ValueAddedRate}
+                      </p>
+                    </div>
+
+                    <div className='text-left'>
+                      <p className='mb-1 text-xs font-bold text-gray-600 uppercase'>
+                        Thuế SP trừ trợ cấp
+                      </p>
+
+                      <p className='text-2xl font-bold text-green-700'>
+                        {display.card3TaxNetRate}
+                      </p>
+                    </div>
+                  </div>
+
+                  <GrdpColumnLineChart
+                    data={display.card3Chart}
+                    barColor='#16A34A'
+                    lineColor='#14532D'
+                    height={144}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-blue-700'>
+            <CardContent className='p-6'>
+              <h3 className='mb-4 text-xl font-bold text-blue-800'>
+                Cơ cấu GRDP
+              </h3>
+
+              <div className='space-y-4'>
+                <div className='flex flex-col items-center justify-around gap-6 lg:flex-row'>
+                  <div className='relative h-40 w-40 flex-shrink-0'>
+                    <div
+                      className='relative h-full w-full rounded-full border-[20px] border-gray-200'
+                      style={{ background: display.card4DonutGradient }}
+                    >
+                      <div className='absolute inset-5 flex flex-col items-center justify-center rounded-full bg-white'>
+                        <span className='text-center text-xs font-bold'>
+                          Tỷ trọng
+                        </span>
+
+                        <span className='text-center text-xs font-bold'>
+                          (%)
+                        </span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
 
-                {/* Card 2: Tổng sản phẩm trên địa bàn theo giá hiện hành */}
-                <Card className="h-full w-full min-w-0 border-l-4 border-l-orange-600 border-r border-orange-200/50 border-b border-orange-200/50 overflow-hidden">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-orange-800 mb-4">Tổng sản phẩm trên địa bàn theo giá hiện hành</h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center border-b border-orange-200/20 pb-2">
-                        <div>
-                          <span className="text-2xl font-bold text-orange-800">54.422.794,3</span>
-                          <span className="text-xs text-gray-500 italic ml-2">(Triệu đồng)</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs text-gray-600 uppercase block">So với cùng kỳ:</span>
-                          <span className="text-xl font-bold text-orange-800">111,5%</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
-                        <div className="flex min-w-0 flex-col gap-4 justify-center sm:shrink-0 sm:basis-[42%]">
-                          <div className="text-left">
-                            <p className="text-xs font-bold text-gray-600 uppercase mb-1">Tổng giá trị tăng thêm</p>
-                            <p className="text-lg font-bold text-orange-800">52.126.319</p>
-                            <p className="text-xs text-orange-600 font-bold">111,6%</p>
-                          </div>
-                          <div className="text-left">
-                            <p className="text-xs font-bold text-gray-600 uppercase mb-1">Thuế SP trừ trợ cấp</p>
-                            <p className="text-lg font-bold text-orange-800">2.296.475,48</p>
-                            <p className="text-xs text-orange-600 font-bold">109,2%</p>
-                          </div>
-                        </div>
-                        {/* Mini Chart */}
-                        <div className="relative h-28 min-h-0 flex-1 bg-gray-50 rounded-lg border border-gray-200/20 sm:min-h-24">
-                        <div className="absolute bottom-2 left-2 right-2 flex items-end justify-around">
-                          <div className="w-4 bg-orange-600 h-[95%] rounded-t-sm"></div>
-                          <div className="w-4 bg-orange-600 h-[75%] rounded-t-sm"></div>
-                          <div className="w-4 bg-orange-600 h-[70%] rounded-t-sm"></div>
-                        </div>
-                        <div className="absolute bottom-0 left-2 right-2 flex justify-around text-[6px] font-bold text-gray-600">
-                          <span>KV III</span>
-                          <span>KV II</span>
-                          <span>KV I</span>
-                        </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <div className='flex w-full max-w-xs flex-col gap-2'>
+                    <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                      <div className='flex items-center gap-2'>
+                        <div className='h-3 w-3 rounded-full bg-blue-600' />
 
-                {/* Card 3: Tốc độ tăng GRDP */}
-                <Card className="h-full w-full min-w-0 border-l-4 border-l-green-600 border-r border-orange-200/50 border-b border-orange-200/50 overflow-hidden">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-green-700 mb-4">Tốc độ tăng GRDP</h3>
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-stretch">
-                        <div className="flex min-w-0 flex-col gap-4 justify-center sm:shrink-0 sm:basis-[42%]">
-                          <div className="text-left">
-                            <p className="text-xs font-bold text-gray-600 uppercase mb-1">Tổng giá trị tăng thêm</p>
-                            <p className="text-2xl font-bold text-green-700">6,54%</p>
-                          </div>
-                          <div className="text-left">
-                            <p className="text-xs font-bold text-gray-600 uppercase mb-1">Thuế SP trừ trợ cấp</p>
-                            <p className="text-2xl font-bold text-green-700">4,75%</p>
-                          </div>
-                        </div>
-                        {/* Chart */}
-                        <div className="relative h-36 min-h-0 flex-1 bg-gray-50 rounded-lg border border-gray-200/20 sm:min-h-32">
-                        <div className="absolute bottom-2 left-2 right-2 flex items-end justify-around">
-                          <div className="w-6 bg-green-600 h-[95%] rounded-t-sm relative">
-                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-green-600">162</span>
-                          </div>
-                          <div className="w-6 bg-green-600 h-[75%] rounded-t-sm relative">
-                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-green-600">129</span>
-                          </div>
-                          <div className="w-6 bg-green-600 h-[55%] rounded-t-sm relative">
-                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-green-600">90</span>
-                          </div>
-                          <div className="w-6 bg-green-600 h-[70%] rounded-t-sm relative">
-                            <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[8px] font-bold text-green-600">121</span>
-                          </div>
-                        </div>
-                        <div className="absolute bottom-0 left-2 right-2 flex justify-around text-[6px] font-bold text-gray-600 text-center">
-                          <span className="w-6">KV III</span>
-                          <span className="w-6">KV II</span>
-                          <span className="w-6">KV I</span>
-                          <span className="w-6">Thuế SP</span>
-                        </div>
-                        </div>
+                        <span className='text-sm font-bold text-gray-700'>
+                          KV III (Dịch vụ)
+                        </span>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
 
-                {/* Card 4: Cơ cấu GRDP */}
-                <Card className="h-full w-full min-w-0 border-l-4 border-l-blue-700 border-r border-orange-200/50 border-b border-orange-200/50 overflow-hidden">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-blue-800 mb-4">Cơ cấu GRDP</h3>
-                    <div className="space-y-4">
-                      <div className="flex flex-col lg:flex-row items-center justify-around gap-6">
-                        <div className="relative w-40 h-40 flex-shrink-0">
-                          {/* Donut Chart */}
-                          <div className="w-full h-full rounded-full border-[20px] border-gray-200" style={{ background: 'conic-gradient(#1D4ED8 0% 39.25%, #795900 39.25% 68.19%, #154212 68.19% 95.78%, #7C3AED 95.78% 100%)' }}>
-                            <div className="absolute inset-5 bg-white rounded-full flex flex-col items-center justify-center">
-                              <span className="text-xs font-bold text-center">Tỷ trọng</span>
-                              <span className="text-xs font-bold text-center">(%)</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2 w-full max-w-xs">
-                          <div className="flex items-center justify-between border-b border-orange-200/20 pb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                              <span className="text-sm font-bold text-gray-700">KV III (Dịch vụ)</span>
-                            </div>
-                            <span className="text-sm font-bold text-blue-800">39,25%</span>
-                          </div>
-                          <div className="flex items-center justify-between border-b border-orange-200/20 pb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
-                              <span className="text-sm font-bold text-gray-700">KV II (Công nghiệp)</span>
-                            </div>
-                            <span className="text-sm font-bold text-orange-800">28,94%</span>
-                          </div>
-                          <div className="flex items-center justify-between border-b border-orange-200/20 pb-2">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                              <span className="text-sm font-bold text-gray-700">KV I (Nông, Lâm)</span>
-                            </div>
-                            <span className="text-sm font-bold text-green-800">27,59%</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
-                              <span className="text-sm font-bold text-gray-700">Thuế sản phẩm</span>
-                            </div>
-                            <span className="text-sm font-bold text-purple-800">4,22%</span>
-                          </div>
-                        </div>
-                      </div>
+                      <span className='text-sm font-bold text-blue-800'>
+                        {display.card4ShareKv3}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                      <div className='flex items-center gap-2'>
+                        <div className='h-3 w-3 rounded-full bg-orange-600' />
+
+                        <span className='text-sm font-bold text-gray-700'>
+                          KV II (Công nghiệp)
+                        </span>
+                      </div>
+
+                      <span className='text-sm font-bold text-orange-800'>
+                        {display.card4ShareKv2}
+                      </span>
+                    </div>
+
+                    <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                      <div className='flex items-center gap-2'>
+                        <div className='h-3 w-3 rounded-full bg-green-600' />
+
+                        <span className='text-sm font-bold text-gray-700'>
+                          KV I (Nông, Lâm)
+                        </span>
+                      </div>
+
+                      <span className='text-sm font-bold text-green-800'>
+                        {display.card4ShareKv1}
+                      </span>
+                    </div>
+
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center gap-2'>
+                        <div className='h-3 w-3 rounded-full bg-purple-600' />
+
+                        <span className='text-sm font-bold text-gray-700'>
+                          Thuế sản phẩm
+                        </span>
+                      </div>
+
+                      <span className='text-sm font-bold text-purple-800'>
+                        {display.card4ShareTax}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        <DashboardReportsDebugPanel
+          pageLabel='GRDP'
+          isLoading={reportsQuery.isLoading}
+          isError={reportsQuery.isError}
+          error={reportsQuery.error}
+          data={reportsQuery.data}
+          requestLabel={requestLabel}
+        />
       </div>
     </Main>
   )

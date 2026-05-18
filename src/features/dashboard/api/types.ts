@@ -61,7 +61,18 @@ export type DashboardSchema = {
 
 export type DashboardReportCell = {
   indicatorId: string
+  code?: string
   attributeId: string
+  attributeName?: string
+  valueText: string | null
+  valueNumber: number | string | null
+}
+
+export type DashboardReportCellLog = {
+  indicatorId: string
+  code: string
+  attributeId: string
+  attributeName: string
   valueText: string | null
   valueNumber: number | string | null
 }

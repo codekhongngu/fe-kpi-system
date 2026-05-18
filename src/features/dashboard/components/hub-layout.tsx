@@ -5,13 +5,18 @@ import {
   type ComponentType,
   type CSSProperties,
 } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, FileText, Loader2, MapPin } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import { dashboardApi } from '../api/dashboard-api'
 import type { DashboardTemplateRef } from '../api/types'
-import { dashboardQueryKeys } from '../utils/dashboard-query'
+import { fetchDashboardFieldReports } from '../hooks/use-dashboard-field-reports'
+import {
+  buildKtXhDashboardRouteSearch,
+  dashboardQueryKeys,
+} from '../utils/dashboard-query'
+import { getDashboardPathForFieldCode } from '../utils/dashboard-field-route'
 import { type DashboardHubItem } from '../utils/hub-field-config'
 import { mapDashboardFieldCategoriesToHubItems } from '../utils/map-dashboard-field-to-hubs'
 
@@ -89,10 +94,12 @@ function HubRingItem({
 
 export function HubLayout() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const compact = useHubCompact()
   const [selectedField, setSelectedField] = useState<DashboardHubItem | null>(
     null
   )
+  const [isOpeningDashboard, setIsOpeningDashboard] = useState(false)
 
   const categoriesQuery = useQuery({
     queryKey: dashboardQueryKeys.fieldCategories,
@@ -125,24 +132,78 @@ export function HubLayout() {
 
   const isLoading = categoriesQuery.isLoading && fieldItems.length === 0
 
-  const navigateToFieldDashboard = () => {
-    navigate({ to: '/grdp' })
+  const openDashboardWithReports = async (
+    field: DashboardHubItem,
+    template: DashboardTemplateRef
+  ) => {
+    const routeSearch = buildKtXhDashboardRouteSearch(field.id, template.id)
+    const reportSearch = {
+      templateId: routeSearch.templateId,
+      periodCode: routeSearch.periodCode,
+      periodType: routeSearch.periodType,
+      page: routeSearch.page,
+      limit: routeSearch.limit,
+    }
+    const dashboardPath = getDashboardPathForFieldCode(field.code)
+
+    setIsOpeningDashboard(true)
+    try {
+      const data = await queryClient.fetchQuery({
+        queryKey: dashboardQueryKeys.fieldReports(field.id, reportSearch),
+        queryFn: () =>
+          fetchDashboardFieldReports(field.id, template.id),
+      })
+
+      console.log('[Hub] Dashboard field reports:', {
+        fieldCategoryId: field.id,
+        fieldLabel: field.label,
+        templateId: template.id,
+        templateName: template.name ?? template.code,
+        periodCode: routeSearch.periodCode,
+        periodType: routeSearch.periodType,
+        dashboardPath,
+        data,
+      })
+
+      navigate({
+        to: dashboardPath,
+        search: {
+          fieldCategoryId: routeSearch.fieldCategoryId,
+          templateId: routeSearch.templateId,
+          periodCode: routeSearch.periodCode,
+          periodType: routeSearch.periodType,
+        },
+      })
+    } catch (error) {
+      console.error('[Hub] Dashboard field reports failed:', error)
+      navigate({
+        to: dashboardPath,
+        search: {
+          fieldCategoryId: routeSearch.fieldCategoryId,
+          templateId: routeSearch.templateId,
+          periodCode: routeSearch.periodCode,
+          periodType: routeSearch.periodType,
+        },
+      })
+    } finally {
+      setIsOpeningDashboard(false)
+    }
   }
 
   const handleFieldClick = (field: DashboardHubItem) => {
-    if (!field.templates.length) return
+    if (!field.templates.length || isOpeningDashboard) return
 
     if (field.templates.length === 1) {
-      navigateToFieldDashboard()
+      void openDashboardWithReports(field, field.templates[0]!)
       return
     }
 
     setSelectedField(field)
   }
 
-  const handleTemplateClick = (_template: DashboardTemplateRef) => {
-    if (!selectedField) return
-    navigateToFieldDashboard()
+  const handleTemplateClick = (template: DashboardTemplateRef) => {
+    if (!selectedField || isOpeningDashboard) return
+    void openDashboardWithReports(selectedField, template)
   }
 
   return (
@@ -199,7 +260,7 @@ export function HubLayout() {
             Chọn biểu mẫu
           </p>
         ) : null}
-        {isLoading ? (
+        {isLoading || isOpeningDashboard ? (
           <Loader2 className='relative z-10 mt-2 h-5 w-5 animate-spin text-white/90' />
         ) : null}
       </div>
