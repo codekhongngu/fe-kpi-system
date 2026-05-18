@@ -21,12 +21,12 @@ import { formManagementApi } from '@/features/form-management/api/template-manag
 import type {
   FormTemplate,
   TemplateCellConfig,
-  TemplateField,
   TemplateIndicator,
 } from '@/features/form-management/api/types'
 import {
   buildHeaderMatrix,
   buildTree,
+  collectLeafFieldsInOrder,
   flattenIndicatorTree,
 } from '@/features/form-management/utils/tree-utils'
 import type {
@@ -896,14 +896,7 @@ function ReportCampaignSummaryMatrix({
     )
 
     const matrix = buildHeaderMatrix(extraFields)
-    const leaves: TemplateField[] = []
-    matrix.forEach((row) => {
-      row.forEach((node) => {
-        if (!node.children || node.children.length === 0) {
-          leaves.push(node as unknown as TemplateField)
-        }
-      })
-    })
+    const leaves = collectLeafFieldsInOrder(extraFields)
 
     return {
       headerMatrix: matrix,

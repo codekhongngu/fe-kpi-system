@@ -89,6 +89,28 @@ export function buildHeaderMatrix(
 }
 
 /**
+ * Collects leaf fields in left-to-right tree order (matches header column order).
+ */
+export function collectLeafFieldsInOrder(fields: TemplateField[]): TemplateField[] {
+  const tree = buildTree(fields)
+  const leaves: TemplateField[] = []
+
+  function walk(nodes: TreeNode<TemplateField>[]) {
+    for (const node of nodes) {
+      const isLeaf = !node.children || node.children.length === 0
+      if (isLeaf) {
+        leaves.push(node)
+      } else {
+        walk(node.children!)
+      }
+    }
+  }
+
+  walk(tree)
+  return leaves
+}
+
+/**
  * Flattens an indicator tree into a list of rows, handling expanded/collapsed state.
  */
 export function flattenIndicatorTree(

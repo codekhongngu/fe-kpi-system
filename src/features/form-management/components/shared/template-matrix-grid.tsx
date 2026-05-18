@@ -5,6 +5,7 @@ import { type TemplateField, type TemplateIndicator } from '../../api/types'
 import {
   buildTree,
   buildHeaderMatrix,
+  collectLeafFieldsInOrder,
   flattenIndicatorTree,
 } from '../../utils/tree-utils'
 
@@ -86,16 +87,7 @@ export function TemplateMatrixGrid({
     )
 
     const matrix = buildHeaderMatrix(extraFields)
-
-    // Get all leaf fields in order to render table body cells
-    const leaves: TemplateField[] = []
-    matrix.forEach((row) => {
-      row.forEach((node) => {
-        if (!node.children || node.children.length === 0) {
-          leaves.push(node as unknown as TemplateField) // The node contains all field props
-        }
-      })
-    })
+    const leaves = collectLeafFieldsInOrder(extraFields)
 
     return {
       headerMatrix: matrix,
