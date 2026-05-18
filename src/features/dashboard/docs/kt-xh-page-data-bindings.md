@@ -24,8 +24,8 @@ Tài liệu tham chiếu khi chỉnh sửa gắn dữ liệu API (`cells`) lên 
 |------|-------|--------------|----------------|
 | GRDP | `/grdp` | `use-grdp-display-values.ts` | `pages/kt-xh/grdp.tsx` |
 | Nông nghiệp | `/agriculture` | `use-agriculture-display-values.ts` | `pages/kt-xh/agriculture.tsx` |
-| Chăn nuôi | `/livestock` | *(chưa có)* | `pages/kt-xh/livestock.tsx` |
-| Trồng trọt khác | `/tree-planting-other` | *(chưa có)* | `pages/kt-xh/tree-planting-other.tsx` |
+| Chăn nuôi | `/livestock` | `use-livestock-display-values.ts` | `pages/kt-xh/livestock.tsx` |
+| Trồng trọt khác | `/tree-planting-other` | `use-tree-planting-display-values.ts` | `pages/kt-xh/tree-planting-other.tsx` |
 | Lâm nghiệp, Thủy sản | `/forestry-fishery` | *(chưa có)* | `pages/kt-xh/forestry-fishery.tsx` |
 
 ### Mã lĩnh vực Hub (BE)
@@ -166,48 +166,95 @@ Mỗi hàng: `.value` = Thực hiên, `.yoy` = % so kỳ (cùng mã CSTT).
 
 ---
 
-## `/livestock` — Chăn nuôi
+## `/livestock` — CHĂN NUÔI
 
-- **Tiêu đề header:** *(chưa có KtXhHeader + API)*
-- **Trạng thái API:** Chưa gắn — số hardcode trong `livestock.tsx`
-- **Cần bổ sung:** mapping CSTT + `use-livestock-display-values.ts`
+- **Tiêu đề header:** `CHĂN NUÔI`
+- **Trạng thái API:** Đã gắn
 
-### Section — SỐ LƯỢNG GIA SÚC, GIA CẦM
+### Section 1 — SỐ LƯỢNG GIA SÚC, GIA CẦM TRONG CHĂN NUÔI
 
-| Card | Nhãn | Giá trị mock (hiện tại) | Biến / CSTT |
-|------|------|-------------------------|-------------|
-| 1 | TỔNG ĐÀN BÒ | `0,0` | *chưa map* |
-| 2 | TỔNG ĐÀN LỢN | `0,0` | *chưa map* |
-| 3 | TỔNG ĐÀN GIA CẦM | `0,0` | *chưa map* |
+| Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|------|---------|------|---------|---------------------|
+| 1 | TỔNG ĐÀN BÒ | `herdCattle.value` | CSTT127 | Thực hiên |
+| 1 | So với cùng kỳ (%) | `herdCattle.yoy` | CSTT127 | YoY % |
+| 2 | TỔNG ĐÀN LỢN | `herdPig.value` | CSTT126 | Thực hiên |
+| 2 | So với cùng kỳ (%) | `herdPig.yoy` | CSTT126 | YoY % |
+| 3 | TỔNG ĐÀN GIA CẦM | `herdPoultry.value` | CSTT128 | Thực hiên |
+| 3 | So với cùng kỳ (%) | `herdPoultry.yoy` | CSTT128 | YoY % |
 
-### Section — SẢN LƯỢNG CHĂN NUÔI
+### Section 2 — SẢN LƯỢNG CHĂN NUÔI
 
-| Card | Nhãn phụ | Giá trị mock | % mock | Biến / CSTT |
-|------|----------|--------------|--------|-------------|
-| 1 | Thịt lợn hơi | *(số lớn)* | `+107,70` | *chưa map* |
-| 2 | Thịt trâu hơi | *(số lớn)* | `91,00` | *chưa map* |
-| 3 | Thịt bò hơi | *(số lớn)* | `0,00` | *chưa map* |
+| Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|------|---------|------|---------|---------------------|
+| 4 | Thịt bò hơi | `beefMeat.value` | CSTT131 | Thực hiên |
+| 4 | So với cùng kỳ (%) | `beefMeat.yoy` | CSTT131 | YoY % |
+| 5 | Thịt lợn hơi | `porkMeat.value` | CSTT130 | Thực hiên |
+| 5 | So với cùng kỳ (%) | `porkMeat.yoy` | CSTT130 | YoY % |
+| 6 | Gia cầm | `poultryMeat.value` | CSTT132 | Thực hiên |
+| 6 | So với cùng kỳ (%) | `poultryMeat.yoy` | CSTT132 | YoY % |
 
-### Section — SỐ TRANG TRẠI (và các section tiếp theo trong file)
+### Section 3 — SỐ TRANG TRẠI QUY MÔ VỪA, QUY MÔ LỚN
 
-| Card | Nhãn phụ | % mock (ví dụ) | Biến / CSTT |
-|------|----------|----------------|-------------|
-| — | Thịt gia cầm | `+106,80` | *chưa map* |
+| Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|------|---------|------|---------|---------------------|
+| 7 | Trang trại lợn | `pigFarm.value` | CSTT134 | Thực hiên |
+| 7 | So với cùng kỳ (%) | `pigFarm.yoy` | CSTT134 | YoY % |
+| 8 | Trang trại bò | `cattleFarm.value` | CSTT135 | Thực hiên |
+| 8 | So với cùng kỳ (%) | `cattleFarm.yoy` | CSTT135 | YoY % |
+| 9 | Trang trại gia cầm | `poultryFarm.value` | CSTT136 | Thực hiên |
+| 9 | So với cùng kỳ (%) | `poultryFarm.yoy` | CSTT136 | YoY % |
 
-> Mở `livestock.tsx` để liệt kê đầy đủ các card còn lại khi gắn API.
+**Tổng Livestock:** 9 mã CSTT × 2 = **18 ô số**.
 
 ---
 
 ## `/tree-planting-other` — Các loại cây trồng khác
 
-- **Trạng thái API:** Chưa gắn
-- **Section 1:** 3 card (Diện tích / Sản lượng / Năng suất) — biểu đồ cột theo cây (Lạc, Sắn, Rau, Ngô, …) hardcode
-- **Section 2:** Card tổng hợp — `0,0` / `So với kỳ trước (%): 0,0`
+- **Tiêu đề header:** `NÔNG NGHIỆP: CÁC LOẠI CÂY TRỒNG KHÁC`
+- **Trạng thái API:** Đã gắn
+- **Biểu đồ:** `GrdpColumnLineChart` — cột = Thực hiên, đường = % so kỳ (8 loại cây / chart)
 
-| Cần bổ sung khi gắn API |
-|-------------------------|
-| Bảng CSTT cho từng cột cây trồng và từng metric |
-| `use-tree-planting-display-values.ts` |
+### Section 1 — TỔNG DIỆN TÍCH, SẢN LƯỢNG VÀ NĂNG SUẤT CÂY TRỒNG KHÁC
+
+Thứ tự cột: Ngô → Lạc → Khoai lang → Sắn → Mía → Cây vừng (Mè) → Rau các loại → Đậu các loại.
+
+#### Card 1 — Diện tích gieo trồng (ha) — `display.areaChart`
+
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Ngô | `areaChart[0]` | CSTT94 | Thực hiên (cột) + YoY % (đường) |
+| Lạc | `areaChart[1]` | CSTT95 | Thực hiên + YoY % |
+| Khoai lang | `areaChart[2]` | CSTT96 | Thực hiên + YoY % |
+| Sắn | `areaChart[3]` | CSTT97 | Thực hiên + YoY % |
+| Mía | `areaChart[4]` | CSTT98 | Thực hiên + YoY % |
+| Cây vừng (Mè) | `areaChart[5]` | CSTT99 | Thực hiên + YoY % |
+| Rau các loại | `areaChart[6]` | CSTT100 | Thực hiên + YoY % |
+| Đậu các loại | `areaChart[7]` | CSTT101 | Thực hiên + YoY % |
+
+#### Card 2 — Sản lượng (tấn) — `display.outputChart`
+
+| Nhãn UI | Mã CSTT |
+|---------|---------|
+| Ngô … Đậu các loại (cùng thứ tự) | CSTT103 … CSTT110 |
+
+#### Card 3 — Năng suất (tạ/ha) — `display.yieldChart`
+
+| Nhãn UI | Mã CSTT |
+|---------|---------|
+| Ngô … Đậu các loại (cùng thứ tự) | CSTT112 … CSTT119 |
+
+### Section 2 — CHUYỂN ĐỔI CƠ CẤU CÂY TRỒNG
+
+| Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|------|---------|------|---------|---------------------|
+| 4 | Trên đất lúa | `landRice.value` | CSTT121 | Thực hiên |
+| 4 | So với kỳ trước (%) | `landRice.yoy` | CSTT121 | YoY % |
+| 5 | Trên đất mía | `landSugarcane.value` | CSTT122 | Thực hiên |
+| 5 | So với kỳ trước (%) | `landSugarcane.yoy` | CSTT122 | YoY % |
+| 6 | Trên đất sắn | `landCassava.value` | CSTT123 | Thực hiên |
+| 6 | So với kỳ trước (%) | `landCassava.yoy` | CSTT123 | YoY % |
+
+**Tổng Tree planting:** 24 mã CSTT chart (8×3) + 3 mã CSTT section 2 × 2 = **30 ô số**.
 
 ---
 

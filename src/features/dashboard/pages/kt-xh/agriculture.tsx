@@ -1,14 +1,12 @@
-﻿import { useEffect } from 'react'
-import { getRouteApi } from '@tanstack/react-router'
+﻿import { getRouteApi } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
 import { Main } from '@/components/layout/main'
 import { AgricultureSeasonMetricRows } from '../../components/agriculture-season-metric-rows'
-import { DashboardReportsDebugPanel } from '../../components/dashboard-reports-debug-panel'
 import { KtXhHeader } from '../../components/kt-xh-header'
 import { useDashboardFieldReports } from '../../hooks/use-dashboard-field-reports'
+import { useSyncKtXhRouteSearch } from '../../hooks/use-kt-xh-navigation'
 import { normalizeDashboardPeriodType } from '../../utils/dashboard-period'
 import { DEFAULT_PERIOD_CODE } from '../../utils/dashboard-query'
-import { buildCellsLogPayload } from '../../utils/map-cells-for-log'
 import { useAgricultureDisplayValues } from '../../utils/use-agriculture-display-values'
 import { Leaf, Sprout, Trees, TrendingUp } from 'lucide-react'
 
@@ -56,6 +54,8 @@ export function AgriculturePage() {
   const search = routeApi.useSearch()
   const navigate = routeApi.useNavigate()
 
+  useSyncKtXhRouteSearch(search)
+
   const reportsQuery = useDashboardFieldReports({
     fieldCategoryId: search.fieldCategoryId,
     templateId: search.templateId,
@@ -64,11 +64,6 @@ export function AgriculturePage() {
   })
 
   const display = useAgricultureDisplayValues(reportsQuery.data)
-
-  const requestLabel =
-    search.fieldCategoryId && search.templateId
-      ? `GET /dashboard/field-categories/${search.fieldCategoryId}/reports?templateId=${search.templateId}&periodCode=${search.periodCode ?? 'KBCT06'}&periodType=${search.periodType ?? 'THANG'}`
-      : undefined
 
   const periodType = normalizeDashboardPeriodType(
     reportsQuery.data?.context.periodType ?? search.periodType
@@ -87,20 +82,6 @@ export function AgriculturePage() {
       }),
     })
   }
-
-  useEffect(() => {
-    if (!reportsQuery.data) return
-    console.log('[Agriculture] cells:', buildCellsLogPayload(reportsQuery.data))
-  }, [reportsQuery.data])
-
-  useEffect(() => {
-    if (reportsQuery.error) {
-      console.error(
-        '[Agriculture] Dashboard field reports error:',
-        reportsQuery.error
-      )
-    }
-  }, [reportsQuery.error])
 
   return (
     <Main fluid>
@@ -213,14 +194,6 @@ export function AgriculturePage() {
           </div>
         </section>
 
-        <DashboardReportsDebugPanel
-          pageLabel='Nông nghiệp'
-          isLoading={reportsQuery.isLoading}
-          isError={reportsQuery.isError}
-          error={reportsQuery.error}
-          data={reportsQuery.data}
-          requestLabel={requestLabel}
-        />
       </div>
     </Main>
   )

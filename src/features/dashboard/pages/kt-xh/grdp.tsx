@@ -1,14 +1,12 @@
-import { useEffect } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
 import { Main } from '@/components/layout/main'
-import { DashboardReportsDebugPanel } from '../../components/dashboard-reports-debug-panel'
 import { GrdpColumnLineChart } from '../../components/grdp-column-line-chart'
 import { KtXhHeader } from '../../components/kt-xh-header'
 import { useDashboardFieldReports } from '../../hooks/use-dashboard-field-reports'
+import { useSyncKtXhRouteSearch } from '../../hooks/use-kt-xh-navigation'
 import { normalizeDashboardPeriodType } from '../../utils/dashboard-period'
 import { DEFAULT_PERIOD_CODE } from '../../utils/dashboard-query'
-import { buildCellsLogPayload } from '../../utils/map-cells-for-log'
 import { useGrdpDisplayValues } from '../../utils/use-grdp-display-values'
 
 const routeApi = getRouteApi('/_authenticated/grdp')
@@ -17,6 +15,8 @@ export function GrdpPage() {
   const search = routeApi.useSearch()
 
   const navigate = routeApi.useNavigate()
+
+  useSyncKtXhRouteSearch(search)
 
   const reportsQuery = useDashboardFieldReports({
     fieldCategoryId: search.fieldCategoryId,
@@ -29,11 +29,6 @@ export function GrdpPage() {
   })
 
   const display = useGrdpDisplayValues(reportsQuery.data)
-
-  const requestLabel =
-    search.fieldCategoryId && search.templateId
-      ? `GET /dashboard/field-categories/${search.fieldCategoryId}/reports?templateId=${search.templateId}&periodCode=${search.periodCode ?? 'KBCT06'}&periodType=${search.periodType ?? 'THANG'}`
-      : undefined
 
   const periodType = normalizeDashboardPeriodType(
     reportsQuery.data?.context.periodType ?? search.periodType
@@ -55,18 +50,6 @@ export function GrdpPage() {
       }),
     })
   }
-
-  useEffect(() => {
-    if (!reportsQuery.data) return
-
-    console.log('[GRDP] cells:', buildCellsLogPayload(reportsQuery.data))
-  }, [reportsQuery.data])
-
-  useEffect(() => {
-    if (reportsQuery.error) {
-      console.error('[GRDP] Dashboard field reports error:', reportsQuery.error)
-    }
-  }, [reportsQuery.error])
 
   return (
     <Main fluid>
@@ -348,14 +331,6 @@ export function GrdpPage() {
           </Card>
         </div>
 
-        <DashboardReportsDebugPanel
-          pageLabel='GRDP'
-          isLoading={reportsQuery.isLoading}
-          isError={reportsQuery.isError}
-          error={reportsQuery.error}
-          data={reportsQuery.data}
-          requestLabel={requestLabel}
-        />
       </div>
     </Main>
   )

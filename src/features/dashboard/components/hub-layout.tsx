@@ -17,6 +17,8 @@ import {
   dashboardQueryKeys,
 } from '../utils/dashboard-query'
 import { getDashboardPathForFieldCode } from '../utils/dashboard-field-route'
+import { normalizeDashboardPeriodType } from '../utils/dashboard-period'
+import { getPersistedKtXhPeriod } from '../utils/kt-xh-navigation'
 import { type DashboardHubItem } from '../utils/hub-field-config'
 import { mapDashboardFieldCategoriesToHubItems } from '../utils/map-dashboard-field-to-hubs'
 
@@ -136,7 +138,13 @@ export function HubLayout() {
     field: DashboardHubItem,
     template: DashboardTemplateRef
   ) => {
-    const routeSearch = buildKtXhDashboardRouteSearch(field.id, template.id)
+    const persistedPeriod = getPersistedKtXhPeriod()
+    const routeSearch = buildKtXhDashboardRouteSearch(field.id, template.id, {
+      periodCode: persistedPeriod?.periodCode,
+      periodType: persistedPeriod?.periodType
+        ? normalizeDashboardPeriodType(persistedPeriod.periodType)
+        : undefined,
+    })
     const reportSearch = {
       templateId: routeSearch.templateId,
       periodCode: routeSearch.periodCode,
@@ -151,7 +159,10 @@ export function HubLayout() {
       const data = await queryClient.fetchQuery({
         queryKey: dashboardQueryKeys.fieldReports(field.id, reportSearch),
         queryFn: () =>
-          fetchDashboardFieldReports(field.id, template.id),
+          fetchDashboardFieldReports(field.id, template.id, {
+            periodCode: routeSearch.periodCode,
+            periodType: routeSearch.periodType,
+          }),
       })
 
       console.log('[Hub] Dashboard field reports:', {

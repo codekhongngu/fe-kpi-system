@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useRouterState } from '@tanstack/react-router'
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { useKtXhNavigation } from '../hooks/use-kt-xh-navigation'
 import { DEFAULT_PERIOD_CODE } from '../utils/dashboard-query'
 import {
   buildKtXhApiPeriodCode,
@@ -24,6 +25,7 @@ import {
   normalizeDashboardPeriodType,
   parseKtXhPeriodSelection,
 } from '../utils/dashboard-period'
+import { KT_XH_PAGES } from '../utils/kt-xh-navigation'
 
 interface KtXhHeaderProps {
   title: string
@@ -40,40 +42,23 @@ export function KtXhHeader({
   periodCode: periodCodeProp,
   onPeriodChange,
 }: KtXhHeaderProps) {
-  const navigate = useNavigate()
+  const { navigateToKtXhPage } = useKtXhNavigation()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
 
-  const ktXhPages = [
-    { name: 'GRDP', path: '/grdp', description: 'Tổng sản phẩm nội địa' },
-    { name: 'Nông nghiệp: Trồng trọt', path: '/agriculture', description: 'Trồng trọt và cây cối' },
-    {
-      name: 'Nông nghiệp: Các loại cây trồng khác',
-      path: '/tree-planting-other',
-      description: 'Các loại cây trồng khác',
-    },
-    { name: 'Chăn nuôi', path: '/livestock', description: 'Chăn nuôi gia súc, gia cầm' },
-    {
-      name: 'Lâm nghiệp, Thủy sản',
-      path: '/forestry-fishery',
-      description: 'Lâm nghiệp và khai thác thủy sản',
-    },
-  ]
-
-  const currentPageIndex = ktXhPages.findIndex(
-    (page) => window.location.pathname === page.path
-  )
-  const previousPage = currentPageIndex > 0 ? ktXhPages[currentPageIndex - 1] : null
+  const currentPageIndex = KT_XH_PAGES.findIndex((page) => pathname === page.path)
+  const previousPage = currentPageIndex > 0 ? KT_XH_PAGES[currentPageIndex - 1] : null
   const nextPage =
-    currentPageIndex < ktXhPages.length - 1 ? ktXhPages[currentPageIndex + 1] : null
+    currentPageIndex < KT_XH_PAGES.length - 1 ? KT_XH_PAGES[currentPageIndex + 1] : null
 
   const navigateToPrevious = () => {
     if (previousPage) {
-      navigate({ to: previousPage.path })
+      navigateToKtXhPage(previousPage.path)
     }
   }
 
   const navigateToNext = () => {
     if (nextPage) {
-      navigate({ to: nextPage.path })
+      navigateToKtXhPage(nextPage.path)
     }
   }
 
@@ -155,10 +140,10 @@ export function KtXhHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='start' className='w-56'>
-              {ktXhPages.map((page) => (
+              {KT_XH_PAGES.map((page) => (
                 <DropdownMenuItem
                   key={page.path}
-                  onClick={() => navigate({ to: page.path })}
+                  onClick={() => navigateToKtXhPage(page.path)}
                   className='cursor-pointer'
                 >
                   <div className='flex flex-col'>
