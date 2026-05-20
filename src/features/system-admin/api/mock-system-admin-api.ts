@@ -957,6 +957,17 @@ export const systemAdminMockApi = {
     return updated
   },
 
+  updateRolePermissions: async (roleId: string, permissionIds: string[]) => {
+    await apiClient.patch(`/roles/${roleId}/permissions`, { permissionIds })
+
+    const roles = await systemAdminMockApi.listRoles()
+    const updated = roles.find((role) => role.id === roleId)
+    if (!updated) {
+      throw new Error('Không tìm thấy nhóm quyền.')
+    }
+    return updated
+  },
+
   deleteRole: async (roleId: string) => {
     await apiClient.delete(`/roles/${roleId}`)
     return true
