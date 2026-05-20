@@ -1,8 +1,8 @@
-import {
+﻿import {
   Card,
   CardContent,
 } from '@/components/ui/card'
-import { Main } from '@/components/layout/main'
+import { KtXhDashboardShell } from '../../components/kt-xh-dashboard-shell'
 import { KtXhHeader } from '../../components/kt-xh-header'
 import { 
   TrendingUp,
@@ -11,12 +11,12 @@ import {
   Fish,
   Ship
 } from 'lucide-react'
+import { KT_XH_METRIC_ICON_SIZE } from '../../utils/kt-xh-theme'
 
 export function ForestryFisheryPage() {
 
   return (
-    <Main fluid>
-      <div className="w-full max-w-7xl mx-auto space-y-6">
+    <KtXhDashboardShell contentClassName='space-y-6'>
         {/* Top App Bar */}
         <KtXhHeader title="LÂM NGHIỆP - THỦY SẢN" />
 
@@ -26,16 +26,19 @@ export function ForestryFisheryPage() {
             {/* Left Column: LÂM NGHIỆP */}
             <div className="space-y-4">
               <div className="flex items-center gap-4 mb-6">
-                <div className="h-[2px] flex-1 bg-orange-200/50"></div>
+                <div className="h-[2px] flex-1 bg-[#E66C37]/50"></div>
                 <h2 className="text-xl font-bold text-green-700 uppercase tracking-wider px-4">LÂM NGHIỆP</h2>
-                <div className="h-[2px] flex-1 bg-orange-200/50"></div>
+                <div className="h-[2px] flex-1 bg-[#E66C37]/50"></div>
               </div>
               {/* Diện tích trồng rừng và cây phân tán */}
-              <Card data-slot="card" className="border-green-700/30 hover:border-green-600/50 transition-all">
+              <Card data-slot="card" className="border-[#E66C37]/50 hover:border-[#E66C37]/80 transition-all">
                 <CardContent className="p-6">
                   <p className="text-xs font-bold text-green-700 uppercase mb-4">Diện tích trồng rừng và cây phân tán</p>
                   <div className="flex items-end justify-between">
-                    <Trees className="text-green-700 text-5xl opacity-40" />
+                    <Trees
+                      size={KT_XH_METRIC_ICON_SIZE}
+                      className="text-green-700 opacity-40"
+                    />
                     <div className="text-right">
                       <p className="text-3xl font-bold text-green-800 flex items-center justify-end gap-2">
                         1.250
@@ -51,11 +54,14 @@ export function ForestryFisheryPage() {
               </Card>
 
               {/* Sản lượng gỗ khai thác */}
-              <Card data-slot="card" className="border-green-700/30 hover:border-green-600/50 transition-all">
+              <Card data-slot="card" className="border-[#E66C37]/50 hover:border-[#E66C37]/80 transition-all">
                 <CardContent className="p-6">
                   <p className="text-xs font-bold text-green-700 uppercase mb-4">Sản lượng gỗ khai thác (Rừng trồng)</p>
                   <div className="flex items-end justify-between">
-                    <Package className="text-green-700 text-5xl opacity-40" />
+                    <Package
+                      size={KT_XH_METRIC_ICON_SIZE}
+                      className="text-green-700 opacity-40"
+                    />
                     <div className="text-right">
                       <p className="text-3xl font-bold text-green-800 flex items-center justify-end gap-2">
                         85.750
@@ -74,16 +80,19 @@ export function ForestryFisheryPage() {
             {/* Right Column: THỦY SẢN */}
             <div className="space-y-4">
               <div className="flex items-center gap-4 mb-6">
-                <div className="h-[2px] flex-1 bg-orange-200/50"></div>
+                <div className="h-[2px] flex-1 bg-[#E66C37]/50"></div>
                 <h2 className="text-xl font-bold text-blue-700 uppercase tracking-wider px-4">THỦY SẢN</h2>
-                <div className="h-[2px] flex-1 bg-orange-200/50"></div>
+                <div className="h-[2px] flex-1 bg-[#E66C37]/50"></div>
               </div>
               {/* Thủy sản nuôi trồng */}
               <Card data-slot="card" className="border-blue-600/30 hover:border-blue-500/50 transition-all">
                 <CardContent className="p-6">
                   <p className="text-xs font-bold text-blue-700 uppercase mb-4">Sản lượng thủy sản nuôi trồng</p>
                   <div className="flex items-end justify-between">
-                    <Fish className="text-blue-700 text-5xl opacity-40" />
+                    <Fish
+                      size={KT_XH_METRIC_ICON_SIZE}
+                      className="text-blue-700 opacity-40"
+                    />
                     <div className="text-right">
                       <p className="text-3xl font-bold text-blue-800 flex items-center justify-end gap-2">
                         2.450
@@ -103,7 +112,10 @@ export function ForestryFisheryPage() {
                 <CardContent className="p-6">
                   <p className="text-xs font-bold text-blue-700 uppercase mb-4">Sản lượng thủy sản khai thác</p>
                   <div className="flex items-end justify-between">
-                    <Ship className="text-blue-700 text-5xl opacity-40" />
+                    <Ship
+                      size={KT_XH_METRIC_ICON_SIZE}
+                      className="text-blue-700 opacity-40"
+                    />
                     <div className="text-right">
                       <p className="text-3xl font-bold text-blue-800 flex items-center justify-end gap-2">
                         3.820
@@ -121,7 +133,6 @@ export function ForestryFisheryPage() {
           </div>
         </section>
 
-      </div>
-    </Main>
+    </KtXhDashboardShell>
   )
 }

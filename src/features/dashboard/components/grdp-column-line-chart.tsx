@@ -38,7 +38,7 @@ export function GrdpColumnLineChart({
   height = 112,
 }: GrdpColumnLineChartProps) {
   return (
-    <div className='min-h-0 flex-1 rounded-lg border border-gray-200/20 bg-gray-50 p-1'>
+    <div className='min-h-0 flex-1 rounded-lg border border-[#E66C37]/20 bg-gray-50 p-1'>
       <ResponsiveContainer width='100%' height={height}>
         <ComposedChart
           data={data}

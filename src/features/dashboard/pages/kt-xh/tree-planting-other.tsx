@@ -1,7 +1,7 @@
 ﻿import { getRouteApi } from '@tanstack/react-router'
 import { Leaf, Sprout, Trees } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Main } from '@/components/layout/main'
+import { KtXhDashboardShell } from '../../components/kt-xh-dashboard-shell'
 import { GrdpColumnLineChart } from '../../components/grdp-column-line-chart'
 import { KtXhHeader } from '../../components/kt-xh-header'
 import { useDashboardFieldReports } from '../../hooks/use-dashboard-field-reports'
@@ -29,7 +29,7 @@ function ConversionCard({
   metric,
 }: ConversionCardProps) {
   return (
-    <Card className='rounded-xl border border-gray-200 bg-white p-4'>
+    <Card className='rounded-xl border border-[#E66C37]/50 bg-white p-4'>
       <div className='flex items-center gap-4'>
         <div
           className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl ${iconClassName}`}
@@ -85,8 +85,7 @@ export function TreePlantingOtherPage() {
   }
 
   return (
-    <Main fluid>
-      <div className='mx-auto w-full max-w-7xl space-y-6'>
+    <KtXhDashboardShell contentClassName='space-y-6'>
         <KtXhHeader
           title='NÔNG NGHIỆP: CÁC LOẠI CÂY TRỒNG KHÁC'
           periodType={periodType}
@@ -96,15 +95,15 @@ export function TreePlantingOtherPage() {
 
         <section>
           <div className='mb-6 flex items-center gap-4'>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
             <h2 className='px-4 text-xl font-bold tracking-wider text-green-700 uppercase'>
               TỔNG DIỆN TÍCH, SẢN LƯỢNG VÀ NĂNG SUẤT CÂY TRỒNG KHÁC
             </h2>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
           </div>
 
           <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-            <Card className='overflow-hidden border-l-4 border-orange-200/50 border-l-orange-600'>
+            <Card className='overflow-hidden border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
               <CardContent className='p-6'>
                 <h3 className='mb-4 text-xl font-bold text-orange-800'>
                   Diện tích gieo trồng (ha)
@@ -118,7 +117,7 @@ export function TreePlantingOtherPage() {
               </CardContent>
             </Card>
 
-            <Card className='overflow-hidden border-l-4 border-yellow-600 border-orange-200/50'>
+            <Card className='overflow-hidden border-l-4 border-l-[#E66C37] border-[#E66C37]/50'>
               <CardContent className='p-6'>
                 <h3 className='mb-4 text-xl font-bold text-yellow-800'>
                   Sản lượng (tấn)
@@ -132,7 +131,7 @@ export function TreePlantingOtherPage() {
               </CardContent>
             </Card>
 
-            <Card className='overflow-hidden border-l-4 border-green-600 border-orange-200/50'>
+            <Card className='overflow-hidden border-l-4 border-l-[#E66C37] border-[#E66C37]/50'>
               <CardContent className='p-6'>
                 <h3 className='mb-4 text-xl font-bold text-green-800'>
                   Năng suất (tạ/ha)
@@ -150,11 +149,11 @@ export function TreePlantingOtherPage() {
 
         <section>
           <div className='mb-6 flex items-center gap-4'>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
             <h2 className='px-4 text-xl font-bold tracking-wider text-green-700 uppercase'>
               CHUYỂN ĐỔI CƠ CẤU CÂY TRỒNG
             </h2>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
           </div>
 
           <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
@@ -182,7 +181,6 @@ export function TreePlantingOtherPage() {
           </div>
         </section>
 
-      </div>
-    </Main>
+    </KtXhDashboardShell>
   )
 }

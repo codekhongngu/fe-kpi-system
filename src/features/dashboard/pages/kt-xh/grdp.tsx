@@ -1,13 +1,16 @@
-import { getRouteApi } from '@tanstack/react-router'
+﻿import { getRouteApi } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
-import { Main } from '@/components/layout/main'
+import { KtXhDashboardShell } from '../../components/kt-xh-dashboard-shell'
 import { GrdpColumnLineChart } from '../../components/grdp-column-line-chart'
 import { KtXhHeader } from '../../components/kt-xh-header'
 import { useDashboardFieldReports } from '../../hooks/use-dashboard-field-reports'
 import { useSyncKtXhRouteSearch } from '../../hooks/use-kt-xh-navigation'
 import { normalizeDashboardPeriodType } from '../../utils/dashboard-period'
 import { DEFAULT_PERIOD_CODE } from '../../utils/dashboard-query'
-import { useGrdpDisplayValues } from '../../utils/use-grdp-display-values'
+import {
+  GRDP_STRUCTURE_COLORS,
+  useGrdpDisplayValues,
+} from '../../utils/use-grdp-display-values'
 
 const routeApi = getRouteApi('/_authenticated/grdp')
 
@@ -52,8 +55,7 @@ export function GrdpPage() {
   }
 
   return (
-    <Main fluid>
-      <div className='mx-auto w-full max-w-7xl space-y-6'>
+    <KtXhDashboardShell contentClassName='space-y-6'>
         <KtXhHeader
           title='GRDP'
           periodType={periodType}
@@ -62,14 +64,14 @@ export function GrdpPage() {
         />
 
         <div className='grid grid-cols-1 items-stretch gap-4 md:grid-cols-2'>
-          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-red-600'>
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
             <CardContent className='p-6'>
               <h3 className='mb-4 text-xl font-bold text-red-800'>
                 Tổng sản phẩm trên địa bàn theo giá so sánh
               </h3>
 
               <div className='space-y-4'>
-                <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                <div className='flex items-center justify-between border-b border-[#E66C37]/20 pb-2'>
                   <div>
                     <span className='text-2xl font-bold text-red-800'>
                       {display.card1Total}
@@ -132,16 +134,16 @@ export function GrdpPage() {
             </CardContent>
           </Card>
 
-          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-orange-600'>
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
             <CardContent className='p-6'>
-              <h3 className='mb-4 text-xl font-bold text-orange-800'>
+              <h3 className='mb-4 text-xl font-bold text-[#F3932C]'>
                 Tổng sản phẩm trên địa bàn theo giá hiện hành
               </h3>
 
               <div className='space-y-4'>
-                <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                <div className='flex items-center justify-between border-b border-[#E66C37]/20 pb-2'>
                   <div>
-                    <span className='text-2xl font-bold text-orange-800'>
+                    <span className='text-2xl font-bold text-[#F3932C]'>
                       {display.card2Total}
                     </span>
 
@@ -155,7 +157,7 @@ export function GrdpPage() {
                       So với cùng kỳ:
                     </span>
 
-                    <span className='text-xl font-bold text-orange-800'>
+                    <span className='text-xl font-bold text-[#F3932C]'>
                       {display.card2YoY}
                     </span>
                   </div>
@@ -168,7 +170,7 @@ export function GrdpPage() {
                         Tổng giá trị tăng thêm
                       </p>
 
-                      <p className='text-lg font-bold text-orange-800'>
+                      <p className='text-lg font-bold text-[#F3932C]'>
                         {display.card2ValueAdded}
                       </p>
 
@@ -182,7 +184,7 @@ export function GrdpPage() {
                         Thuế SP trừ trợ cấp
                       </p>
 
-                      <p className='text-lg font-bold text-orange-800'>
+                      <p className='text-lg font-bold text-[#F3932C]'>
                         {display.card2TaxNet}
                       </p>
 
@@ -202,7 +204,7 @@ export function GrdpPage() {
             </CardContent>
           </Card>
 
-          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-green-600'>
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
             <CardContent className='p-6'>
               <h3 className='mb-4 text-xl font-bold text-green-700'>
                 Tốc độ tăng GRDP
@@ -243,7 +245,7 @@ export function GrdpPage() {
             </CardContent>
           </Card>
 
-          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-orange-200/50 border-l-blue-700'>
+          <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
             <CardContent className='p-6'>
               <h3 className='mb-4 text-xl font-bold text-blue-800'>
                 Cơ cấu GRDP
@@ -269,58 +271,82 @@ export function GrdpPage() {
                   </div>
 
                   <div className='flex w-full max-w-xs flex-col gap-2'>
-                    <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                    <div className='flex items-center justify-between border-b border-[#E66C37]/20 pb-2'>
                       <div className='flex items-center gap-2'>
-                        <div className='h-3 w-3 rounded-full bg-blue-600' />
+                        <div
+                          className='h-3 w-3 rounded-full'
+                          style={{ backgroundColor: GRDP_STRUCTURE_COLORS.kv3.fill }}
+                        />
 
                         <span className='text-sm font-bold text-gray-700'>
                           KV III (Dịch vụ)
                         </span>
                       </div>
 
-                      <span className='text-sm font-bold text-blue-800'>
+                      <span
+                        className='text-sm font-bold'
+                        style={{ color: GRDP_STRUCTURE_COLORS.kv3.text }}
+                      >
                         {display.card4ShareKv3}
                       </span>
                     </div>
 
-                    <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                    <div className='flex items-center justify-between border-b border-[#E66C37]/20 pb-2'>
                       <div className='flex items-center gap-2'>
-                        <div className='h-3 w-3 rounded-full bg-orange-600' />
+                        <div
+                          className='h-3 w-3 rounded-full'
+                          style={{ backgroundColor: GRDP_STRUCTURE_COLORS.kv2.fill }}
+                        />
 
                         <span className='text-sm font-bold text-gray-700'>
                           KV II (Công nghiệp)
                         </span>
                       </div>
 
-                      <span className='text-sm font-bold text-orange-800'>
+                      <span
+                        className='text-sm font-bold'
+                        style={{ color: GRDP_STRUCTURE_COLORS.kv2.text }}
+                      >
                         {display.card4ShareKv2}
                       </span>
                     </div>
 
-                    <div className='flex items-center justify-between border-b border-orange-200/20 pb-2'>
+                    <div className='flex items-center justify-between border-b border-[#E66C37]/20 pb-2'>
                       <div className='flex items-center gap-2'>
-                        <div className='h-3 w-3 rounded-full bg-green-600' />
+                        <div
+                          className='h-3 w-3 rounded-full'
+                          style={{ backgroundColor: GRDP_STRUCTURE_COLORS.kv1.fill }}
+                        />
 
                         <span className='text-sm font-bold text-gray-700'>
                           KV I (Nông, Lâm)
                         </span>
                       </div>
 
-                      <span className='text-sm font-bold text-green-800'>
+                      <span
+                        className='text-sm font-bold'
+                        style={{ color: GRDP_STRUCTURE_COLORS.kv1.text }}
+                      >
                         {display.card4ShareKv1}
                       </span>
                     </div>
 
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center gap-2'>
-                        <div className='h-3 w-3 rounded-full bg-purple-600' />
+                        <div
+                          className='h-3 w-3 rounded-full'
+                          style={{ backgroundColor: GRDP_STRUCTURE_COLORS.tax.fill }}
+                        />
 
                         <span className='text-sm font-bold text-gray-700'>
                           Thuế sản phẩm
                         </span>
                       </div>
 
-                      <span className='text-sm font-bold text-purple-800'>
+                      <span
+                        className='text-sm font-bold'
+                        style={{ color: GRDP_STRUCTURE_COLORS.tax.text }}
+                      >
                         {display.card4ShareTax}
                       </span>
                     </div>
@@ -331,7 +357,6 @@ export function GrdpPage() {
           </Card>
         </div>
 
-      </div>
-    </Main>
+    </KtXhDashboardShell>
   )
 }

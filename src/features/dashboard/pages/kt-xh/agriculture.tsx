@@ -1,6 +1,6 @@
 ﻿import { getRouteApi } from '@tanstack/react-router'
 import { Card, CardContent } from '@/components/ui/card'
-import { Main } from '@/components/layout/main'
+import { KtXhDashboardShell } from '../../components/kt-xh-dashboard-shell'
 import { AgricultureSeasonMetricRows } from '../../components/agriculture-season-metric-rows'
 import { KtXhHeader } from '../../components/kt-xh-header'
 import { useDashboardFieldReports } from '../../hooks/use-dashboard-field-reports'
@@ -8,6 +8,7 @@ import { useSyncKtXhRouteSearch } from '../../hooks/use-kt-xh-navigation'
 import { normalizeDashboardPeriodType } from '../../utils/dashboard-period'
 import { DEFAULT_PERIOD_CODE } from '../../utils/dashboard-query'
 import { useAgricultureDisplayValues } from '../../utils/use-agriculture-display-values'
+import { KT_XH_METRIC_ICON_SIZE } from '../../utils/kt-xh-theme'
 import { Leaf, Sprout, Trees, TrendingUp } from 'lucide-react'
 
 const routeApi = getRouteApi('/_authenticated/agriculture')
@@ -30,11 +31,14 @@ type SummaryMetricCardProps = {
 
 function SummaryMetricCard({ label, icon: Icon, value, yoy }: SummaryMetricCardProps) {
   return (
-    <Card className='border-orange-200/50 transition-all hover:border-green-300/30'>
+    <Card className='border-[#E66C37]/50 transition-all hover:border-[#E66C37]/80'>
       <CardContent className='p-6'>
         <p className='mb-4 text-xs font-bold text-orange-600 uppercase'>{label}</p>
         <div className='flex items-end justify-between'>
-          <Icon className='text-5xl text-yellow-600 opacity-40' />
+          <Icon
+            size={KT_XH_METRIC_ICON_SIZE}
+            className='text-yellow-600 opacity-40'
+          />
           <div className='text-right'>
             <p className='flex items-center justify-end gap-2 text-3xl font-bold text-green-700'>
               {value}
@@ -84,8 +88,7 @@ export function AgriculturePage() {
   }
 
   return (
-    <Main fluid>
-      <div className='mx-auto w-full max-w-7xl space-y-6'>
+    <KtXhDashboardShell contentClassName='space-y-6'>
         <KtXhHeader
           title='NÔNG NGHIỆP: TRỒNG TRỐT'
           periodType={periodType}
@@ -95,11 +98,11 @@ export function AgriculturePage() {
 
         <section>
           <div className='mb-6 flex items-center gap-4'>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
             <h2 className='px-4 text-xl font-bold tracking-wider text-green-700 uppercase'>
               TỔNG DIỆN TÍCH GIEO TRỒNG VÀ SẢN LƯỢNG CÂY LÚA
             </h2>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
             <SummaryMetricCard
@@ -125,14 +128,14 @@ export function AgriculturePage() {
 
         <section>
           <div className='mb-6 flex items-center gap-4'>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
             <h2 className='px-4 text-xl font-bold tracking-wider text-green-700 uppercase'>
               CHỈ TIÊU TRỒNG TRỐT
             </h2>
-            <div className='h-[2px] flex-1 bg-orange-200/50' />
+            <div className='h-[2px] flex-1 bg-[#E66C37]/50' />
           </div>
           <div className='grid grid-cols-1 gap-4 lg:grid-cols-3'>
-            <Card className='overflow-hidden border-l-4 border-l-green-600 border-orange-200/50'>
+            <Card className='overflow-hidden border-l-4 border-l-[#E66C37] border-[#E66C37]/50'>
               <CardContent className='p-4 sm:p-5'>
                 <h3 className='mb-3 text-lg font-bold text-green-700 sm:text-xl'>
                   LÚA VỤ ĐÔNG XUÂN
@@ -152,7 +155,7 @@ export function AgriculturePage() {
               </CardContent>
             </Card>
 
-            <Card className='overflow-hidden border-l-4 border-l-yellow-600 border-orange-200/50'>
+            <Card className='overflow-hidden border-l-4 border-l-[#E66C37] border-[#E66C37]/50'>
               <CardContent className='p-4 sm:p-5'>
                 <h3 className='mb-3 text-lg font-bold text-green-700 sm:text-xl'>
                   LÚA VỤ HÈ THU
@@ -172,7 +175,7 @@ export function AgriculturePage() {
               </CardContent>
             </Card>
 
-            <Card className='overflow-hidden border-l-4 border-l-orange-600 border-orange-200/50'>
+            <Card className='overflow-hidden border-l-4 border-l-[#E66C37] border-[#E66C37]/50'>
               <CardContent className='p-4 sm:p-5'>
                 <h3 className='mb-3 text-lg font-bold text-green-700 sm:text-xl'>
                   LÚA VỤ MÙA
@@ -194,7 +197,6 @@ export function AgriculturePage() {
           </div>
         </section>
 
-      </div>
-    </Main>
+    </KtXhDashboardShell>
   )
 }

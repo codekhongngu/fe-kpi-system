@@ -15,7 +15,20 @@ import {
   formatDashboardYoYPercent,
 } from './dashboard-report-values'
 
-const CARD4_COLORS = ['#1D4ED8', '#795900', '#154212', '#7C3AED'] as const
+/** Card 4 donut + legend — KV III, KV II, KV I, Thuế SP (vivid) */
+export const GRDP_STRUCTURE_COLORS = {
+  kv3: { fill: '#0EA5E9', text: '#0284C7' },
+  kv2: { fill: '#F97316', text: '#EA580C' },
+  kv1: { fill: '#22C55E', text: '#16A34A' },
+  tax: { fill: '#C026D3', text: '#A21CAF' },
+} as const
+
+const CARD4_COLORS = [
+  GRDP_STRUCTURE_COLORS.kv3.fill,
+  GRDP_STRUCTURE_COLORS.kv2.fill,
+  GRDP_STRUCTURE_COLORS.kv1.fill,
+  GRDP_STRUCTURE_COLORS.tax.fill,
+] as const
 const GRDP_KV_LABELS = ['KV III', 'KV II', 'KV I'] as const
 
 export type GrdpChartPoint = {

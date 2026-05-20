@@ -1,4 +1,4 @@
-import { ChevronLeft, Home } from 'lucide-react'
+﻿import { ChevronLeft, Home } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -38,7 +38,7 @@ export function FieldDashboardHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex flex-col justify-center border-b border-orange-200/50 bg-orange-50 px-6 py-3',
+        'sticky top-0 z-30 flex flex-col justify-center border-b border-[#E66C37]/50 bg-orange-50 px-6 py-3',
         className
       )}
     >
@@ -68,7 +68,7 @@ export function FieldDashboardHeader({
         </div>
 
         <div className='flex flex-wrap items-center justify-end gap-2'>
-          <div className='flex items-center gap-2 rounded-xl border border-orange-200/30 bg-white/85 px-3 py-2 backdrop-blur-sm'>
+          <div className='flex items-center gap-2 rounded-xl border border-[#E66C37]/30 bg-white/85 px-3 py-2 backdrop-blur-sm'>
             <label className='text-xs font-bold text-orange-600'>Kỳ</label>
             <select
               className='border-none bg-transparent p-0 text-sm font-bold text-green-700 focus:ring-0'
@@ -82,7 +82,7 @@ export function FieldDashboardHeader({
               ))}
             </select>
           </div>
-          <div className='flex items-center gap-2 rounded-xl border border-orange-200/30 bg-white/85 px-3 py-2 backdrop-blur-sm'>
+          <div className='flex items-center gap-2 rounded-xl border border-[#E66C37]/30 bg-white/85 px-3 py-2 backdrop-blur-sm'>
             <label className='text-xs font-bold text-orange-600'>Năm</label>
             <select
               className='border-none bg-transparent p-0 text-sm font-bold text-green-700 focus:ring-0'

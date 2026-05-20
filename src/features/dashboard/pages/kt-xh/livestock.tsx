@@ -1,10 +1,12 @@
-import { getRouteApi } from '@tanstack/react-router'
+﻿import { getRouteApi } from '@tanstack/react-router'
 import {
   Beef,
   Bird,
   Circle,
+  Ham,
   TrendingUp,
   Warehouse,
+  PiggyBank,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Main } from '@/components/layout/main'
@@ -15,6 +17,7 @@ import { normalizeDashboardPeriodType } from '../../utils/dashboard-period'
 import { DEFAULT_PERIOD_CODE } from '../../utils/dashboard-query'
 import type { LivestockMetricPair } from '../../utils/use-livestock-display-values'
 import { useLivestockDisplayValues } from '../../utils/use-livestock-display-values'
+import { KT_XH_METRIC_ICON_SIZE } from '../../utils/kt-xh-theme'
 
 const routeApi = getRouteApi('/_authenticated/livestock')
 
@@ -31,7 +34,10 @@ function HerdMetricCard({ label, icon: Icon, unit, metric }: HerdMetricCardProps
       <CardContent className='p-6'>
         <p className='mb-4 text-xs font-bold text-orange-600 uppercase'>{label}</p>
         <div className='flex items-end justify-between'>
-          <Icon className='text-5xl text-yellow-600 opacity-40' />
+          <Icon
+            size={KT_XH_METRIC_ICON_SIZE}
+            className='text-yellow-600 opacity-40'
+          />
           <div className='text-right'>
             <p className='flex items-center justify-end gap-2 text-3xl font-bold text-green-700'>
               {metric.value}
@@ -69,7 +75,10 @@ function ProductionMetricCard({
     <Card className='border-orange-200/50 transition-all hover:border-green-300/30'>
       <CardContent className='p-6'>
         <div className='flex items-end justify-between'>
-          <Icon className='text-5xl text-yellow-600 opacity-40' />
+          <Icon
+            size={KT_XH_METRIC_ICON_SIZE}
+            className='text-yellow-600 opacity-40'
+          />
           <div className='text-right'>
             <p className='flex items-center justify-end gap-2 text-3xl font-bold text-green-700'>
               {metric.value}
@@ -101,7 +110,10 @@ function FarmMetricCard({ label, icon: Icon, metric }: FarmMetricCardProps) {
     <Card className='border-orange-200/50 transition-all hover:border-green-300/30'>
       <CardContent className='p-6'>
         <div className='flex items-end justify-between'>
-          <Icon className='text-5xl text-yellow-600 opacity-40' />
+          <Icon
+            size={KT_XH_METRIC_ICON_SIZE}
+            className='text-yellow-600 opacity-40'
+          />
           <div className='text-right'>
             <p className='flex items-center justify-end gap-2 text-3xl font-bold text-green-700'>
               {metric.value}
@@ -182,7 +194,7 @@ export function LivestockPage() {
             />
             <HerdMetricCard
               label='TỔNG ĐÀN LỢN'
-              icon={Circle}
+              icon={PiggyBank}
               unit='Con'
               metric={display.herdPig}
             />
@@ -212,7 +224,7 @@ export function LivestockPage() {
             />
             <ProductionMetricCard
               label='Thịt lợn hơi'
-              icon={Circle}
+              icon={Ham}
               unit='tấn'
               metric={display.porkMeat}
             />

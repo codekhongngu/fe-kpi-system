@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import {
   ChevronLeft,
@@ -113,7 +113,7 @@ export function KtXhHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex h-[60px] flex-col justify-center border-b border-orange-200/50 bg-orange-50 px-6',
+        'sticky top-0 z-30 flex h-[60px] flex-col justify-center border-b border-[#E66C37]/50 bg-[#fcebde] px-6',
         className
       )}
     >
@@ -173,7 +173,7 @@ export function KtXhHeader({
         </h1>
 
         <div className='flex items-center gap-4'>
-          <div className='flex items-center gap-2 rounded-xl border border-orange-200/30 bg-white/85 px-4 py-2 backdrop-blur-sm'>
+          <div className='flex items-center gap-2 rounded-xl border border-[#E66C37]/30 bg-white/85 px-4 py-2 backdrop-blur-sm'>
             <label className='text-xs font-bold text-orange-600'>
               {periodSlotLabel}
             </label>
@@ -190,7 +190,7 @@ export function KtXhHeader({
             </select>
           </div>
 
-          <div className='flex items-center gap-2 rounded-xl border border-orange-200/30 bg-white/85 px-4 py-2 backdrop-blur-sm'>
+          <div className='flex items-center gap-2 rounded-xl border border-[#E66C37]/30 bg-white/85 px-4 py-2 backdrop-blur-sm'>
             <label className='text-xs font-bold text-orange-600'>Năm</label>
             <select
               className='border-none bg-transparent p-0 text-sm font-bold text-green-700 focus:ring-0'

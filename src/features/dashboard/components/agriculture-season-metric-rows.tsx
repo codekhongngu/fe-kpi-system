@@ -1,4 +1,4 @@
-import type { AgricultureMetricPair } from '../utils/use-agriculture-display-values'
+﻿import type { AgricultureMetricPair } from '../utils/use-agriculture-display-values'
 
 type AgricultureSeasonMetricRowsProps = {
   area: AgricultureMetricPair
@@ -17,7 +17,7 @@ function MetricRow({
   showYoYOnTop?: boolean
   withBorder?: boolean
 }) {
-  const borderClass = withBorder ? 'border-b border-orange-200/20 pb-1.5' : ''
+  const borderClass = withBorder ? 'border-b border-[#E66C37]/20 pb-1.5' : ''
 
   if (showYoYOnTop) {
     return (
