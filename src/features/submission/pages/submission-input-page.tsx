@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import {
   AlertCircle,
@@ -19,12 +19,10 @@ import {
   Card,
   CardContent,
 } from '@/components/ui/card'
-import { formManagementApi } from '@/features/form-management/api/template-management-api'
-import type { FormTemplate } from '@/features/form-management/api/types'
 import { SubmissionGrid } from '../components/submission-grid'
-import { SubmitConfirmDialog } from '../components/submit-confirm-dialog'
 import { SubmissionExcelImportDialog } from '../components/submission-excel-import-dialog'
-import { useMyAssignments } from '../hooks/use-my-assignments'
+import { SubmitConfirmDialog } from '../components/submit-confirm-dialog'
+import { useSubmissionContext } from '../hooks/use-submission-context'
 import { useSubmission } from '../hooks/use-submission'
 import { getSubmissionStatusInfo } from '../utils/submission-status'
 import { isSubmissionReadOnlyStatus, isSubmissionRejectedStatus } from '../utils/submission-status-rules'
@@ -35,22 +33,18 @@ export function SubmissionInputPage() {
   }
   const navigate = useNavigate()
 
-  const [template, setTemplate] = useState<FormTemplate | null>(null)
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false)
   const [isExcelImportOpen, setIsExcelImportOpen] = useState(false)
 
-  // 1. Fetch danh sách để lấy thông tin assignment
-  const { data: assignments, isLoading: isLoadingAssignments } =
-    useMyAssignments({
-      q: '',
-      page: 1,
-      limit: 100,
-    })
-  const assignment = assignments?.items?.find(
-    (a) => a.assignmentId === assignmentId
-  )
+  // 1. Fetch toàn bộ context (assignment + submission + template + scope) trong 1 request
+  const {
+    assignment,
+    template,
+    allowedIndicatorIds,
+    isLoading: isLoadingContext,
+  } = useSubmissionContext(assignmentId)
 
-  // 2. Hook quản lý logic submission
+  // 2. Hook quản lý logic submission (patch cells, save draft, submit)
   const {
     detail,
     isLoading: isLoadingSubmission,
@@ -63,15 +57,8 @@ export function SubmissionInputPage() {
     applyBulkCellChanges,
   } = useSubmission(assignmentId)
 
-  // 3. Lấy template schema từ formId
-  useEffect(() => {
-    if (assignment?.form.id) {
-      formManagementApi.getTemplate(assignment.form.id).then(setTemplate)
-    }
-  }, [assignment?.form.id])
-
   const isLoading =
-    isLoadingAssignments || isLoadingSubmission || !template || !detail
+    isLoadingContext || isLoadingSubmission || !template || !detail
 
   const isReadOnly = isSubmissionReadOnlyStatus(detail?.status)
   const isRejected = isSubmissionRejectedStatus(detail?.status)
@@ -243,6 +230,10 @@ export function SubmissionInputPage() {
                     <div className='h-3 w-3 rounded border border-blue-200 bg-blue-50' />
                     <span className='text-xs text-muted-foreground'>Công thức</span>
                   </div>
+                  <div className='flex items-center gap-1.5'>
+                    <div className='h-3 w-3 rounded border border-dashed border-slate-300 bg-slate-100' />
+                    <span className='text-xs text-muted-foreground'>Ngoài phạm vi</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -277,6 +268,7 @@ export function SubmissionInputPage() {
                 detail={detail}
                 isReadOnly={isReadOnly}
                 onCellChange={handleCellChange}
+                allowedIndicatorIds={allowedIndicatorIds}
               />
             </div>
           </Card>

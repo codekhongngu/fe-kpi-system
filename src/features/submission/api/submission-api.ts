@@ -4,6 +4,7 @@ import type {
   SubmissionDetail,
   CellChange,
   PatchCellsResult,
+  SubmissionContext,
 } from './types'
 
 export type MyAssignmentsQuery = {
@@ -78,6 +79,12 @@ export const submissionApi = {
   cancelSubmit: (submissionId: string) =>
     apiClient
       .post<{ status: string }>(`/submissions/${submissionId}/cancel-submit`)
+      .then((r) => r.data),
+
+  // GET /api/v1/my/assignments/:assignmentId/submission-context
+  getSubmissionContext: (assignmentId: string) =>
+    apiClient
+      .get<SubmissionContext>(`/my/assignments/${assignmentId}/submission-context`)
       .then((r) => r.data),
 
   // GET /api/v1/submissions/history/:assignmentId

@@ -519,11 +519,11 @@ export function MyAssignmentsPage() {
                     </TabsList>
                   </div>
 
-                  <div className='flex-1 overflow-y-auto p-8 custom-scrollbar'>
-                    <TabsContent value='overview' className='mt-0 space-y-8'>
+                  <div className='flex-1 overflow-y-auto py-4 px-6 custom-scrollbar'>
+                    <TabsContent value='overview' className='mt-0 space-y-8 px-4'>
                       <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
                         {/* Status Card */}
-                        <Card className='rounded-3xl border-none bg-muted/30 shadow-none'>
+                        <Card className='rounded-3xl bg-muted/30'>
                           <CardContent className='pt-6'>
                             <div className='flex items-center gap-4'>
                               <div className={cn(
@@ -558,7 +558,7 @@ export function MyAssignmentsPage() {
                         </Card>
 
                         {/* Deadline Card */}
-                        <Card className='rounded-3xl border-none bg-muted/30 shadow-none'>
+                        <Card className='rounded-3xl bg-muted/30'>
                           <CardContent className='pt-6'>
                             <div className='flex items-center gap-4'>
                               <div className='size-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center'>
@@ -646,13 +646,13 @@ export function MyAssignmentsPage() {
 
                     <TabsContent value='timeline' className='mt-0'>
                       <Card className='rounded-3xl border-none bg-muted/10 shadow-none'>
-                        <CardHeader className='pb-0 pt-8 px-8'>
+                        <CardHeader className='pb-0 pt-0 px-4'>
                           <CardTitle className='text-sm font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2'>
                             <History className='size-4' />
                             Dòng thời gian phê duyệt
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className='p-8 pt-10'>
+                        <CardContent className='px-4 pt-6'>
                           {historyQuery.isLoading ? (
                             <div className='flex flex-col items-center justify-center p-12 gap-3 opacity-40'>
                               <div className='size-6 border-2 border-primary border-t-transparent animate-spin rounded-full' />
@@ -776,7 +776,6 @@ export function MyAssignmentsPage() {
         newSnapshot={newSnapshot}
         title={oldSnapshot ? 'So sánh thay đổi dữ liệu' : 'Chi tiết dữ liệu tại thời điểm này'}
       />
-
 
       <ConfirmDialog
         open={isCancelConfirmOpen}

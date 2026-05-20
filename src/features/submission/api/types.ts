@@ -84,3 +84,53 @@ export type PatchCellsResult = {
     message: string
   }[]
 }
+
+export type SubmissionContextAssignment = {
+  id: string
+  deadlineFrom: string
+  deadlineTo: string
+  isCancelled: boolean
+  form: { id: string; code: string; name: string }
+  period: { type: string; code: string; name: string }
+}
+
+export type SubmissionContext = {
+  assignment: SubmissionContextAssignment
+  submission: SubmissionDetail
+  template: {
+    id: string
+    code: string
+    name: string
+    description: string | null
+    periodType: string
+    templateType: string
+    indicators: Array<{
+      id: string
+      parentId: string | null
+      displayIndex: string | null
+      code: string
+      name: string
+      unit: string | null
+      dataType: string | null
+      type: 'INPUT' | 'TITLE'
+      sortOrder: number
+    }>
+    attributes: Array<{
+      id: string
+      parentId: string | null
+      name: string
+      sortOrder: number
+      isSystem: boolean
+    }>
+    cellConfigs: Array<{
+      id: string
+      indicatorId: string
+      attributeId: string
+      dataType: 'number' | 'text'
+      required: boolean
+      readOnly: boolean
+      formula: string | null
+    }>
+  }
+  allowedIndicatorIds: string[]
+}

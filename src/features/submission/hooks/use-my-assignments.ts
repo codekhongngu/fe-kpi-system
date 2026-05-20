@@ -31,6 +31,7 @@ export function useCancelSubmit() {
     },
   })
 }
+
 export function useSubmissionHistory(assignmentId: string | null) {
   return useQuery({
     queryKey: ['submission-history', assignmentId],

@@ -1,7 +1,15 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Lock, Calculator, AlertCircle } from 'lucide-react'
+import { Lock, Calculator, AlertCircle, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import type {
   FormTemplate,
@@ -22,6 +30,7 @@ type SubmissionGridProps = {
   effectiveCellConfigs?: TemplateCellConfig[]
   /** Cells with invalid Excel values (shown in red in preview) */
   importInvalidCellKeys?: Set<string>
+  allowedIndicatorIds?: string[]
 }
 
 function cellKey(indicatorId: string, attributeId: string) {
@@ -34,6 +43,29 @@ function formatCellInputValue(
   if (value === null || value === undefined) return ''
   return String(value)
 }
+/**
+ * Collects all ancestor indicator IDs for a given set of indicator IDs.
+ * This ensures parent TITLE rows remain visible when filtering by allowed indicators.
+ */
+function collectAncestorIds(
+  indicators: TemplateIndicator[],
+  allowedIds: Set<string>
+): Set<string> {
+  const idMap = new Map<string, TemplateIndicator>()
+  for (const ind of indicators) {
+    idMap.set(ind.id, ind)
+  }
+
+  const result = new Set<string>(allowedIds)
+  for (const id of allowedIds) {
+    let current = idMap.get(id)
+    while (current?.parentId) {
+      result.add(current.parentId)
+      current = idMap.get(current.parentId)
+    }
+  }
+  return result
+}
 
 export function SubmissionGrid({
   template,
@@ -43,8 +75,30 @@ export function SubmissionGrid({
   previewMode = false,
   effectiveCellConfigs,
   importInvalidCellKeys,
+  allowedIndicatorIds,
 }: SubmissionGridProps) {
   const { indicators, fields } = template
+  const [showAllIndicators, setShowAllIndicators] = useState(false)
+
+  // Compute the allowed set and whether scope filtering is active
+  const allowedSet = useMemo(() => {
+    if (!allowedIndicatorIds || allowedIndicatorIds.length === 0) return null
+    // If all INPUT indicators are allowed, no filtering needed
+    const inputIds = indicators.filter((i) => i.type === 'INPUT').map((i) => i.id)
+    const allAllowed = inputIds.every((id) => allowedIndicatorIds.includes(id))
+    if (allAllowed) return null
+    return new Set(allowedIndicatorIds)
+  }, [allowedIndicatorIds, indicators])
+
+  const hasScopeFiltering = allowedSet !== null
+
+  // Filter indicators when not showing all
+  const visibleIndicators = useMemo(() => {
+    if (!hasScopeFiltering || showAllIndicators) return indicators
+    // Keep allowed indicators + their ancestors (TITLE parents)
+    const visibleIds = collectAncestorIds(indicators, allowedSet!)
+    return indicators.filter((ind) => visibleIds.has(ind.id))
+  }, [indicators, hasScopeFiltering, showAllIndicators, allowedSet])
 
   const effectiveCellConfigsQuery = useQuery({
     queryKey: [
@@ -134,7 +188,38 @@ export function SubmissionGrid({
       'text') as 'number' | 'text'
     const isNumber = resolvedDataType === 'number'
 
-    // 2. Formula cells — locked, blue tint
+    // Check if this indicator is outside the allowed scope
+    const isOutOfScope = hasScopeFiltering && allowedSet && !allowedSet.has(indicator.id)
+
+    // 2. Out-of-scope cells — disabled with visual distinction
+    if (isOutOfScope) {
+      const currentVal = cellValuesMap.get(key)
+      const displayValue = isNumber
+        ? (currentVal?.valueNumber ?? '')
+        : (currentVal?.valueText ?? '')
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className='relative w-full min-w-[120px]'>
+                <Input
+                  value={displayValue}
+                  readOnly
+                  disabled
+                  className='h-8 border-dashed border-slate-300 bg-slate-100 pr-8 text-xs text-slate-400'
+                />
+                <EyeOff className='absolute top-1/2 right-2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side='top' className='max-w-[200px] text-xs'>
+              Chỉ tiêu này không thuộc phạm vi giao cho đơn vị bạn
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    }
+
+    // 3. Formula cells — locked, blue tint
     if (cellConfig?.formula) {
       const currentVal = cellValuesMap.get(key)
       const displayValue = formatCellInputValue(
@@ -154,7 +239,7 @@ export function SubmissionGrid({
       )
     }
 
-    // 3. Default value cells — locked, yellow tint
+    // 4. Default value cells — locked, yellow tint
     const defaultVal = defaultValuesMap.get(key)
     if (
       defaultVal &&
@@ -178,7 +263,7 @@ export function SubmissionGrid({
       )
     }
 
-    // 4. Read-only config cells
+    // 5. Read-only config cells
     if (cellConfig?.readOnly) {
       const currentVal = cellValuesMap.get(key)
       const displayValue = formatCellInputValue(
@@ -252,13 +337,30 @@ export function SubmissionGrid({
   }
 
   return (
-    <TemplateMatrixGrid
-      indicators={indicators}
-      fields={fields}
-      renderCell={renderCell}
-      emptyMessage='Chưa có chỉ tiêu nào để nhập liệu.'
-      defaultExpandAll={previewMode}
-      compact={previewMode}
-    />
+    <div className='space-y-0'>
+      {/* Scope filter toggle — only shown when scope filtering is active */}
+      {hasScopeFiltering && (
+        <div className='flex items-center justify-end gap-2 px-2 pb-2'>
+          <Switch
+            id='show-all-indicators'
+            checked={showAllIndicators}
+            onCheckedChange={setShowAllIndicators}
+          />
+          <Label
+            htmlFor='show-all-indicators'
+            className='cursor-pointer text-xs font-medium text-muted-foreground'
+          >
+            Hiển thị toàn bộ chỉ tiêu
+          </Label>
+        </div>
+      )}
+
+      <TemplateMatrixGrid
+        indicators={visibleIndicators}
+        fields={fields}
+        renderCell={renderCell}
+        emptyMessage='Chưa có chỉ tiêu nào để nhập liệu.'
+      />
+    </div>
   )
 }

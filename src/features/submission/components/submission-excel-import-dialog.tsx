@@ -340,6 +340,7 @@ export function SubmissionExcelImportDialog({
             Đóng
           </Button>
           <Button
+            className="ml-4"
             type='button'
             onClick={handleConfirm}
             disabled={!canConfirm || isParsing}
