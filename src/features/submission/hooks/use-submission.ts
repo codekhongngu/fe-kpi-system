@@ -76,6 +76,18 @@ export function useSubmission(assignmentId: string) {
     setHasUnsavedChanges(true)
   }, [])
 
+  const applyBulkCellChanges = useCallback((changes: CellChange[]) => {
+    if (changes.length === 0) return
+    setLocalChanges((prev) => {
+      const next = { ...prev }
+      for (const change of changes) {
+        next[cellKey(change.indicatorId, change.attributeId)] = change
+      }
+      return next
+    })
+    setHasUnsavedChanges(true)
+  }, [])
+
   // 5. Save Draft — batch save all local changes in one API call
   const saveDraftMutation = useMutation({
     mutationFn: async () => {
@@ -167,6 +179,7 @@ export function useSubmission(assignmentId: string) {
     error,
     hasUnsavedChanges,
     handleCellChange,
+    applyBulkCellChanges,
     saveDraft: saveDraftMutation.mutate,
     isSavingDraft: saveDraftMutation.isPending,
     submit: submitMutation.mutate,

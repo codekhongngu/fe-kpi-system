@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Lock, Calculator } from 'lucide-react'
+import { Lock, Calculator, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { formManagementApi } from '@/features/form-management/api/template-management-api'
 import type {
@@ -17,10 +17,22 @@ type SubmissionGridProps = {
   detail: SubmissionDetail
   isReadOnly: boolean
   onCellChange: (change: CellChange) => void
+  /** Excel import preview: expand all rows, compact layout */
+  previewMode?: boolean
+  effectiveCellConfigs?: TemplateCellConfig[]
+  /** Cells with invalid Excel values (shown in red in preview) */
+  importInvalidCellKeys?: Set<string>
 }
 
 function cellKey(indicatorId: string, attributeId: string) {
   return `${indicatorId}__${attributeId}`
+}
+
+function formatCellInputValue(
+  value: string | number | null | undefined
+): string {
+  if (value === null || value === undefined) return ''
+  return String(value)
 }
 
 export function SubmissionGrid({
@@ -28,10 +40,12 @@ export function SubmissionGrid({
   detail,
   isReadOnly,
   onCellChange,
+  previewMode = false,
+  effectiveCellConfigs,
+  importInvalidCellKeys,
 }: SubmissionGridProps) {
   const { indicators, fields } = template
 
-  // Fetch effective cell configs for accurate dataType resolution and readOnly status
   const effectiveCellConfigsQuery = useQuery({
     queryKey: [
       'form-management',
@@ -41,18 +55,21 @@ export function SubmissionGrid({
       'effective',
     ],
     queryFn: () => formManagementApi.listEffectiveCellConfigs(template.id),
-    enabled: Boolean(template.id),
+    enabled: Boolean(template.id) && effectiveCellConfigs === undefined,
   })
 
-  // Build lookup maps for fast access
   const effectiveMap = useMemo(() => {
     const map = new Map<string, TemplateCellConfig>()
-    const configs = effectiveCellConfigsQuery.data ?? template.cellConfigs ?? []
+    const configs =
+      effectiveCellConfigs ??
+      effectiveCellConfigsQuery.data ??
+      template.cellConfigs ??
+      []
     for (const cell of configs) {
       map.set(cellKey(cell.indicatorId, cell.attributeId), cell)
     }
     return map
-  }, [effectiveCellConfigsQuery.data, template.cellConfigs])
+  }, [effectiveCellConfigs, effectiveCellConfigsQuery.data, template.cellConfigs])
 
   const defaultValuesMap = useMemo(() => {
     const map = new Map<string, { valueText: string | null; valueNumber: number | null }>()
@@ -120,8 +137,9 @@ export function SubmissionGrid({
     // 2. Formula cells — locked, blue tint
     if (cellConfig?.formula) {
       const currentVal = cellValuesMap.get(key)
-      const displayValue =
+      const displayValue = formatCellInputValue(
         currentVal?.valueNumber ?? currentVal?.valueText ?? ''
+      )
       return (
         <div className='relative w-full min-w-[120px]'>
           <Input
@@ -142,10 +160,11 @@ export function SubmissionGrid({
       defaultVal &&
       (defaultVal.valueText || defaultVal.valueNumber !== null)
     ) {
-      const displayValue =
+      const displayValue = formatCellInputValue(
         defaultVal.valueNumber !== null
           ? defaultVal.valueNumber
           : (defaultVal.valueText ?? '')
+      )
       return (
         <div className='relative w-full min-w-[120px]'>
           <Input
@@ -162,9 +181,11 @@ export function SubmissionGrid({
     // 4. Read-only config cells
     if (cellConfig?.readOnly) {
       const currentVal = cellValuesMap.get(key)
-      const displayValue = isNumber
-        ? (currentVal?.valueNumber ?? '')
-        : (currentVal?.valueText ?? '')
+      const displayValue = formatCellInputValue(
+        isNumber
+          ? (currentVal?.valueNumber ?? '')
+          : (currentVal?.valueText ?? '')
+      )
       return (
         <div className='relative w-full min-w-[120px]'>
           <Input
@@ -178,11 +199,36 @@ export function SubmissionGrid({
       )
     }
 
-    // 5. Normal editable input (allow if it's an INPUT indicator even if no cellConfig exists)
+    // 5. Excel import preview — invalid cell (show raw Excel text, not old value)
+    if (previewMode && importInvalidCellKeys?.has(key)) {
+      const currentVal = cellValuesMap.get(key)
+      const displayValue = formatCellInputValue(
+        currentVal?.valueText ?? currentVal?.valueNumber ?? ''
+      )
+      return (
+        <div className='relative w-full min-w-[120px] rounded-md ring-2 ring-red-500 ring-offset-1'>
+          <Input
+            value={displayValue}
+            readOnly
+            disabled
+            className='h-8 border-2 border-red-600 bg-red-200 pr-8 text-xs font-semibold text-red-950 shadow-sm disabled:cursor-not-allowed disabled:opacity-100'
+            title='Giá trị không hợp lệ trong file Excel — sẽ không được áp dụng'
+          />
+          <AlertCircle
+            className='pointer-events-none absolute top-1/2 right-2 size-4 -translate-y-1/2 text-red-700'
+            aria-hidden
+          />
+        </div>
+      )
+    }
+
+    // 6. Normal editable input (allow if it's an INPUT indicator even if no cellConfig exists)
     const currentVal = cellValuesMap.get(key)
-    const displayVal = isNumber
-      ? (currentVal?.valueNumber ?? '')
-      : (currentVal?.valueText ?? '')
+    const displayVal = formatCellInputValue(
+      isNumber
+        ? (currentVal?.valueNumber ?? '')
+        : (currentVal?.valueText ?? '')
+    )
 
     return (
       <div className='w-full min-w-[120px]'>
@@ -211,6 +257,8 @@ export function SubmissionGrid({
       fields={fields}
       renderCell={renderCell}
       emptyMessage='Chưa có chỉ tiêu nào để nhập liệu.'
+      defaultExpandAll={previewMode}
+      compact={previewMode}
     />
   )
 }

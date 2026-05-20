@@ -9,6 +9,7 @@ import {
   Save,
   Send,
   Loader2,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,7 @@ import { formManagementApi } from '@/features/form-management/api/template-manag
 import type { FormTemplate } from '@/features/form-management/api/types'
 import { SubmissionGrid } from '../components/submission-grid'
 import { SubmitConfirmDialog } from '../components/submit-confirm-dialog'
+import { SubmissionExcelImportDialog } from '../components/submission-excel-import-dialog'
 import { useMyAssignments } from '../hooks/use-my-assignments'
 import { useSubmission } from '../hooks/use-submission'
 import { getSubmissionStatusInfo } from '../utils/submission-status'
@@ -35,6 +37,7 @@ export function SubmissionInputPage() {
 
   const [template, setTemplate] = useState<FormTemplate | null>(null)
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false)
+  const [isExcelImportOpen, setIsExcelImportOpen] = useState(false)
 
   // 1. Fetch danh sách để lấy thông tin assignment
   const { data: assignments, isLoading: isLoadingAssignments } =
@@ -57,6 +60,7 @@ export function SubmissionInputPage() {
     hasUnsavedChanges,
     submit,
     isSubmitting,
+    applyBulkCellChanges,
   } = useSubmission(assignmentId)
 
   // 3. Lấy template schema từ formId
@@ -129,6 +133,16 @@ export function SubmissionInputPage() {
           <div className='flex items-center gap-2'>
             {!isReadOnly && (
               <>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setIsExcelImportOpen(true)}
+                  className='h-9 px-4'
+                >
+                  <FileSpreadsheet className='mr-2 h-4 w-4' />
+                  Nhập Excel
+                </Button>
+
                 <Button
                   variant='outline'
                   size='sm'
@@ -275,6 +289,17 @@ export function SubmissionInputPage() {
         onConfirm={handleSubmitConfirm}
         isSubmitting={isSubmitting}
         completionPct={detail.completionPct}
+      />
+
+      <SubmissionExcelImportDialog
+        open={isExcelImportOpen}
+        onOpenChange={setIsExcelImportOpen}
+        template={template}
+        detail={detail}
+        formName={assignment?.form.name ?? 'bao-cao'}
+        periodCode={assignment?.period.code ?? detail.code}
+        isReadOnly={isReadOnly}
+        onApply={applyBulkCellChanges}
       />
     </div>
   )

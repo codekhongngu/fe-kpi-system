@@ -17,6 +17,10 @@ type TemplateMatrixGridProps = {
     field: TemplateField
   ) => React.ReactNode
   emptyMessage?: string
+  /** Expand every indicator row on mount (preview/import) */
+  defaultExpandAll?: boolean
+  /** Hide fullscreen toggle — use inside dialogs */
+  compact?: boolean
 }
 
 export function TemplateMatrixGrid({
@@ -24,11 +28,15 @@ export function TemplateMatrixGrid({
   fields,
   renderCell,
   emptyMessage = 'Không có dữ liệu',
+  defaultExpandAll = false,
+  compact = false,
 }: TemplateMatrixGridProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // By default, expand all indicators at level 1
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    if (defaultExpandAll) {
+      return new Set(indicators.map((ind) => ind.id))
+    }
     const rootIds = new Set<string>()
     indicators.forEach((ind) => {
       if (!ind.parentId) {
@@ -37,6 +45,11 @@ export function TemplateMatrixGrid({
     })
     return rootIds
   })
+
+  useEffect(() => {
+    if (!defaultExpandAll) return
+    setExpandedIds(new Set(indicators.map((ind) => ind.id)))
+  }, [defaultExpandAll, indicators])
 
   // Close fullscreen on escape key
   useEffect(() => {
@@ -110,7 +123,9 @@ export function TemplateMatrixGrid({
 
   const contentClass = isFullscreen
     ? 'flex-1 overflow-auto p-4'
-    : 'overflow-auto max-h-[600px]'
+    : compact
+      ? 'overflow-auto max-h-[min(50vh,480px)]'
+      : 'overflow-auto max-h-[600px]'
 
   return (
     <div className={wrapperClass}>
@@ -124,18 +139,20 @@ export function TemplateMatrixGrid({
             Thu gọn tất cả
           </Button>
         </div>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => setIsFullscreen(!isFullscreen)}
-          title={isFullscreen ? 'Thu nhỏ' : 'Mở rộng toàn màn hình'}
-        >
-          {isFullscreen ? (
-            <Minimize2 className='size-4' />
-          ) : (
-            <Maximize2 className='size-4' />
-          )}
-        </Button>
+        {!compact ? (
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            title={isFullscreen ? 'Thu nhỏ' : 'Mở rộng toàn màn hình'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className='size-4' />
+            ) : (
+              <Maximize2 className='size-4' />
+            )}
+          </Button>
+        ) : null}
       </div>
 
       {/* Grid container */}
