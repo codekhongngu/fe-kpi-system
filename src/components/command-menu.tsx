@@ -1,9 +1,7 @@
 import React from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowRight, ChevronRight, Laptop, Moon, Sun } from 'lucide-react'
-import { useAuthStore } from '@/stores/auth-store'
-import { apiClient } from '@/lib/api-client'
+import { useAuthStore, type AuthUser } from '@/stores/auth-store'
 import { useSearch } from '@/context/search-provider'
 import { useTheme } from '@/context/theme-provider'
 import {
@@ -18,90 +16,15 @@ import {
 import { getSidebarNavGroupsForUser } from './layout/data/sidebar-data'
 import { ScrollArea } from './ui/scroll-area'
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function getRoleIds(user: unknown): string[] {
-  if (isRecord(user)) {
-    const roleIds = user.roleIds
-    if (Array.isArray(roleIds)) {
-      return roleIds.filter((item): item is string => typeof item === 'string')
-    }
-  }
-  return []
-}
-
-function isUuidLike(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value
-  )
-}
-
-async function fetchRolesById(): Promise<Record<string, string>> {
-  try {
-    const response = await apiClient.get<unknown>('/roles', {
-      params: { page: 1, limit: 200 },
-    })
-    const payload = response.data as any
-    const list = Array.isArray(payload)
-      ? payload
-      : (payload?.data ?? payload?.items ?? [])
-    return Object.fromEntries(
-      (Array.isArray(list) ? list : []).flatMap((item: any) => {
-        const id = typeof item?.id === 'string' ? item.id : ''
-        const code =
-          typeof item?.code === 'string'
-            ? item.code
-            : typeof item?.name === 'string'
-              ? item.name
-              : ''
-        return id && code ? ([[id, code]] as const) : []
-      })
-    )
-  } catch {
-    const response = await apiClient.get<unknown>('/role-groups', {
-      params: { page: 1, limit: 200 },
-    })
-    const payload = response.data as any
-    const list = Array.isArray(payload)
-      ? payload
-      : (payload?.data ?? payload?.items ?? [])
-    return Object.fromEntries(
-      (Array.isArray(list) ? list : []).flatMap((item: any) => {
-        const id = typeof item?.id === 'string' ? item.id : ''
-        const code =
-          typeof item?.code === 'string'
-            ? item.code
-            : typeof item?.name === 'string'
-              ? item.name
-              : ''
-        return id && code ? ([[id, code]] as const) : []
-      })
-    )
-  }
-}
-
 export function CommandMenu() {
   const navigate = useNavigate()
   const { setTheme } = useTheme()
   const { open, setOpen } = useSearch()
-  const authUser = useAuthStore((state) => state.auth.user)
-  const roleIds = getRoleIds(authUser)
-  const needsRoleLookup = roleIds.length > 0 && roleIds.every(isUuidLike)
-
-  const rolesQuery = useQuery({
-    queryKey: ['rolesById'],
-    queryFn: fetchRolesById,
-    enabled: needsRoleLookup,
-    staleTime: 60_000,
-  })
-
-  const rolesById = rolesQuery.data ?? {}
-  const navGroups = getSidebarNavGroupsForUser(
-    authUser,
-    needsRoleLookup ? rolesById : undefined
-  )
+  
+  const authUser = useAuthStore((state) => state.auth.user) as AuthUser | null
+  const permissions = authUser?.permissions ?? []
+  
+  const navGroups = getSidebarNavGroupsForUser(permissions)
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {

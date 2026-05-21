@@ -44,6 +44,7 @@ export type MeResponse = {
   avatarUrl?: string | null
   orgId: string | null
   roleIds: string[]
+  permissions: string[]
   language: string
   timezone: string
   notifyChannel: 'IN_APP' | 'EMAIL' | 'BOTH'

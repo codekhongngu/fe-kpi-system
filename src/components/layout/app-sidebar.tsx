@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/stores/auth-store'
+import { useAuthStore, type AuthUser } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { useLayout } from '@/context/layout-provider'
 import {
@@ -14,51 +14,40 @@ import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
 import { TeamSwitcher } from './team-switcher'
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function getDisplayName(user: unknown): string {
-  if (isRecord(user)) {
-    const fullName =
-      typeof user.fullName === 'string' ? user.fullName.trim() : ''
-    if (fullName) return fullName
-    const username =
-      typeof user.username === 'string' ? user.username.trim() : ''
-    if (username) return username
-    const email = typeof user.email === 'string' ? user.email.trim() : ''
-    if (email) return email
+function getDisplayName(user: AuthUser | null): string {
+  if (user) {
+    if (user.fullName?.trim()) return user.fullName.trim()
+    if (user.username?.trim()) return user.username.trim()
+    if (user.email?.trim()) return user.email.trim()
   }
   return sidebarData.user.name
 }
 
-function getDisplayEmail(user: unknown): string {
-  if (isRecord(user)) {
-    const email = typeof user.email === 'string' ? user.email.trim() : ''
-    if (email) return email
+function getDisplayEmail(user: AuthUser | null): string {
+  if (user) {
+    if (user.email?.trim()) return user.email.trim()
   }
   return sidebarData.user.email
 }
 
-function getDisplayAvatar(user: unknown): string {
-  if (isRecord(user)) {
-    const avatarUrl =
-      typeof user.avatarUrl === 'string' ? user.avatarUrl.trim() : ''
-    if (avatarUrl) return avatarUrl
+function getDisplayAvatar(user: AuthUser | null): string {
+  if (user) {
+    if (user.avatarUrl?.trim()) return user.avatarUrl.trim()
   }
   return sidebarData.user.avatar
 }
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
-  const authUser = useAuthStore((state) => state.auth.user)
+  const authUser = useAuthStore((state) => state.auth.user) as AuthUser | null
 
   const user = {
     name: getDisplayName(authUser),
     email: getDisplayEmail(authUser),
     avatar: getDisplayAvatar(authUser),
   }
-  const navGroups = getSidebarNavGroupsForUser(authUser)
+  const permissions = authUser?.permissions ?? []
+  const navGroups = getSidebarNavGroupsForUser(permissions)
   return (
     <Sidebar
       collapsible={collapsible}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AxiosError } from 'axios'
+import { usePermission } from '@/hooks/use-permission'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   type ColumnDef,
@@ -308,6 +309,9 @@ function OrganizationTree({
 
 export function UnitsTab() {
   const queryClient = useQueryClient()
+  const canCreate = usePermission('units.create')
+  const canUpdate = usePermission('units.update')
+  const canDelete = usePermission('units.delete')
   const [includeLockedUnits, setIncludeLockedUnits] = useState(true)
   const unitsQuery = useQuery({
     queryKey: ['organizations', 'tree', { includeLockedUnits }],
@@ -560,36 +564,43 @@ export function UnitsTab() {
         header: () => <div className='text-right'>Thao tác</div>,
         cell: ({ row }) => {
           const unit = row.original
+          if (!canUpdate && !canDelete) return null
           return (
             <div className='flex justify-end gap-1'>
-              <Button
-                size='icon'
-                variant='outline'
-                onClick={() => openEditDialog(unit)}
-                title='Sửa đơn vị'
-              >
-                <UserPen />
-              </Button>
-              <Button
-                size='sm'
-                variant='outline'
-                onClick={() =>
-                  setStatusDialog({
-                    unit,
-                    action: unit.status === 'active' ? 'lock' : 'unlock',
-                  })
-                }
-              >
-                {unit.status === 'active' ? 'Khóa' : 'Mở'}
-              </Button>
-              <Button
-                size='icon'
-                variant='destructive'
-                onClick={() => setDeletingUnit(unit)}
-                title='Xóa đơn vị'
-              >
-                <Trash2 />
-              </Button>
+              {canUpdate && (
+                <Button
+                  size='icon'
+                  variant='outline'
+                  onClick={() => openEditDialog(unit)}
+                  title='Sửa đơn vị'
+                >
+                  <UserPen />
+                </Button>
+              )}
+              {canUpdate && (
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() =>
+                    setStatusDialog({
+                      unit,
+                      action: unit.status === 'active' ? 'lock' : 'unlock',
+                    })
+                  }
+                >
+                  {unit.status === 'active' ? 'Khóa' : 'Mở'}
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  size='icon'
+                  variant='destructive'
+                  onClick={() => setDeletingUnit(unit)}
+                  title='Xóa đơn vị'
+                >
+                  <Trash2 />
+                </Button>
+              )}
             </div>
           )
         },
@@ -643,14 +654,16 @@ export function UnitsTab() {
                   Chọn đơn vị để xem danh sách trực thuộc
                 </CardDescription>
               </div>
-              <Button
-                size='sm'
-                variant='outline'
-                onClick={() => openCreateDialog(null)}
-              >
-                <PlusCircle />
-                Thêm
-              </Button>
+              {canCreate && (
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() => openCreateDialog(null)}
+                >
+                  <PlusCircle />
+                  Thêm
+                </Button>
+              )}
             </CardHeader>
             <CardContent className='space-y-3 p-4'>
               <Input
@@ -730,48 +743,54 @@ export function UnitsTab() {
                   )}
                 </div>
                 <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end'>
-                  <Button
-                    size='sm'
-                    onClick={() => openCreateDialog(selectedUnitId)}
-                    disabled={!selectedUnitId}
-                  >
-                    <PlusCircle />
-                    Thêm trực thuộc
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => selectedUnit && openEditDialog(selectedUnit)}
-                    disabled={!selectedUnit}
-                  >
-                    <UserPen />
-                    Sửa
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() =>
-                      selectedUnit &&
-                      setStatusDialog({
-                        unit: selectedUnit,
-                        action:
-                          selectedUnit.status === 'active' ? 'lock' : 'unlock',
-                      })
-                    }
-                    disabled={!selectedUnit}
-                  >
-                    {selectedUnit?.status === 'active' ? (
-                      <>
-                        <Lock />
-                        Khóa
-                      </>
-                    ) : (
-                      <>
-                        <Unlock />
-                        Mở
-                      </>
-                    )}
-                  </Button>
+                  {canCreate && (
+                    <Button
+                      size='sm'
+                      onClick={() => openCreateDialog(selectedUnitId)}
+                      disabled={!selectedUnitId}
+                    >
+                      <PlusCircle />
+                      Thêm trực thuộc
+                    </Button>
+                  )}
+                  {canUpdate && (
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      onClick={() => selectedUnit && openEditDialog(selectedUnit)}
+                      disabled={!selectedUnit}
+                    >
+                      <UserPen />
+                      Sửa
+                    </Button>
+                  )}
+                  {canUpdate && (
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      onClick={() =>
+                        selectedUnit &&
+                        setStatusDialog({
+                          unit: selectedUnit,
+                          action:
+                            selectedUnit.status === 'active' ? 'lock' : 'unlock',
+                        })
+                      }
+                      disabled={!selectedUnit}
+                    >
+                      {selectedUnit?.status === 'active' ? (
+                        <>
+                          <Lock />
+                          Khóa
+                        </>
+                      ) : (
+                        <>
+                          <Unlock />
+                          Mở
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
             </Card>

@@ -25,16 +25,18 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const meQuery = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authApi.me,
-    enabled: !!accessToken && !user,
+    enabled: !!accessToken,
     retry: false,
+    staleTime: 2 * 60 * 1000,
   })
 
   useEffect(() => {
-    if (meQuery.data && !user) {
+    if (meQuery.data) {
       setUser(meQuery.data)
     }
-  }, [meQuery.data, setUser, user])
+  }, [meQuery.data, setUser])
 
+  // Only block rendering when no cached user AND actively loading
   if (!!accessToken && !user && meQuery.isLoading) {
     return (
       <div className='flex min-h-svh items-center justify-center p-6'>
