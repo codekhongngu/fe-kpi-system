@@ -52,6 +52,7 @@ function buildFixedRoles(permissions: Permission[]): Role[] {
       ...meta,
       permissionIds,
       permissions: codes,
+      permissionCount: codes.length,
     }
   })
 }
@@ -68,7 +69,7 @@ async function fetchPermissionsFromApi(): Promise<Permission[]> {
   try {
     response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
       '/permissions',
-      { params: { page: 1, limit: 500 } }
+      { params: { page: 1, limit: 100 } }
     )
   } catch {
     response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
@@ -710,6 +711,7 @@ export const systemAdminMockApi = {
       name?: string
       description?: string | null
       dataScope?: DataScope
+      permissionCount?: number
       permissions?:
       | string[]
       | Array<{
@@ -800,11 +802,13 @@ export const systemAdminMockApi = {
       try {
         response = await apiClient.get<
           { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
-        >('/roles', { params: { page: 1, limit: 500 } })
+        >('/roles', {
+          params: { include: 'permissionCount', limit: 100, page: 1 },
+        })
       } catch {
         response = await apiClient.get<
           { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
-        >('/roles')
+        >('/roles', { params: { include: 'permissionCount', limit: 100 } })
       }
       const payload = response.data
       const items = Array.isArray(payload)
@@ -815,45 +819,38 @@ export const systemAdminMockApi = {
 
       if (items.length === 0) return []
 
-      return Promise.all(
-        items.map(async (role) => {
-          const extracted = extractPermissions(role)
-          const code = (role.code ?? '').trim()
+      return items.map((role) => {
+        const extracted = extractPermissions(role)
+        const code = (role.code ?? '').trim()
 
-          let permissionIds = Array.isArray(role.permissionIds)
-            ? role.permissionIds.filter(isValidPermissionUuid)
-            : extracted.permissionIds
+        const permissionIds = Array.isArray(role.permissionIds)
+          ? role.permissionIds.filter(isValidPermissionUuid)
+          : extracted.permissionIds
 
-          let permissionCodes = Array.isArray(role.permissionCodes)
-            ? role.permissionCodes
-            : extracted.permissionCodes
+        const permissionCodes = Array.isArray(role.permissionCodes)
+          ? role.permissionCodes
+          : extracted.permissionCodes
 
-          if (
-            permissionIds.length === 0 &&
-            permissionCodes.length === 0 &&
-            role.id
-          ) {
-            try {
-              const loaded = await fetchRolePermissionsFromApi(role.id)
-              permissionIds = loaded.permissionIds
-              permissionCodes = loaded.permissionCodes
-            } catch {
-              // keep empty
-            }
-          }
+        const permissionCount =
+          typeof role.permissionCount === 'number' &&
+          Number.isFinite(role.permissionCount)
+            ? Math.max(0, Math.floor(role.permissionCount))
+            : permissionIds.length > 0
+              ? permissionIds.length
+              : permissionCodes.length
 
-          return {
-            id: role.id,
-            code,
-            name: role.name ?? '',
-            description: role.description ?? '',
-            dataScope: (role.dataScope ?? 'own_unit') as DataScope,
-            permissionIds,
-            permissions: permissionCodes,
-            isDefault: Boolean(role.isDefault ?? role.isSystem ?? true),
-          } satisfies Role
-        })
-      )
+        return {
+          id: role.id,
+          code,
+          name: role.name ?? '',
+          description: role.description ?? '',
+          dataScope: (role.dataScope ?? 'own_unit') as DataScope,
+          permissionIds,
+          permissions: permissionCodes,
+          permissionCount,
+          isDefault: Boolean(role.isDefault ?? role.isSystem ?? true),
+        } satisfies Role
+      })
     } catch {
       return []
     }
@@ -902,6 +899,7 @@ export const systemAdminMockApi = {
           dataScope: input.dataScope,
           permissionIds,
           permissions: input.permissions,
+          permissionCount: permissionIds.length,
           isDefault: false,
         }
       )

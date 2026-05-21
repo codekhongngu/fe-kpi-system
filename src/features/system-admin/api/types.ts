@@ -25,6 +25,8 @@ export type Role = {
   dataScope: DataScope
   permissionIds: string[]
   permissions: string[]
+  /** Số quyền đã gán — từ GET /roles?include=permissionCount */
+  permissionCount: number
   isDefault: boolean
 }
 

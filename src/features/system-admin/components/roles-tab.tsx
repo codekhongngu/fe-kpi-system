@@ -61,10 +61,7 @@ function arraysEqual(a: string[], b: string[]): boolean {
   return sortedA.every((v, i) => v === sortedB[i])
 }
 
-function countRolePermissions(role: Role, activeCount?: number): number {
-  if (activeCount !== undefined) return activeCount
-  return role.permissionIds?.length ?? role.permissions?.length ?? 0
-}
+const ROLES_STALE_MS = 5 * 60 * 1000
 
 export function RolesTab() {
   const queryClient = useQueryClient()
@@ -72,11 +69,13 @@ export function RolesTab() {
   const rolesQuery = useQuery<Role[]>({
     queryKey: ['system-admin', 'roles'],
     queryFn: () => systemAdminMockApi.listRoles(),
+    staleTime: ROLES_STALE_MS,
   })
 
   const allPermissionsQuery = useQuery<Permission[]>({
     queryKey: ['system-admin', 'permissions'],
     queryFn: () => systemAdminMockApi.listPermissions(),
+    staleTime: ROLES_STALE_MS,
   })
 
   const roles = rolesQuery.data ?? EMPTY_ROLES
@@ -85,8 +84,7 @@ export function RolesTab() {
   const orderedRoles = useMemo(
     () =>
       [...roles].sort((a, b) => {
-        const countDiff =
-          countRolePermissions(b) - countRolePermissions(a)
+        const countDiff = b.permissionCount - a.permissionCount
         if (countDiff !== 0) return countDiff
         return a.name.localeCompare(b.name, 'vi')
       }),
@@ -112,6 +110,7 @@ export function RolesTab() {
     queryKey: ['system-admin', 'roles', selectedRoleId, 'permissions'],
     queryFn: () => systemAdminMockApi.getRolePermissions(selectedRoleId!),
     enabled: Boolean(selectedRoleId),
+    staleTime: ROLES_STALE_MS,
   })
 
   const permissionMatrixGroups = useMemo(
@@ -277,9 +276,19 @@ export function RolesTab() {
     },
     onSuccess: () => {
       toast.success('Đã cập nhật quyền vai trò.')
+      const savedCount = pendingPermissionIds.filter(isValidPermissionUuid)
+        .length
       setOriginalPermissionIds([...pendingPermissionIds])
-      queryClient.invalidateQueries({ queryKey: ['system-admin', 'roles'] })
       if (selectedRoleId) {
+        queryClient.setQueryData<Role[]>(
+          ['system-admin', 'roles'],
+          (prev) =>
+            prev?.map((role) =>
+              role.id === selectedRoleId
+                ? { ...role, permissionCount: savedCount }
+                : role
+            ) ?? prev
+        )
         queryClient.invalidateQueries({
           queryKey: [
             'system-admin',
@@ -359,10 +368,7 @@ export function RolesTab() {
               </div>
               {orderedRoles.map((role) => {
                 const isActive = role.id === selectedRoleId
-                const count = countRolePermissions(
-                  role,
-                  isActive ? pendingPermissionIds.length : undefined
-                )
+                const count = role.permissionCount
                 const permissionTotal = Math.max(totalMatrixPermissions, 1)
                 const pct = Math.round((count / permissionTotal) * 100)
                 const dotClass = getRoleDotClass(role.code)
