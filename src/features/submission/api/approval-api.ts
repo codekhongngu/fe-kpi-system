@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api-client'
-import type { SubmissionFlowLog } from '@/components/submission/submission-timeline'
+import type { SubmissionFlowLog } from '../components/submission-timeline'
 
 export const approvalApi = {
   // POST /api/v1/approvals/:id/approve-department

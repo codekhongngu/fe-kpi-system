@@ -147,7 +147,7 @@ function renderReportDetailsTabContent(
 }
 
 export function ReportDetailsPage({ reportId }: ReportDetailsPageProps) {
-  const navigate = useNavigate()
+  const navigate:any = useNavigate()
   const search = useSearch({ strict: false }) as ReportDetailsSearch
   const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)

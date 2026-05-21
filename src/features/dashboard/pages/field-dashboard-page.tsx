@@ -6,13 +6,14 @@ import { Main } from '@/components/layout/main'
 import { dashboardApi } from '../api/dashboard-api'
 import { FieldDashboardHeader } from '../components/field-dashboard-header'
 import { FieldDashboardReportsSection } from '../components/field-dashboard-reports-section'
+import type { FieldDashboardSearch } from '../api/types'
 import { dashboardQueryKeys, getErrorMessage } from '../utils/dashboard-query'
 
 const routeApi = getRouteApi('/_authenticated/dashboard/field/$fieldCategoryId')
 
 export function FieldDashboardPage() {
   const { fieldCategoryId } = routeApi.useParams()
-  const search = routeApi.useSearch()
+  const search = routeApi.useSearch() as FieldDashboardSearch
   const navigate = routeApi.useNavigate()
 
   const reportsQuery = useQuery({

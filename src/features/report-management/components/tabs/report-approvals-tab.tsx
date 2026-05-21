@@ -29,7 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { SubmissionTimeline } from '@/components/submission/submission-timeline'
+import { SubmissionTimeline } from '@/features/submission/components/submission-timeline'
 import { approvalApi } from '@/features/submission/api/approval-api'
 import {
   useApproveDepartment,

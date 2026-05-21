@@ -123,6 +123,7 @@ export type CreateTemplateInput = {
   periodType: PeriodType
   templateType: TemplateType
   description: string
+  isActive?: boolean
 }
 
 export type UpdateTemplateInput = {

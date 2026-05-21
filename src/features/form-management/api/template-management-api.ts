@@ -537,7 +537,7 @@ export const formManagementApi = {
       fieldCategoryId: form.fieldCategoryId ?? input.fieldCategoryId,
       periodType: form.periodType ?? input.periodType,
       templateType: form.templateType ?? input.templateType,
-      isActive: form.isActive ?? input.isActive,
+      isActive: form.isActive ?? input.isActive ?? true,
       fields: [],
       indicators: [],
       templateScopes: [],

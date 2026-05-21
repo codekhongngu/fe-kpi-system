@@ -2,7 +2,6 @@
 import {
   Beef,
   Bird,
-  Circle,
   Ham,
   TrendingUp,
   Warehouse,

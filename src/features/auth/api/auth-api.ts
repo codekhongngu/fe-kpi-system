@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/api-client'
 export type AuthResponse = {
   accessToken: string
   refreshToken?: string
-  user: unknown
+  user: MeResponse
   expiresIn: number
 }
 

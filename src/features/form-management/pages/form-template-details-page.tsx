@@ -85,7 +85,7 @@ export function FormTemplateDetailsPage({
     await queryClient.invalidateQueries({ queryKey: ['form-management'] })
   }
 
-  const patchMutation = useMutation({
+  const patchMutation:any = useMutation({
     mutationFn: (payload: {
       name: string
       fieldCategoryId: string

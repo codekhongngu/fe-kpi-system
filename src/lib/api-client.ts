@@ -154,7 +154,7 @@ export function createApiClient(): AxiosInstance {
       originalRequest._retry = true
 
       try {
-        const refreshed = await refreshAccessToken()
+        const refreshed:any = await refreshAccessToken()
         useAuthStore.getState().auth.setAccessToken(refreshed.accessToken)
         if (refreshed.refreshToken) {
           useAuthStore.getState().auth.setRefreshToken(refreshed.refreshToken)

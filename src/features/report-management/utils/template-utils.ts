@@ -26,6 +26,4 @@ export async function getTemplateById(
   }
 }
 
-export function clearTemplateCache() {
-  templateCache.clear()
-}
+

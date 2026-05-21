@@ -29,13 +29,8 @@ export type ReportAction =
   | 'report:update'
   | 'report:cancel'
   | 'report:assign'
-  | 'report:input'
-  | 'report:submit'
   | 'report:approve'
   | 'report:reject'
-  | 'report:view'
-  | 'report:history'
-  | 'report:role-variants'
 
 export type ReportListItem = {
   id: string
@@ -152,20 +147,6 @@ export type ReportFilters = {
   pageSize: number
 }
 
-export type ReportListResponse = {
-  items: ReportListItem[]
-  total: number
-}
-
-export type ReportSummary = {
-  total: number
-  unsubmitted: number
-  pendingApproval: number
-  approved: number
-  rejected: number
-  overdue: number
-}
-
 export type ReportReferences = {
   templates: ReportReferenceItem[]
   units: ReportReferenceItem[]
@@ -195,15 +176,6 @@ export type UpdateReportInput = {
   priority?: ReportPriority
   note?: string | null
 }
-
-export const reportTabs: Array<{ value: ReportTab; label: string }> = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'unsubmitted', label: 'Chưa nộp' },
-  { value: 'pending_approval', label: 'Chờ duyệt' },
-  { value: 'approved', label: 'Đã duyệt' },
-  { value: 'rejected', label: 'Bị trả lại' },
-  { value: 'overdue', label: 'Quá hạn' },
-]
 
 export const campaignStatusOptions: Array<{
   value: CampaignStatus
@@ -255,11 +227,6 @@ export type CampaignScope = {
   indicatorName?: string
 }
 
-export type CampaignScopeInput = {
-  orgId: string
-  indicatorId: string
-}
-
 export type CampaignDefaultValue = {
   id?: string
   campaignId?: string
@@ -306,12 +273,4 @@ export type CampaignSummaryDetail = {
   createdAt: string
 }
 
-export type CreateSummaryInput = {
-  formId: string
-  periodType: PeriodType
-  periodFrom: string
-  periodTo: string
-  periodCode?: string
-  periodName?: string
-  orgId: string
-}
+

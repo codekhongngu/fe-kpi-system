@@ -62,11 +62,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { formManagementApi } from '../../api/template-management-api'
 import {
   fieldDataTypeOptions,
-  type FieldDataType,
   type TemplateIndicator,
 } from '../../api/types'
 import {

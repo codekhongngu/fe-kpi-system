@@ -54,6 +54,7 @@ import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenti
 import { Route as AuthenticatedMyAssignmentsIndexRouteImport } from './routes/_authenticated/my/assignments/index'
 import { Route as AuthenticatedReportManagementDetailsReportIdRouteImport } from './routes/_authenticated/report-management/details.$reportId'
 import { Route as AuthenticatedFormManagementDetailsTemplateIdRouteImport } from './routes/_authenticated/form-management/details.$templateId'
+import { Route as AuthenticatedDashboardFieldFieldCategoryIdRouteImport } from './routes/_authenticated/dashboard/field/$fieldCategoryId'
 import { Route as AuthenticatedReportManagementAdminViewReportIdAssignmentIdRouteImport } from './routes/_authenticated/report-management/admin-view.$reportId.$assignmentId'
 import { Route as AuthenticatedMySubmissionsFlowLogsLogIdRouteImport } from './routes/_authenticated/my/submissions/flow-logs/$logId'
 import { Route as AuthenticatedMyAssignmentsAssignmentIdInputRouteImport } from './routes/_authenticated/my/assignments/$assignmentId.input'
@@ -301,6 +302,12 @@ const AuthenticatedFormManagementDetailsTemplateIdRoute =
     path: '/details/$templateId',
     getParentRoute: () => AuthenticatedFormManagementRouteRoute,
   } as any)
+const AuthenticatedDashboardFieldFieldCategoryIdRoute =
+  AuthenticatedDashboardFieldFieldCategoryIdRouteImport.update({
+    id: '/dashboard/field/$fieldCategoryId',
+    path: '/dashboard/field/$fieldCategoryId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportManagementAdminViewReportIdAssignmentIdRoute =
   AuthenticatedReportManagementAdminViewReportIdAssignmentIdRouteImport.update({
     id: '/report-management/admin-view/$reportId/$assignmentId',
@@ -368,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/system-admin/': typeof AuthenticatedSystemAdminIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
+  '/dashboard/field/$fieldCategoryId': typeof AuthenticatedDashboardFieldFieldCategoryIdRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   '/my/assignments/': typeof AuthenticatedMyAssignmentsIndexRoute
@@ -414,6 +422,7 @@ export interface FileRoutesByTo {
   '/system-admin': typeof AuthenticatedSystemAdminIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/dashboard/field/$fieldCategoryId': typeof AuthenticatedDashboardFieldFieldCategoryIdRoute
   '/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   '/my/assignments': typeof AuthenticatedMyAssignmentsIndexRoute
@@ -466,6 +475,7 @@ export interface FileRoutesById {
   '/_authenticated/system-admin/': typeof AuthenticatedSystemAdminIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/dashboard/field/$fieldCategoryId': typeof AuthenticatedDashboardFieldFieldCategoryIdRoute
   '/_authenticated/form-management/details/$templateId': typeof AuthenticatedFormManagementDetailsTemplateIdRoute
   '/_authenticated/report-management/details/$reportId': typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   '/_authenticated/my/assignments/': typeof AuthenticatedMyAssignmentsIndexRoute
@@ -516,6 +526,7 @@ export interface FileRouteTypes {
     | '/system-admin/'
     | '/tasks/'
     | '/users/'
+    | '/dashboard/field/$fieldCategoryId'
     | '/form-management/details/$templateId'
     | '/report-management/details/$reportId'
     | '/my/assignments/'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/system-admin'
     | '/tasks'
     | '/users'
+    | '/dashboard/field/$fieldCategoryId'
     | '/form-management/details/$templateId'
     | '/report-management/details/$reportId'
     | '/my/assignments'
@@ -613,6 +625,7 @@ export interface FileRouteTypes {
     | '/_authenticated/system-admin/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
+    | '/_authenticated/dashboard/field/$fieldCategoryId'
     | '/_authenticated/form-management/details/$templateId'
     | '/_authenticated/report-management/details/$reportId'
     | '/_authenticated/my/assignments/'
@@ -955,6 +968,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFormManagementDetailsTemplateIdRouteImport
       parentRoute: typeof AuthenticatedFormManagementRouteRoute
     }
+    '/_authenticated/dashboard/field/$fieldCategoryId': {
+      id: '/_authenticated/dashboard/field/$fieldCategoryId'
+      path: '/dashboard/field/$fieldCategoryId'
+      fullPath: '/dashboard/field/$fieldCategoryId'
+      preLoaderRoute: typeof AuthenticatedDashboardFieldFieldCategoryIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/report-management/admin-view/$reportId/$assignmentId': {
       id: '/_authenticated/report-management/admin-view/$reportId/$assignmentId'
       path: '/report-management/admin-view/$reportId/$assignmentId'
@@ -1061,6 +1081,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSystemAdminIndexRoute: typeof AuthenticatedSystemAdminIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedDashboardFieldFieldCategoryIdRoute: typeof AuthenticatedDashboardFieldFieldCategoryIdRoute
   AuthenticatedReportManagementDetailsReportIdRoute: typeof AuthenticatedReportManagementDetailsReportIdRouteWithChildren
   AuthenticatedMyAssignmentsIndexRoute: typeof AuthenticatedMyAssignmentsIndexRoute
   AuthenticatedMyAssignmentsAssignmentIdInputRoute: typeof AuthenticatedMyAssignmentsAssignmentIdInputRoute
@@ -1090,6 +1111,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSystemAdminIndexRoute: AuthenticatedSystemAdminIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedDashboardFieldFieldCategoryIdRoute:
+    AuthenticatedDashboardFieldFieldCategoryIdRoute,
   AuthenticatedReportManagementDetailsReportIdRoute:
     AuthenticatedReportManagementDetailsReportIdRouteWithChildren,
   AuthenticatedMyAssignmentsIndexRoute: AuthenticatedMyAssignmentsIndexRoute,

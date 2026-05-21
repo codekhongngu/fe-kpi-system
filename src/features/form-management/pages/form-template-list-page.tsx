@@ -202,6 +202,7 @@ export function FormTemplateListPage() {
           periodType: formState.periodType,
           templateType: formState.templateType,
           description: formState.description.trim(),
+          isActive: true,
         },
       })
       return

@@ -57,7 +57,6 @@ const defaultForm: FieldCategoryFormState = {
 
 export function FormCategoryListPage() {
   const queryClient = useQueryClient()
-  const canCreate = usePermission('field-categories.create')
   const canUpdate = usePermission('field-categories.update')
   const canDelete = usePermission('field-categories.delete')
 

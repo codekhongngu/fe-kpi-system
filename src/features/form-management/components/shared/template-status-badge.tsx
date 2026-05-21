@@ -5,6 +5,7 @@ import type {
 
 type TemplateStatusBadgeProps = {
   templateStatus?: TemplateLifecycleStatus
+  isActive?: boolean
 }
 
 const lifecycleVariant: Record<

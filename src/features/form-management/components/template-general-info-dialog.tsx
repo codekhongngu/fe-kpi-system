@@ -33,6 +33,7 @@ type FormModalState = {
   periodType: PeriodType
   templateType: TemplateType
   description: string
+  isActive?: boolean
 }
 
 type TemplateGeneralInfoDialogProps = {
