@@ -107,7 +107,7 @@ export function getSidebarNavGroupsForUser(
     .map((group) => ({
       ...group,
       items: group.items.filter(
-        (item) => !item.permission || permissionSet.has(item.permission)
+        (item:any) => !item.permission || permissionSet.has(item.permission)
       ),
     }))
     .filter((group) => group.items.length > 0)

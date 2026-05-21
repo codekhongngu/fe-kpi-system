@@ -26,6 +26,7 @@ import { useSubmissionContext } from '../hooks/use-submission-context'
 import { useSubmission } from '../hooks/use-submission'
 import { getSubmissionStatusInfo } from '../utils/submission-status'
 import { isSubmissionReadOnlyStatus, isSubmissionRejectedStatus } from '../utils/submission-status-rules'
+import { usePermission } from '@/hooks/use-permission'
 
 export function SubmissionInputPage() {
   const { assignmentId } = useParams({ strict: false }) as {
@@ -57,10 +58,13 @@ export function SubmissionInputPage() {
     applyBulkCellChanges,
   } = useSubmission(assignmentId)
 
+  const canInput = usePermission('submissions.input')
+  const canSubmit = usePermission('submissions.submit')
+
   const isLoading =
     isLoadingContext || isLoadingSubmission || !template || !detail
 
-  const isReadOnly = isSubmissionReadOnlyStatus(detail?.status)
+  const isReadOnly = isSubmissionReadOnlyStatus(detail?.status) || !canInput
   const isRejected = isSubmissionRejectedStatus(detail?.status)
 
   const handleBack = () => {
@@ -148,14 +152,16 @@ export function SubmissionInputPage() {
                   )}
                 </Button>
 
-                <Button
-                  onClick={() => setIsSubmitDialogOpen(true)}
-                  size='sm'
-                  className='h-9 bg-primary px-4 hover:bg-primary/90'
-                >
-                  <Send className='mr-2 h-4 w-4' />
-                  Nộp báo cáo
-                </Button>
+                {canSubmit && (
+                  <Button
+                    onClick={() => setIsSubmitDialogOpen(true)}
+                    size='sm'
+                    className='h-9 bg-primary px-4 hover:bg-primary/90'
+                  >
+                    <Send className='mr-2 h-4 w-4' />
+                    Nộp báo cáo
+                  </Button>
+                )}
               </>
             )}
           </div>

@@ -66,6 +66,7 @@ import { SubmissionTimeline, type SubmissionFlowLog } from '@/components/submiss
 import { SubmissionDiffModal } from '@/components/submission/submission-diff-modal'
 import { submissionApi } from '../api/submission-api'
 import type { SubmissionSnapshot } from '../utils/data-diff'
+import { usePermission } from '@/hooks/use-permission'
 
 type AssignmentFilterStatus =
   | 'all'
@@ -158,6 +159,13 @@ export function MyAssignmentsPage() {
   })
 
   const { mutate: cancelSubmit, isPending: isCanceling } = useCancelSubmit()
+
+  // Permissions
+  const canInput = usePermission('submissions.input')
+  const canCancel = usePermission('submissions.cancel')
+  const canApprove = usePermission('approvals.approve')
+  const canReject = usePermission('approvals.reject')
+  
   const approveDept = useApproveDepartment()
   const rejectDept = useRejectDepartment()
 
@@ -444,7 +452,7 @@ export function MyAssignmentsPage() {
                       to='/my/assignments/$assignmentId/input'
                       params={{ assignmentId: selectedItem.assignmentId }}
                     >
-                      {isSubmissionReadOnlyStatus(selectedItem.submission?.status) ? (
+                      {isSubmissionReadOnlyStatus(selectedItem.submission?.status) || !canInput ? (
                         <>
                           <Eye className='mr-2 h-5 w-5' />
                           Xem dữ liệu
@@ -459,32 +467,37 @@ export function MyAssignmentsPage() {
                   </Button>
 
                   {/* Context Actions */}
-                  {normalizeSubmissionStatus(selectedItem.submission?.status) === 'PENDING_DEPARTMENT' && (
+                  {normalizeSubmissionStatus(selectedItem.submission?.status) === 'PENDING_DEPARTMENT' &&
+                    (canApprove || canReject) && (
                     <div className='flex items-center gap-2 border-l pl-3 ml-1'>
-                      <Button
-                        size='sm'
-                        variant='secondary'
-                        className='bg-green-600 text-white hover:bg-green-700 rounded-xl'
-                        onClick={() => handleApproveDept(selectedItem.submission!.id)}
-                        disabled={approveDept.isPending}
-                      >
-                        <CheckCircle className='mr-2 h-4 w-4' />
-                        Duyệt
-                      </Button>
-                      <Button
-                        variant='destructive'
-                        size='sm'
-                        className='rounded-xl'
-                        onClick={() => handleRejectDept(selectedItem.submission!.id)}
-                        disabled={rejectDept.isPending}
-                      >
-                        <XCircle className='mr-2 h-4 w-4' />
-                        Từ chối
-                      </Button>
+                      {canApprove && (
+                        <Button
+                          size='sm'
+                          variant='secondary'
+                          className='bg-green-600 text-white hover:bg-green-700 rounded-xl'
+                          onClick={() => handleApproveDept(selectedItem.submission!.id)}
+                          disabled={approveDept.isPending}
+                        >
+                          <CheckCircle className='mr-2 h-4 w-4' />
+                          Duyệt
+                        </Button>
+                      )}
+                      {canReject && (
+                        <Button
+                          variant='destructive'
+                          size='sm'
+                          className='rounded-xl'
+                          onClick={() => handleRejectDept(selectedItem.submission!.id)}
+                          disabled={rejectDept.isPending}
+                        >
+                          <XCircle className='mr-2 h-4 w-4' />
+                          Từ chối
+                        </Button>
+                      )}
                     </div>
                   )}
 
-                  {normalizeSubmissionStatus(selectedItem.submission?.status) === 'PENDING_DEPARTMENT' && (
+                  {normalizeSubmissionStatus(selectedItem.submission?.status) === 'PENDING_DEPARTMENT' && canCancel && (
                     <Button
                       variant='outline'
                       size='sm'

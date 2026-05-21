@@ -42,6 +42,7 @@ import { normalizeSubmissionStatus } from '@/features/submission/utils/submissio
 import { reportCampaignApi } from '../../api/report-management-api'
 import type { ReportAssignment, ReportDetail, SubmissionStatus } from '../../api/types'
 import { reportQueryKeys } from '../../utils/report-query'
+import { useAnyPermission } from '@/hooks/use-permission'
 
 type ApprovalActionType = 'DEPARTMENT' | 'DISTRICT' | null
 
@@ -76,6 +77,8 @@ export function ReportApprovalsTab({
   onRefetch,
 }: ReportApprovalsTabProps) {
   const queryClient = useQueryClient()
+  const canApprove = useAnyPermission(['approvals.approve'])
+  const canReject = useAnyPermission(['approvals.reject'])
   const [assignmentSearch, setAssignmentSearch] = useState('')
   const [assignmentStatusFilter, setAssignmentStatusFilter] =
     useState<'all' | SubmissionStatus>('all')
@@ -307,63 +310,71 @@ export function ReportApprovalsTab({
                 </Button>
                 {selectedAssignment.normalizedStatus === 'PENDING_DEPARTMENT' && (
                   <>
-                    <Button
-                      size='sm'
-                      className='h-9 rounded-xl bg-green-600 hover:bg-green-700'
-                      onClick={() => {
-                        setActionType('DEPARTMENT')
-                        setIsApproveModalOpen(true)
-                      }}
-                      disabled={approveDept.isPending}
-                    >
-                      <CheckCircle2 className='mr-2 size-4' />
-                      Duyệt phòng
-                    </Button>
-                    <Button
-                      variant='destructive'
-                      size='sm'
-                      className='h-9 rounded-xl'
-                      onClick={() => {
-                        setActionType('DEPARTMENT')
-                        setRejectReason('')
-                        setIsRejectModalOpen(true)
-                      }}
-                      disabled={rejectDept.isPending}
-                    >
-                      <XCircle className='mr-2 size-4' />
-                      Từ chối
-                    </Button>
+                    {canApprove && (
+                      <Button
+                        size='sm'
+                        className='h-9 rounded-xl bg-green-600 hover:bg-green-700'
+                        onClick={() => {
+                          setActionType('DEPARTMENT')
+                          setIsApproveModalOpen(true)
+                        }}
+                        disabled={approveDept.isPending}
+                      >
+                        <CheckCircle2 className='mr-2 size-4' />
+                        Duyệt phòng
+                      </Button>
+                    )}
+                    {canReject && (
+                      <Button
+                        variant='destructive'
+                        size='sm'
+                        className='h-9 rounded-xl'
+                        onClick={() => {
+                          setActionType('DEPARTMENT')
+                          setRejectReason('')
+                          setIsRejectModalOpen(true)
+                        }}
+                        disabled={rejectDept.isPending}
+                      >
+                        <XCircle className='mr-2 size-4' />
+                        Từ chối
+                      </Button>
+                    )}
                   </>
                 )}
 
                 {selectedAssignment.normalizedStatus === 'DEPARTMENT_APPROVED' && (
                   <>
-                    <Button
-                      size='sm'
-                      className='h-9 rounded-xl'
-                      onClick={() => {
-                        setActionType('DISTRICT')
-                        setIsApproveModalOpen(true)
-                      }}
-                      disabled={approveDist.isPending}
-                    >
-                      <CheckCircle2 className='mr-2 size-4' />
-                      Chốt số (xã)
-                    </Button>
-                    <Button
-                      variant='destructive'
-                      size='sm'
-                      className='h-9 rounded-xl'
-                      onClick={() => {
-                        setActionType('DISTRICT')
-                        setRejectReason('')
-                        setIsRejectModalOpen(true)
-                      }}
-                      disabled={rejectDist.isPending}
-                    >
-                      <XCircle className='mr-2 size-4' />
-                      Trả lại
-                    </Button>
+                    {canApprove && (
+                      <Button
+                        size='sm'
+                        className='h-9 rounded-xl'
+                        onClick={() => {
+                          setActionType('DISTRICT')
+                          setIsApproveModalOpen(true)
+                        }}
+                        disabled={approveDist.isPending}
+                      >
+                        <CheckCircle2 className='mr-2 size-4' />
+                        Chốt số (xã)
+                      </Button>
+                    )}
+                    {canReject && (
+                      <Button
+                        variant='destructive'
+                        size='sm'
+                        className='h-9 rounded-xl'
+                        onClick={() => {
+                          setActionType('DISTRICT')
+                          setRejectReason('')
+                          setIsRejectModalOpen(true)
+                        }}
+                        disabled={rejectDist.isPending}
+                      >
+                        <XCircle className='mr-2 size-4' />
+                        Trả lại
+                      </Button>
+                    )}
                   </>
                 )}
               </div>

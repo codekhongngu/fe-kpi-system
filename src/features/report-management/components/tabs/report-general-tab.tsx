@@ -42,6 +42,7 @@ import {
 import { reportCampaignApi } from '../../api/report-management-api'
 import type { CampaignScope, ReportDetail, UpdateReportInput } from '../../api/types'
 import { getErrorMessage, reportQueryKeys } from '../../utils/report-query'
+import { usePermission as useGlobalPermission } from '@/hooks/use-permission'
 import { ReportConfirmDialog } from '../report-confirm-dialog'
 import { ReportStatusBadge } from '../report-status'
 
@@ -194,6 +195,9 @@ export function ReportGeneralTab({
   report,
   onRefetch,
 }: ReportGeneralTabProps) {
+  const canUpdate = useGlobalPermission('report-campaigns.update')
+  const canDispatch = useGlobalPermission('report-campaigns.dispatch')
+
   const [confirmDispatchOpen, setConfirmDispatchOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -265,15 +269,17 @@ export function ReportGeneralTab({
                   </div>
                 </div>
                 <div className='flex gap-2'>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    disabled={report.status !== 'DRAFT'}
-                    onClick={() => setEditOpen(true)}
-                  >
-                    <PencilLine className='size-3 mr-1' />
-                    Chỉnh sửa
-                  </Button>
+                  {canUpdate && (
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      disabled={report.status !== 'DRAFT'}
+                      onClick={() => setEditOpen(true)}
+                    >
+                      <PencilLine className='size-3 mr-1' />
+                      Chỉnh sửa
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -419,7 +425,7 @@ export function ReportGeneralTab({
               </div>
             </ScrollArea>
 
-            {report.status === 'DRAFT' && (
+            {report.status === 'DRAFT' && canDispatch && (
               <div className='pt-2 border-t mt-auto'>
                 <Button
                   className='w-full rounded-xl bg-secondary font-bold text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/20'

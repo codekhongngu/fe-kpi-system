@@ -1,7 +1,5 @@
 import type { PeriodType } from '@/features/form-management/api/types'
 
-export type ReportRole = 'admin' | 'manager' | 'staff'
-
 export type ReportTab =
   | 'all'
   | 'unsubmitted'
@@ -196,14 +194,6 @@ export type UpdateReportInput = {
   deadline?: string
   priority?: ReportPriority
   note?: string | null
-}
-
-export type RoleVariant = {
-  role: ReportRole
-  label: string
-  defaultTab: ReportTab
-  visibleTabs: ReportTab[]
-  actions: Array<{ action: ReportAction; label: string; condition: string }>
 }
 
 export const reportTabs: Array<{ value: ReportTab; label: string }> = [

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { FilePlus2 } from 'lucide-react'
@@ -12,17 +12,17 @@ import { reportCampaignApi } from '../api/report-management-api'
 import type {
   CreateReportInput,
   CampaignStatus,
+  ReportAction,
   ReportFilters,
   ReportListItem,
   UpdateReportInput,
 } from '../api/types'
-import { PermissionGuard } from '../components/permission-guard'
+import { PermissionGuard } from '@/components/permission-guard'
 import { ReportConfirmDialog } from '../components/report-confirm-dialog'
 import { ReportFilters as ReportFiltersPanel } from '../components/report-filters'
 import { ReportFormDialog } from '../components/report-form-dialog'
 import { ReportTable } from '../components/report-table'
-import { RoleVariantsDialog } from '../components/role-variants-dialog'
-import { usePermission } from '../hooks/use-permission'
+import { usePermission } from '@/hooks/use-permission'
 import { useTemplateInfo } from '../hooks/use-template-info'
 import {
   defaultReportFilters,
@@ -94,7 +94,29 @@ function getConfirmCopy(confirmState: ConfirmState) {
 export function ReportListPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const permission = usePermission()
+
+  const canCreate  = usePermission('report-campaigns.create')
+  const canUpdate  = usePermission('report-campaigns.update')
+  const canAssign  = usePermission('report-campaigns.dispatch')
+  const canApprove = usePermission('approvals.approve')
+  const canReject  = usePermission('approvals.reject')
+  const canCancel  = usePermission('report-campaigns.delete')
+
+  const can = useCallback(
+    (action: ReportAction): boolean => {
+      switch (action) {
+        case 'report:create':  return canCreate
+        case 'report:update':  return canUpdate
+        case 'report:assign':  return canAssign
+        case 'report:approve': return canApprove
+        case 'report:reject':  return canReject
+        case 'report:cancel':  return canCancel
+        default:               return false
+      }
+    },
+    [canCreate, canUpdate, canAssign, canApprove, canReject, canCancel]
+  )
+
   const [filters, setFilters] = useState<ReportFilters>(defaultReportFilters)
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
@@ -102,7 +124,6 @@ export function ReportListPage() {
     null
   )
   const [confirmState, setConfirmState] = useState<ConfirmState>(null)
-  const [roleVariantsOpen, setRoleVariantsOpen] = useState(false)
 
   const campaignListParams = useMemo<CampaignListParams>(() => {
     const params: CampaignListParams = {
@@ -254,7 +275,7 @@ export function ReportListPage() {
           title='Danh sách báo cáo'
           subtitle='Quản lý danh sách báo cáo'
         >
-          <PermissionGuard action='report:create'>
+          <PermissionGuard permission='report-campaigns.create'>
             <Button onClick={openCreateForm}>
               <FilePlus2 />
               Tạo báo cáo
@@ -278,7 +299,7 @@ export function ReportListPage() {
             isLoading={
               listQuery.isLoading || listQuery.isFetching || templateLoading
             }
-            can={permission.can}
+            can={can}
             onView={(report) =>
               navigate({
                 to: '/report-management/details/$reportId',
@@ -331,12 +352,6 @@ export function ReportListPage() {
           }
         }}
         onConfirm={(reason) => actionMutation.mutate({ reason })}
-      />
-
-      <RoleVariantsDialog
-        open={roleVariantsOpen}
-        variants={permission.roleVariants}
-        onOpenChange={setRoleVariantsOpen}
       />
     </>
   )
