@@ -1,5 +1,12 @@
 import { apiClient } from '@/lib/api-client'
 import {
+  ALL_PERMISSION_CODES,
+  FIXED_ROLE_PERMISSIONS,
+  FIXED_ROLES,
+  isValidPermissionUuid,
+  mapPermissionCodesToUuidIds,
+  PERMISSION_GROUPS,
+  type DataScope,
   type CreatePeriodInput,
   type CreateRoleInput,
   type CreateUnitInput,
@@ -8,6 +15,7 @@ import {
   type Permission,
   type ReportPeriod,
   type Role,
+  type RolePermissionsResult,
   type SystemUser,
   type UpdatePeriodInput,
   type UpdateRoleInput,
@@ -15,14 +23,245 @@ import {
   type UpdateUserInput,
 } from './types'
 
-const DEFAULT_ROLE_NAMES = new Set([
-  'System Admin',
-  'Data Manager',
-  'Data Entry',
-  'Approver',
-])
+function buildCatalogPermissions(): Permission[] {
+  const labelByCode = new Map(
+    PERMISSION_GROUPS.flatMap((group) =>
+      group.permissions.map((item) => [item.code, item.label] as const)
+    )
+  )
+  return ALL_PERMISSION_CODES.map((code) => ({
+    id: '',
+    code,
+    name: labelByCode.get(code) ?? code,
+    description: null,
+  }))
+}
+
+function mapPermissionCodesToIds(
+  codes: string[],
+  permissions: Permission[]
+): string[] {
+  return mapPermissionCodesToUuidIds(codes, permissions).ids
+}
+
+function buildFixedRoles(permissions: Permission[]): Role[] {
+  return FIXED_ROLES.map((meta) => {
+    const codes = FIXED_ROLE_PERMISSIONS[meta.code] ?? []
+    const permissionIds = mapPermissionCodesToIds(codes, permissions)
+    return {
+      ...meta,
+      permissionIds,
+      permissions: codes,
+    }
+  })
+}
+
+async function fetchPermissionsFromApi(): Promise<Permission[]> {
+  type BePermission = {
+    id?: string
+    code?: string
+    name?: string
+    description?: string | null
+  }
+
+  let response: { data: { items?: BePermission[] } | BePermission[] }
+  try {
+    response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
+      '/permissions',
+      { params: { page: 1, limit: 500 } }
+    )
+  } catch {
+    response = await apiClient.get<{ items: BePermission[] } | BePermission[]>(
+      '/permissions'
+    )
+  }
+
+  const payload = response.data
+  const items = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { data?: unknown }).data)
+      ? ((payload as { data: BePermission[] }).data ?? [])
+      : ((payload as { items?: BePermission[] }).items ?? [])
+
+  const result: Permission[] = []
+  for (const permission of items) {
+    const id = String(permission.id ?? '').trim()
+    const code = String(permission.code ?? '').trim()
+    if (!id || !code || !isValidPermissionUuid(id)) continue
+    const rawName = String(permission.name ?? '').trim()
+    const name =
+      !rawName || rawName === code ? humanizePermissionCode(code) : rawName
+    result.push({
+      id,
+      code,
+      name: name || code,
+      description: permission.description ?? null,
+    })
+  }
+  return result
+}
+
+function mergePermissionsWithCatalog(apiItems: Permission[]): Permission[] {
+  const labelByCode = new Map(
+    PERMISSION_GROUPS.flatMap((group) =>
+      group.permissions.map((item) => [item.code, item.label] as const)
+    )
+  )
+
+  const fromApi: Permission[] = []
+  for (const item of apiItems) {
+    const code = (item.code ?? '').trim()
+    if (!code || !isValidPermissionUuid(item.id)) continue
+    const catalogLabel = labelByCode.get(code)
+    fromApi.push({
+      ...item,
+      code,
+      name: catalogLabel ?? item.name ?? code,
+    })
+  }
+
+  if (fromApi.length > 0) {
+    return fromApi.sort((a, b) => a.code.localeCompare(b.code, 'vi'))
+  }
+
+  return buildCatalogPermissions()
+}
 
 const NETWORK_DELAY_MS = 220
+
+type RolePermissionsItem =
+  | string
+  | {
+      id?: unknown
+      code?: unknown
+      name?: unknown
+      description?: unknown
+      permissionId?: unknown
+      permission?: { id?: unknown; code?: unknown; name?: unknown }
+    }
+
+function parseRolePermissionsPayload(payload: unknown): RolePermissionsResult {
+  const permissionIds: string[] = []
+  const permissionCodes: string[] = []
+  const permissions: Permission[] = []
+  const seenIds = new Set<string>()
+
+  const pushItem = (raw: RolePermissionsItem) => {
+    if (typeof raw === 'string') {
+      const code = raw.trim()
+      if (code && !permissionCodes.includes(code)) permissionCodes.push(code)
+      return
+    }
+    if (!raw || typeof raw !== 'object') return
+
+    const asAny = raw as {
+      id?: unknown
+      code?: unknown
+      name?: unknown
+      description?: unknown
+      permissionId?: unknown
+      permission?: { id?: unknown; code?: unknown; name?: unknown }
+    }
+
+    let id = ''
+    let code = ''
+    let name = ''
+
+    if (typeof asAny.id === 'string' && isValidPermissionUuid(asAny.id)) {
+      id = asAny.id
+    }
+    if (typeof asAny.permissionId === 'string' && isValidPermissionUuid(asAny.permissionId)) {
+      id = asAny.permissionId
+    }
+    if (asAny.permission && typeof asAny.permission === 'object') {
+      if (typeof asAny.permission.id === 'string' && isValidPermissionUuid(asAny.permission.id)) {
+        id = asAny.permission.id
+      }
+      if (typeof asAny.permission.code === 'string') {
+        code = asAny.permission.code.trim()
+      }
+      if (typeof asAny.permission.name === 'string') {
+        name = asAny.permission.name.trim()
+      }
+    }
+    if (typeof asAny.code === 'string') code = asAny.code.trim()
+    if (typeof asAny.name === 'string') name = asAny.name.trim()
+
+    if (code && !permissionCodes.includes(code)) permissionCodes.push(code)
+    if (id && !permissionIds.includes(id)) permissionIds.push(id)
+
+    if (id && code && !seenIds.has(id)) {
+      seenIds.add(id)
+      permissions.push({
+        id,
+        code,
+        name: name || humanizePermissionCode(code) || code,
+        description:
+          typeof asAny.description === 'string' ? asAny.description : null,
+      })
+    }
+  }
+
+  const arr = Array.isArray(payload)
+    ? payload
+    : payload && typeof payload === 'object'
+      ? Array.isArray((payload as { items?: unknown }).items)
+        ? (payload as { items: unknown[] }).items
+        : Array.isArray((payload as { data?: unknown }).data)
+          ? (payload as { data: unknown[] }).data
+          : Array.isArray((payload as { permissions?: unknown }).permissions)
+            ? (payload as { permissions: unknown[] }).permissions
+            : []
+      : []
+
+  ;(arr as RolePermissionsItem[]).forEach(pushItem)
+
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    const obj = payload as {
+      permissionIds?: unknown
+      permissionCodes?: unknown
+      permissions?: unknown
+    }
+    if (Array.isArray(obj.permissionIds)) {
+      for (const id of obj.permissionIds) {
+        if (typeof id === 'string' && isValidPermissionUuid(id) && !permissionIds.includes(id)) {
+          permissionIds.push(id)
+        }
+      }
+    }
+    if (Array.isArray(obj.permissionCodes)) {
+      for (const code of obj.permissionCodes) {
+        if (typeof code === 'string' && code.trim() && !permissionCodes.includes(code.trim())) {
+          permissionCodes.push(code.trim())
+        }
+      }
+    }
+    if (obj.permissions) {
+      const nested = parseRolePermissionsPayload(obj.permissions)
+      for (const id of nested.permissionIds) {
+        if (!permissionIds.includes(id)) permissionIds.push(id)
+      }
+      for (const code of nested.permissionCodes) {
+        if (!permissionCodes.includes(code)) permissionCodes.push(code)
+      }
+      for (const perm of nested.permissions) {
+        if (!seenIds.has(perm.id)) {
+          seenIds.add(perm.id)
+          permissions.push(perm)
+        }
+      }
+    }
+  }
+
+  return { permissionIds, permissionCodes, permissions }
+}
+
+async function fetchRolePermissionsFromApi(
+  roleId: string
+): Promise<RolePermissionsResult> {
+  const response = await apiClient.get(`/roles/${roleId}/permissions`)
+  return parseRolePermissionsPayload(response.data)
+}
 
 function titleize(value: string) {
   if (!value) return ''
@@ -102,62 +341,7 @@ const db: {
   roles: Role[]
   units: OrganizationUnit[]
 } = {
-  roles: [
-    {
-      id: 'r1',
-      code: 'system_admin',
-      name: 'System Admin',
-      description: 'Quản trị toàn bộ hệ thống',
-      dataScope: 'all_units',
-      permissionIds: [],
-      permissions: [
-        'feature:view',
-        'feature:create',
-        'feature:update',
-        'feature:delete',
-        'feature:export',
-        'report:assign',
-        'report:approve',
-      ],
-      isDefault: true,
-    },
-    {
-      id: 'r2',
-      code: 'data_manager',
-      name: 'Data Manager',
-      description: 'Điều phối giao và tổng hợp báo cáo',
-      dataScope: 'child_units',
-      permissionIds: [],
-      permissions: [
-        'feature:view',
-        'feature:create',
-        'feature:update',
-        'feature:export',
-        'report:assign',
-      ],
-      isDefault: true,
-    },
-    {
-      id: 'r3',
-      code: 'data_entry',
-      name: 'Data Entry',
-      description: 'Nhập và gửi báo cáo đơn vị',
-      dataScope: 'own_unit',
-      permissionIds: [],
-      permissions: ['feature:view', 'feature:create', 'feature:update'],
-      isDefault: true,
-    },
-    {
-      id: 'r4',
-      code: 'approver',
-      name: 'Approver',
-      description: 'Phê duyệt hoặc từ chối báo cáo',
-      dataScope: 'child_units',
-      permissionIds: [],
-      permissions: ['feature:view', 'feature:export', 'report:approve'],
-      isDefault: true,
-    },
-  ],
+  roles: buildFixedRoles(buildCatalogPermissions()),
   units: [
     {
       id: 'u1',
@@ -507,47 +691,16 @@ export const systemAdminMockApi = {
   },
 
   listPermissions: async () => {
-    type BePermission = {
-      id: string
-      code?: string
-      name?: string
-      description?: string | null
-      category?: string | null
-    }
-
-    let response: { data: { items?: BePermission[] } | BePermission[] }
     try {
-      response = await apiClient.get<
-        { items: BePermission[] } | BePermission[]
-      >('/permissions', { params: { page: 1, limit: 200 } })
-    } catch (error) {
-      response = await apiClient.get<
-        { items: BePermission[] } | BePermission[]
-      >('/permissions')
+      const apiItems = await fetchPermissionsFromApi()
+      if (apiItems.length > 0) {
+        return mergePermissionsWithCatalog(apiItems)
+      }
+    } catch {
+      // fallback below
     }
-    const payload = response.data
-    const items = Array.isArray(payload)
-      ? payload
-      : Array.isArray((payload as { data?: unknown }).data)
-        ? ((payload as { data: BePermission[] }).data ?? [])
-        : ((payload as { items?: BePermission[] }).items ?? [])
 
-    return items
-      .filter(
-        (permission) => Boolean(permission.id) && Boolean(permission.code)
-      )
-      .map<Permission>((permission) => {
-        const code = (permission.code ?? '').trim()
-        const rawName = (permission.name ?? '').trim()
-        const name =
-          !rawName || rawName === code ? humanizePermissionCode(code) : rawName
-        return {
-          id: permission.id,
-          code,
-          name: name || code,
-          description: permission.description ?? null,
-        }
-      })
+    return buildCatalogPermissions()
   },
 
   listRoles: async () => {
@@ -556,6 +709,7 @@ export const systemAdminMockApi = {
       code?: string
       name?: string
       description?: string | null
+      dataScope?: DataScope
       permissions?:
       | string[]
       | Array<{
@@ -639,263 +793,92 @@ export const systemAdminMockApi = {
       return fromRolePermissions
     }
 
-    const loadRolePermissions = async (roleId: string) => {
+    try {
+      let response: {
+        data: { items?: BeRole[] } | { data?: BeRole[] } | BeRole[]
+      }
       try {
-        const response = await apiClient.get<BeRole>(`/roles/${roleId}`)
-        return extractPermissions(response.data)
-      } catch (error) {
-        try {
-          const response = await apiClient.get<
-            | {
-              permissionIds?: string[]
-              permissionCodes?: string[]
-              permissions?: unknown
-            }
-            | unknown[]
-            | { items?: unknown[]; data?: unknown[] }
-          >(`/roles/${roleId}/permissions`)
+        response = await apiClient.get<
+          { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
+        >('/roles', { params: { page: 1, limit: 500 } })
+      } catch {
+        response = await apiClient.get<
+          { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
+        >('/roles')
+      }
+      const payload = response.data
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray((payload as { data?: unknown }).data)
+          ? ((payload as { data: BeRole[] }).data ?? [])
+          : ((payload as { items?: BeRole[] }).items ?? [])
 
-          const payload = response.data
-          const collectedFromPayload = extractPermissions({
-            id: roleId,
-            permissions: payload,
-          } as BeRole)
+      if (items.length === 0) return []
+
+      return Promise.all(
+        items.map(async (role) => {
+          const extracted = extractPermissions(role)
+          const code = (role.code ?? '').trim()
+
+          let permissionIds = Array.isArray(role.permissionIds)
+            ? role.permissionIds.filter(isValidPermissionUuid)
+            : extracted.permissionIds
+
+          let permissionCodes = Array.isArray(role.permissionCodes)
+            ? role.permissionCodes
+            : extracted.permissionCodes
 
           if (
-            payload &&
-            typeof payload === 'object' &&
-            !Array.isArray(payload)
+            permissionIds.length === 0 &&
+            permissionCodes.length === 0 &&
+            role.id
           ) {
-            const obj = payload as {
-              permissionIds?: unknown
-              permissionCodes?: unknown
-              permissions?: unknown
-            }
-            const permissionIds = Array.isArray(obj.permissionIds)
-              ? obj.permissionIds.filter(
-                (item): item is string => typeof item === 'string'
-              )
-              : []
-            const permissionCodes = Array.isArray(obj.permissionCodes)
-              ? obj.permissionCodes.filter(
-                (item): item is string => typeof item === 'string'
-              )
-              : []
-
-            return {
-              permissionIds:
-                permissionIds.length > 0
-                  ? permissionIds
-                  : collectedFromPayload.permissionIds,
-              permissionCodes:
-                permissionCodes.length > 0
-                  ? permissionCodes
-                  : collectedFromPayload.permissionCodes,
+            try {
+              const loaded = await fetchRolePermissionsFromApi(role.id)
+              permissionIds = loaded.permissionIds
+              permissionCodes = loaded.permissionCodes
+            } catch {
+              // keep empty
             }
           }
 
-          return collectedFromPayload
-        } catch (nestedError) {
-          void nestedError
-        }
-      }
-      return { permissionIds: [], permissionCodes: [] }
+          return {
+            id: role.id,
+            code,
+            name: role.name ?? '',
+            description: role.description ?? '',
+            dataScope: (role.dataScope ?? 'own_unit') as DataScope,
+            permissionIds,
+            permissions: permissionCodes,
+            isDefault: Boolean(role.isDefault ?? role.isSystem ?? true),
+          } satisfies Role
+        })
+      )
+    } catch {
+      return []
     }
-
-    let response: {
-      data: { items?: BeRole[] } | { data?: BeRole[] } | BeRole[]
-    }
-    try {
-      response = await apiClient.get<
-        { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
-      >('/roles', { params: { page: 1, limit: 500 } })
-    } catch (error) {
-      response = await apiClient.get<
-        { items: BeRole[] } | { data?: BeRole[] } | BeRole[]
-      >('/roles')
-    }
-    const payload = response.data
-    const items = Array.isArray(payload)
-      ? payload
-      : Array.isArray((payload as { data?: unknown }).data)
-        ? ((payload as { data: BeRole[] }).data ?? [])
-        : ((payload as { items?: BeRole[] }).items ?? [])
-
-    const baseRoles = items.map<Role>((role) => {
-      const extracted = extractPermissions(role)
-
-      const permissionIds = Array.isArray(role.permissionIds)
-        ? role.permissionIds
-        : extracted.permissionIds
-
-      const permissionCodes = Array.isArray(role.permissionCodes)
-        ? role.permissionCodes
-        : extracted.permissionCodes
-
-      return {
-        id: role.id,
-        code: role.code ?? '',
-        name: role.name ?? '',
-        description: role.description ?? '',
-        dataScope: 'own_unit',
-        permissionIds,
-        permissions: permissionCodes,
-        isDefault:
-          role.isDefault ??
-          role.isSystem ??
-          DEFAULT_ROLE_NAMES.has(role.name ?? ''),
-      }
-    })
-
-    const needsEnrich = baseRoles.some(
-      (role) => role.permissionIds.length === 0 && role.permissions.length === 0
-    )
-
-    if (!needsEnrich) return baseRoles
-
-    const enriched = await Promise.all(
-      baseRoles.map(async (role) => {
-        if (role.permissionIds.length > 0 || role.permissions.length > 0)
-          return role
-
-        const loaded = await loadRolePermissions(role.id)
-        return {
-          ...role,
-          permissionIds: loaded.permissionIds,
-          permissions: loaded.permissionCodes,
-        }
-      })
-    )
-
-    return enriched
   },
 
-  getRolePermissions: async (roleId: string) => {
-    type RolePermissionsItem =
-      | string
-      | {
-        id?: unknown
-        code?: unknown
-        permissionId?: unknown
-        permission?: { id?: unknown; code?: unknown }
-      }
-
-    const collect = (
-      raw: unknown
-    ): { permissionIds: string[]; permissionCodes: string[] } => {
-      const ids: string[] = []
-      const codes: string[] = []
-
-      const arr = Array.isArray(raw)
-        ? raw
-        : raw && typeof raw === 'object'
-          ? Array.isArray((raw as { items?: unknown }).items)
-            ? (raw as { items: unknown[] }).items
-            : Array.isArray((raw as { data?: unknown }).data)
-              ? (raw as { data: unknown[] }).data
-              : []
-          : []
-
-        ; (arr as RolePermissionsItem[]).forEach((item) => {
-          if (typeof item === 'string') {
-            codes.push(item)
-            return
-          }
-          if (!item || typeof item !== 'object') return
-
-          const asAny = item as {
-            id?: unknown
-            code?: unknown
-            permissionId?: unknown
-            permission?: { id?: unknown; code?: unknown }
-          }
-
-          if (typeof asAny.id === 'string') ids.push(asAny.id)
-          if (typeof asAny.code === 'string') codes.push(asAny.code)
-          if (typeof asAny.permissionId === 'string') ids.push(asAny.permissionId)
-          if (asAny.permission && typeof asAny.permission === 'object') {
-            if (typeof asAny.permission.id === 'string')
-              ids.push(asAny.permission.id)
-            if (typeof asAny.permission.code === 'string')
-              codes.push(asAny.permission.code)
-          }
-        })
-
-      return {
-        permissionIds: ids.filter(Boolean),
-        permissionCodes: codes.filter(Boolean),
-      }
-    }
-
-    const extract = (payload: unknown) => {
-      if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-        const obj = payload as {
-          permissionIds?: unknown
-          permissionCodes?: unknown
-          permissions?: unknown
-        }
-        const permissionIds = Array.isArray(obj.permissionIds)
-          ? obj.permissionIds.filter(
-            (item): item is string => typeof item === 'string'
-          )
-          : []
-        const permissionCodes = Array.isArray(obj.permissionCodes)
-          ? obj.permissionCodes.filter(
-            (item): item is string => typeof item === 'string'
-          )
-          : []
-
-        const fromPermissions = collect(obj.permissions)
-        const fromPayload = collect(payload)
-
-        return {
-          permissionIds:
-            permissionIds.length > 0
-              ? permissionIds
-              : fromPermissions.permissionIds.length > 0
-                ? fromPermissions.permissionIds
-                : fromPayload.permissionIds,
-          permissionCodes:
-            permissionCodes.length > 0
-              ? permissionCodes
-              : fromPermissions.permissionCodes.length > 0
-                ? fromPermissions.permissionCodes
-                : fromPayload.permissionCodes,
-        }
-      }
-
-      return collect(payload)
-    }
-
+  getRolePermissions: async (roleId: string): Promise<RolePermissionsResult> => {
     try {
-      const response = await apiClient.get(`/roles/${roleId}`)
-      const extracted = extract(response.data)
-      return extracted.permissionIds
-    } catch (error) {
-      try {
-        const response = await apiClient.get(`/roles/${roleId}/permissions`)
-        const extracted = extract(response.data)
-        return extracted.permissionIds
-      } catch (nestedError) {
-        void nestedError
+      return await fetchRolePermissionsFromApi(roleId)
+    } catch {
+      return {
+        permissionIds: [],
+        permissionCodes: [],
+        permissions: [],
       }
     }
-    return []
   },
 
   createRole: async (input: CreateRoleInput) => {
-    const mapCodesToIds = async (codes: string[]) => {
-      if (codes.length === 0) return []
-      const permissions = await systemAdminMockApi.listPermissions()
-      return codes
-        .map((code) => permissions.find((item) => item.code === code)?.id ?? '')
-        .filter((id) => Boolean(id))
-    }
-
     const permissionIds =
       input.permissionIds.length > 0
-        ? input.permissionIds
-        : await mapCodesToIds(input.permissions)
+        ? input.permissionIds.filter(isValidPermissionUuid)
+        : mapPermissionCodesToIds(
+            input.permissions,
+            await systemAdminMockApi.listPermissions()
+          )
 
     const response = await apiClient.post('/roles', {
       code: input.code,
@@ -929,18 +912,13 @@ export const systemAdminMockApi = {
   },
 
   updateRole: async (roleId: string, input: UpdateRoleInput) => {
-    const mapCodesToIds = async (codes: string[]) => {
-      if (codes.length === 0) return []
-      const permissions = await systemAdminMockApi.listPermissions()
-      return codes
-        .map((code) => permissions.find((item) => item.code === code)?.id ?? '')
-        .filter((id) => Boolean(id))
-    }
-
     const permissionIds =
       input.permissionIds.length > 0
-        ? input.permissionIds
-        : await mapCodesToIds(input.permissions)
+        ? input.permissionIds.filter(isValidPermissionUuid)
+        : mapPermissionCodesToIds(
+            input.permissions,
+            await systemAdminMockApi.listPermissions()
+          )
 
     await apiClient.patch(`/roles/${roleId}`, {
       name: input.name,
@@ -958,7 +936,16 @@ export const systemAdminMockApi = {
   },
 
   updateRolePermissions: async (roleId: string, permissionIds: string[]) => {
-    await apiClient.patch(`/roles/${roleId}/permissions`, { permissionIds })
+    const validIds = permissionIds.filter(isValidPermissionUuid)
+    if (validIds.length !== permissionIds.length) {
+      throw new Error(
+        'ID quyền không hợp lệ. Vui lòng tải lại trang và thử lại.'
+      )
+    }
+
+    await apiClient.patch(`/roles/${roleId}/permissions`, {
+      permissionIds: validIds,
+    })
 
     const roles = await systemAdminMockApi.listRoles()
     const updated = roles.find((role) => role.id === roleId)
@@ -966,6 +953,37 @@ export const systemAdminMockApi = {
       throw new Error('Không tìm thấy nhóm quyền.')
     }
     return updated
+  },
+
+  updateRolePermissionsByCodes: async (roleId: string, codes: string[]) => {
+    let rolePerms: Permission[] = []
+    try {
+      const loaded = await fetchRolePermissionsFromApi(roleId)
+      rolePerms = loaded.permissions
+    } catch {
+      // fallback catalog below
+    }
+
+    const catalogPerms = await fetchPermissionsFromApi()
+    const mergedByCode = new Map<string, Permission>()
+    for (const item of [...catalogPerms, ...rolePerms]) {
+      if (item.code && isValidPermissionUuid(item.id)) {
+        mergedByCode.set(item.code, item)
+      }
+    }
+
+    const { ids, missingCodes } = mapPermissionCodesToUuidIds(
+      codes,
+      Array.from(mergedByCode.values())
+    )
+
+    if (missingCodes.length > 0) {
+      throw new Error(
+        `Không tìm thấy quyền trên máy chủ (${missingCodes.length} mã). Vui lòng tải lại trang hoặc liên hệ quản trị.`
+      )
+    }
+
+    return systemAdminMockApi.updateRolePermissions(roleId, ids)
   },
 
   deleteRole: async (roleId: string) => {

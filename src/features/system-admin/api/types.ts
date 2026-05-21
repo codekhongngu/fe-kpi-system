@@ -35,6 +35,12 @@ export type Permission = {
   description?: string | null
 }
 
+export type RolePermissionsResult = {
+  permissionIds: string[]
+  permissionCodes: string[]
+  permissions: Permission[]
+}
+
 export type OrganizationUnit = {
   id: string
   code: string
@@ -91,16 +97,6 @@ export const dataScopes: Array<{ value: DataScope; label: string }> = [
   { value: 'all_units', label: 'Toàn hệ thống' },
   { value: 'own_unit', label: 'Đơn vị mình' },
   { value: 'child_units', label: 'Đơn vị con' },
-]
-
-export const rolePermissionCatalog: string[] = [
-  'feature:view',
-  'feature:create',
-  'feature:update',
-  'feature:delete',
-  'feature:export',
-  'report:assign',
-  'report:approve',
 ]
 
 export const periodTypeOptions: Array<{ value: PeriodType; label: string }> = [
@@ -199,6 +195,184 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
 export const ALL_PERMISSION_CODES: string[] =
   PERMISSION_GROUPS.flatMap(g => g.permissions.map(p => p.code))
 
+const CATALOG_LABEL_BY_CODE = new Map(
+  PERMISSION_GROUPS.flatMap((g) =>
+    g.permissions.map((p) => [p.code, p.label] as const)
+  )
+)
+
+type PermissionGroupMeta = { label: string; icon: string; order: number }
+
+/** Meta nhóm quyền (icon/label) — submissions & approvals tách riêng */
+const PERMISSION_GROUP_META_BY_KEY: Record<string, PermissionGroupMeta> = {
+  dashboard: { label: 'Dashboard', icon: '📊', order: 0 },
+  units: { label: 'Quản lý đơn vị', icon: '🏢', order: 10 },
+  'field-categories': { label: 'Lĩnh vực biểu mẫu', icon: '📁', order: 20 },
+  users: { label: 'Tài khoản người dùng', icon: '👤', order: 30 },
+  roles: { label: 'Vai trò & Phân quyền', icon: '🔑', order: 40 },
+  forms: { label: 'Quản lý biểu mẫu', icon: '📋', order: 50 },
+  'report-campaigns': { label: 'Quản trị đợt báo cáo', icon: '📅', order: 60 },
+  submissions: { label: 'Nhiệm vụ', icon: '📥', order: 70 },
+  approvals: { label: 'Phê duyệt', icon: '✅', order: 80 },
+  'submissions-approvals': {
+    label: 'Nhiệm vụ & Phê duyệt',
+    icon: '✅',
+    order: 75,
+  },
+}
+
+function getPermissionGroupMeta(key: string): PermissionGroupMeta {
+  return (
+    PERMISSION_GROUP_META_BY_KEY[key] ?? {
+      label: titleizeGroupKey(key),
+      icon: '📌',
+      order: 900,
+    }
+  )
+}
+
+function permissionGroupKeyFromCode(code: string): string {
+  const dot = code.indexOf('.')
+  return dot > 0 ? code.slice(0, dot) : code
+}
+
+function titleizeGroupKey(key: string): string {
+  return key
+    .split(/[-_]/g)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
+}
+
+/** Danh sách quyền phẳng từ GET /roles/:id/permissions */
+export function flattenRolePermissionsForMatrix(
+  data: RolePermissionsResult
+): Permission[] {
+  if (data.permissions.length > 0) {
+    return data.permissions.filter((p) => Boolean(p.code?.trim()))
+  }
+
+  const items: Permission[] = []
+  const codes = data.permissionCodes.map((c) => c.trim()).filter(Boolean)
+  const ids = data.permissionIds
+
+  if (codes.length > 0 && codes.length === ids.length) {
+    for (let i = 0; i < codes.length; i += 1) {
+      const code = codes[i]
+      items.push({
+        id: ids[i] ?? '',
+        code,
+        name: CATALOG_LABEL_BY_CODE.get(code) ?? code,
+        description: null,
+      })
+    }
+    return items
+  }
+
+  for (const code of codes) {
+    items.push({
+      id: '',
+      code,
+      name: CATALOG_LABEL_BY_CODE.get(code) ?? code,
+      description: null,
+    })
+  }
+
+  return items
+}
+
+export function permissionIdsFromRolePermissions(
+  data: RolePermissionsResult
+): string[] {
+  const flat = flattenRolePermissionsForMatrix(data)
+  const fromFlat = flat
+    .map((p) => p.id)
+    .filter((id) => isValidPermissionUuid(id))
+  if (fromFlat.length > 0) return fromFlat
+  return data.permissionIds.filter((id) => isValidPermissionUuid(id))
+}
+
+/** Nhóm quyền cho ma trận UI — nguồn từ GET /permissions (danh sách đầy đủ) */
+export function buildPermissionMatrixGroups(
+  permissions: Permission[]
+): PermissionGroup[] {
+  const byKey = new Map<string, PermissionItem[]>()
+
+  for (const perm of permissions) {
+    const code = perm.code.trim()
+    if (!code) continue
+    const key = permissionGroupKeyFromCode(code)
+    const list = byKey.get(key) ?? []
+    list.push({
+      code,
+      label: CATALOG_LABEL_BY_CODE.get(code) ?? (perm.name?.trim() || code),
+    })
+    byKey.set(key, list)
+  }
+
+  return [...byKey.entries()]
+    .sort(([keyA], [keyB]) => {
+      const orderA = getPermissionGroupMeta(keyA).order
+      const orderB = getPermissionGroupMeta(keyB).order
+      if (orderA !== orderB) return orderA - orderB
+      return keyA.localeCompare(keyB, 'vi')
+    })
+    .map(([key, items]) => {
+      const meta = getPermissionGroupMeta(key)
+      return {
+        key,
+        label: meta.label,
+        icon: meta.icon,
+        permissions: [...items].sort((a, b) =>
+          a.label.localeCompare(b.label, 'vi')
+        ),
+      }
+    })
+}
+
+/** 4 vai trò cố định — thứ tự hiển thị trên RolesTab */
+export const FIXED_ROLES: Array<{
+  id: string
+  code: string
+  name: string
+  description: string
+  dataScope: DataScope
+  isDefault: boolean
+}> = [
+  {
+    id: 'role-super-admin',
+    code: 'SUPER_ADMIN',
+    name: 'Quản trị viên hệ thống',
+    description: 'Toàn quyền quản trị hệ thống',
+    dataScope: 'all_units',
+    isDefault: true,
+  },
+  {
+    id: 'role-commune-manager',
+    code: 'COMMUNE_MANAGER',
+    name: 'Quản lý xã',
+    description: 'Quản lý biểu mẫu, đợt báo cáo và phê duyệt cấp xã',
+    dataScope: 'all_units',
+    isDefault: true,
+  },
+  {
+    id: 'role-dept-manager',
+    code: 'DEPARTMENT_MANAGER',
+    name: 'Quản lý phòng ban',
+    description: 'Xem báo cáo đơn vị và phê duyệt nội bộ phòng',
+    dataScope: 'child_units',
+    isDefault: true,
+  },
+  {
+    id: 'role-dept-staff',
+    code: 'DEPARTMENT_STAFF',
+    name: 'Cán bộ phòng ban',
+    description: 'Nhập và nộp báo cáo được giao',
+    dataScope: 'own_unit',
+    isDefault: true,
+  },
+]
+
 export const FIXED_ROLE_PERMISSIONS: Record<string, string[]> = {
   SUPER_ADMIN: ALL_PERMISSION_CODES,
   COMMUNE_MANAGER: [
@@ -221,4 +395,33 @@ export const FIXED_ROLE_PERMISSIONS: Record<string, string[]> = {
     'submissions.view-assigned', 'submissions.input',
     'submissions.submit', 'submissions.cancel',
   ],
+}
+
+const PERMISSION_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export function isValidPermissionUuid(id: string): boolean {
+  return PERMISSION_UUID_RE.test(id.trim())
+}
+
+export function mapPermissionCodesToUuidIds(
+  codes: string[],
+  permissions: Pick<Permission, 'id' | 'code'>[]
+): { ids: string[]; missingCodes: string[] } {
+  const byCode = new Map<string, string>()
+  for (const permission of permissions) {
+    const code = (permission.code ?? '').trim()
+    if (!code || !isValidPermissionUuid(permission.id)) continue
+    byCode.set(code, permission.id)
+  }
+
+  const ids: string[] = []
+  const missingCodes: string[] = []
+  for (const code of codes) {
+    const id = byCode.get(code)
+    if (id) ids.push(id)
+    else missingCodes.push(code)
+  }
+
+  return { ids, missingCodes }
 }
