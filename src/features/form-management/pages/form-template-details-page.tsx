@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/template-management-api'
 import type { PeriodType, TemplateType } from '../api/types'
+import { usePermission } from '@/hooks/use-permission'
 import { TemplateStatusBadge } from '../components/shared/template-status-badge'
 import { TemplateAttributesTab } from '../components/tabs/template-attributes-tab'
 import { TemplateCellConfigsTab } from '../components/tabs/template-cell-configs-tab'
@@ -65,6 +66,10 @@ export function FormTemplateDetailsPage({
 }: FormTemplateDetailsPageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const canUpdate  = usePermission('forms.update')
+  const canPublish = usePermission('forms.publish')
+  const canCreate  = usePermission('forms.create')
+  const canDelete  = usePermission('forms.delete')
   const categoriesQuery = useFieldCategoriesCatalogQuery()
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [formState, setFormState] = useState<FormModalState>(emptyFormState)
@@ -348,33 +353,35 @@ export function FormTemplateDetailsPage({
                   Hành động
                 </div>
                 <div className='flex flex-wrap gap-1 mt-1'>
-                  <Button variant='outline' size='sm' onClick={openModal}>
-                    <PencilLine className='size-3' />
-                    <span className='hidden sm:inline ml-1'>Chỉnh sửa</span>
-                  </Button>
+                  {canUpdate && (
+                    <Button variant='outline' size='sm' onClick={openModal}>
+                      <PencilLine className='size-3' />
+                      <span className='hidden sm:inline ml-1'>Chỉnh sửa</span>
+                    </Button>
+                  )}
 
-                  {['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') && (
+                  {canPublish && ['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') && (
                     <Button variant='outline' size='sm' onClick={() => archiveMutation.mutate()}>
                       <Archive className='size-3' />
                       <span className='hidden sm:inline ml-1'>Lưu trữ</span>
                     </Button>
                   )}
 
-                  {template.templateStatus === 'DRAFT' && canEdit && (
+                  {canPublish && template.templateStatus === 'DRAFT' && canEdit && (
                     <Button size='sm' onClick={handleMarkReady}>
                       <FilePlus2 className='size-3' />
                       <span className='hidden sm:inline ml-1'>Sẵn sàng</span>
                     </Button>
                   )}
 
-                  {['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') && (
+                  {canCreate && ['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') && (
                     <Button variant='outline' size='sm' onClick={() => cloneMutation.mutate()}>
                       <Copy className='size-3' />
                       <span className='hidden sm:inline ml-1'>Sao chép</span>
                     </Button>
                   )}
 
-                  {template.templateStatus === 'DRAFT' && (
+                  {canDelete && template.templateStatus === 'DRAFT' && (
                     <Button variant='destructive' size='sm' onClick={() => deleteMutation.mutate()}>
                       <Trash2 className='size-3' />
                       <span className='hidden sm:inline ml-1'>Xóa</span>

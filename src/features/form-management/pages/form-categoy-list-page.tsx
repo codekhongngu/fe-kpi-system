@@ -32,6 +32,8 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PermissionGuard } from '@/components/permission-guard'
+import { usePermission } from '@/hooks/use-permission'
 import { formManagementApi } from '../api/template-management-api'
 import { type FieldCategory } from '../api/types'
 
@@ -55,6 +57,9 @@ const defaultForm: FieldCategoryFormState = {
 
 export function FormCategoryListPage() {
   const queryClient = useQueryClient()
+  const canCreate = usePermission('field-categories.create')
+  const canUpdate = usePermission('field-categories.update')
+  const canDelete = usePermission('field-categories.delete')
 
   const categoriesQuery = useQuery({
     queryKey: ['form-management', 'field-categories'],
@@ -182,10 +187,12 @@ export function FormCategoryListPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <Button onClick={openCreateDialog}>
-            <PlusCircle />
-            Thêm lĩnh vực
-          </Button>
+          <PermissionGuard permission='field-categories.create'>
+            <Button onClick={openCreateDialog}>
+              <PlusCircle />
+              Thêm lĩnh vực
+            </Button>
+          </PermissionGuard>
         </div>
       </CardHeader>
       <CardContent>
@@ -246,22 +253,26 @@ export function FormCategoryListPage() {
                   </TableCell>
                   <TableCell className='text-right'>
                     <div className='flex justify-end gap-1'>
-                      <Button
-                        size='icon'
-                        variant='outline'
-                        onClick={() => openEditDialog(item)}
-                        title='Sửa lĩnh vực'
-                      >
-                        <UserPen />
-                      </Button>
-                      <Button
-                        size='icon'
-                        variant='destructive'
-                        onClick={() => setDeletingCategory(item)}
-                        title='Xóa lĩnh vực'
-                      >
-                        <Trash2 />
-                      </Button>
+                      {canUpdate && (
+                        <Button
+                          size='icon'
+                          variant='outline'
+                          onClick={() => openEditDialog(item)}
+                          title='Sửa lĩnh vực'
+                        >
+                          <UserPen />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          size='icon'
+                          variant='destructive'
+                          onClick={() => setDeletingCategory(item)}
+                          title='Xóa lĩnh vực'
+                        >
+                          <Trash2 />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

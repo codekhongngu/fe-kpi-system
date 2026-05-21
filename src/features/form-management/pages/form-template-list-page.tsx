@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { DataTablePagination } from '@/components/data-table/data-table-pagination'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
+import { PermissionGuard } from '@/components/permission-guard'
 import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/template-management-api'
 import type { FormTemplate, PeriodType, TemplateType } from '../api/types'
@@ -228,10 +229,12 @@ export function FormTemplateListPage() {
           title='Danh sách biểu mẫu'
           subtitle='Quản lý danh sách biểu mẫu báo cáo'
         >
-          <Button onClick={openCreateModal}>
-            <PlusCircle />
-            Thêm mới
-          </Button>
+          <PermissionGuard permission='forms.create'>
+            <Button onClick={openCreateModal}>
+              <PlusCircle />
+              Thêm mới
+            </Button>
+          </PermissionGuard>
         </PageBreadcrumb>
 
         <TemplateListFilter

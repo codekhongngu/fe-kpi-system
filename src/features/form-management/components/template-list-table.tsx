@@ -33,6 +33,7 @@ import type {
   TemplateType,
 } from '../api/types'
 import { TemplateStatusBadge } from './shared/template-status-badge'
+import { usePermission } from '@/hooks/use-permission'
 
 const periodTypeLabel: Record<PeriodType, string> = {
   TUAN: 'Tuần',
@@ -70,6 +71,10 @@ export function TemplateListTable({
   onArchive,
   onDelete,
 }: TemplateListTableProps) {
+  const canUpdate  = usePermission('forms.update')
+  const canPublish = usePermission('forms.publish')
+  const canCreate  = usePermission('forms.create')
+  const canDelete  = usePermission('forms.delete')
   return (
     <div className='overflow-auto max-h-[600px] rounded-md border bg-card'>
       <Table data-slot="table">
@@ -140,16 +145,18 @@ export function TemplateListTable({
                         Xem chi tiết
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onEditGeneral(template)}
-                      className='cursor-pointer'
-                    >
-                      <span className='flex items-center gap-2'>
-                        <PencilLine className='size-4' />
-                        Chỉnh sửa thông tin
-                      </span>
-                    </DropdownMenuItem>
-                    {onMarkReady &&
+                    {canUpdate && (
+                      <DropdownMenuItem
+                        onClick={() => onEditGeneral(template)}
+                        className='cursor-pointer'
+                      >
+                        <span className='flex items-center gap-2'>
+                          <PencilLine className='size-4' />
+                          Chỉnh sửa thông tin
+                        </span>
+                      </DropdownMenuItem>
+                    )}
+                    {canPublish && onMarkReady &&
                       (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
                         <DropdownMenuItem
                           onClick={() => onMarkReady(template)}
@@ -161,7 +168,7 @@ export function TemplateListTable({
                           </span>
                         </DropdownMenuItem>
                       )}
-                    {onArchive &&
+                    {canPublish && onArchive &&
                       ['READY', 'IN_USE'].includes(
                         template.templateStatus ?? 'DRAFT'
                       ) && (
@@ -175,7 +182,7 @@ export function TemplateListTable({
                           </span>
                         </DropdownMenuItem>
                       )}
-                    {onClone &&
+                    {canCreate && onClone &&
                       ['IN_USE', 'ARCHIVED'].includes(
                         template.templateStatus ?? 'DRAFT'
                       ) && (
@@ -189,7 +196,7 @@ export function TemplateListTable({
                           </span>
                         </DropdownMenuItem>
                       )}
-                    {onDelete &&
+                    {canDelete && onDelete &&
                       (template.templateStatus ?? 'DRAFT') === 'DRAFT' && (
                         <>
                           <DropdownMenuSeparator />
