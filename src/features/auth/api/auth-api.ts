@@ -43,7 +43,12 @@ export type MeResponse = {
   phone?: string | null
   avatarUrl?: string | null
   orgId: string | null
+  /** Tên đơn vị/phòng ban. Null nếu user chưa gắn org. */
+  orgName: string | null
   roleIds: string[]
+  roles: string[]
+  /** Vai trò ưu tiên cao nhất: SUPER_ADMIN > COMMUNE_MANAGER > DEPARTMENT_MANAGER > DEPARTMENT_STAFF */
+  primaryRole: { code: string; name: string } | null
   permissions: string[]
   language: string
   timezone: string

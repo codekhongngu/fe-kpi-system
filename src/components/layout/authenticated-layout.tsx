@@ -4,15 +4,13 @@ import { Outlet } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
-import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 // import { SkipToMain } from '@/components/skip-to-main'
 import { Header } from '@/components/layout/header'
 import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
+import { UserContextBadge } from '@/components/layout/user-context-badge'
 import { authApi } from '@/features/auth/api/auth-api'
-
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
 }
@@ -48,8 +46,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   }
 
   return (
-    <SearchProvider>
-      <LayoutProvider>
+    <LayoutProvider>
         <SidebarProvider defaultOpen className='min-h-svh w-full bg-background'>
           {/* <SkipToMain /> */}
           <AppSidebar />
@@ -69,15 +66,16 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
             )}
           >
             <Header fixed>
-              <Search />
+              <UserContextBadge />
               <div className='ms-auto flex items-center space-x-4'>
                 <ProfileDropdown />
               </div>
             </Header>
+            <div className="pt-4">
             {children ?? <Outlet />}
+            </div>
           </SidebarInset>
         </SidebarProvider>
       </LayoutProvider>
-    </SearchProvider>
   )
 }
