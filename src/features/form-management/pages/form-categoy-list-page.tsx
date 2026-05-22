@@ -33,7 +33,6 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PermissionGuard } from '@/components/permission-guard'
-import { usePermission } from '@/hooks/use-permission'
 import { formManagementApi } from '../api/template-management-api'
 import { type FieldCategory } from '../api/types'
 
@@ -55,10 +54,37 @@ const defaultForm: FieldCategoryFormState = {
   isActive: true,
 }
 
+function FormCategoryAccessDenied() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Lĩnh vực biểu mẫu</CardTitle>
+        <CardDescription>
+          Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className='text-sm text-muted-foreground'>
+          Bạn không có quyền xem lĩnh vực biểu mẫu.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function FormCategoryListPage() {
+  return (
+    <PermissionGuard
+      permission='field-categories.view'
+      fallback={<FormCategoryAccessDenied />}
+    >
+      <FormCategoryListContent />
+    </PermissionGuard>
+  )
+}
+
+function FormCategoryListContent() {
   const queryClient = useQueryClient()
-  const canUpdate = usePermission('field-categories.update')
-  const canDelete = usePermission('field-categories.delete')
 
   const categoriesQuery = useQuery({
     queryKey: ['form-management', 'field-categories'],
@@ -251,28 +277,35 @@ export function FormCategoryListPage() {
                     {item.description ?? '-'}
                   </TableCell>
                   <TableCell className='text-right'>
-                    <div className='flex justify-end gap-1'>
-                      {canUpdate && (
-                        <Button
-                          size='icon'
-                          variant='outline'
-                          onClick={() => openEditDialog(item)}
-                          title='Sửa lĩnh vực'
-                        >
-                          <UserPen />
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          size='icon'
-                          variant='destructive'
-                          onClick={() => setDeletingCategory(item)}
-                          title='Xóa lĩnh vực'
-                        >
-                          <Trash2 />
-                        </Button>
-                      )}
-                    </div>
+                    <PermissionGuard
+                      permission={[
+                        'field-categories.update',
+                        'field-categories.delete',
+                      ]}
+                    >
+                      <div className='flex justify-end gap-1'>
+                        <PermissionGuard permission='field-categories.update'>
+                          <Button
+                            size='icon'
+                            variant='outline'
+                            onClick={() => openEditDialog(item)}
+                            title='Sửa lĩnh vực'
+                          >
+                            <UserPen />
+                          </Button>
+                        </PermissionGuard>
+                        <PermissionGuard permission='field-categories.delete'>
+                          <Button
+                            size='icon'
+                            variant='destructive'
+                            onClick={() => setDeletingCategory(item)}
+                            title='Xóa lĩnh vực'
+                          >
+                            <Trash2 />
+                          </Button>
+                        </PermissionGuard>
+                      </div>
+                    </PermissionGuard>
                   </TableCell>
                 </TableRow>
               ))}
@@ -375,29 +408,39 @@ export function FormCategoryListPage() {
             <Button variant='outline' onClick={closeForm}>
               Hủy
             </Button>
-            <Button
-              onClick={() => {
-                const name = form.name.trim()
-                if (editingCategory) {
-                  if (!name) {
-                    toast.error('Tên lĩnh vực là bắt buộc.')
-                    return
-                  }
-                  updateMutation.mutate()
-                } else {
-                  const code = form.code.trim().toLowerCase()
-                  if (!code || !name) {
-                    toast.error('Mã lĩnh vực và tên lĩnh vực là bắt buộc.')
-                    return
-                  }
-                  setForm((prev) => ({ ...prev, code }))
-                  createMutation.mutate()
-                }
-              }}
-              disabled={createMutation.isPending || updateMutation.isPending}
+            <PermissionGuard
+              permission={
+                editingCategory
+                  ? 'field-categories.update'
+                  : 'field-categories.create'
+              }
             >
-              Lưu
-            </Button>
+              <Button
+                onClick={() => {
+                  const name = form.name.trim()
+                  if (editingCategory) {
+                    if (!name) {
+                      toast.error('Tên lĩnh vực là bắt buộc.')
+                      return
+                    }
+                    updateMutation.mutate()
+                  } else {
+                    const code = form.code.trim().toLowerCase()
+                    if (!code || !name) {
+                      toast.error('Mã lĩnh vực và tên lĩnh vực là bắt buộc.')
+                      return
+                    }
+                    setForm((prev) => ({ ...prev, code }))
+                    createMutation.mutate()
+                  }
+                }}
+                disabled={
+                  createMutation.isPending || updateMutation.isPending
+                }
+              >
+                Lưu
+              </Button>
+            </PermissionGuard>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -32,14 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { PermissionGuard } from '@/components/permission-guard'
 import { canRunReportAction } from '../api/report-management-api'
-import type { ReportAction, ReportListItem } from '../api/types'
+import type { ReportListItem } from '../api/types'
 import { ReportStatusBadge } from './report-status'
 
 type ReportTableProps = {
   data: ReportListItem[]
   isLoading: boolean
-  can: (action: ReportAction) => boolean
   onView: (report: ReportListItem) => void
   onEdit: (report: ReportListItem) => void
   onCancel: (report: ReportListItem) => void
@@ -56,7 +56,6 @@ function formatDate(value: string | null) {
 export function ReportTable({
   data,
   isLoading,
-  can,
   onView,
   onEdit,
   onCancel,
@@ -160,40 +159,47 @@ export function ReportTable({
                     <Eye className='me-2 size-4' />
                     Xem chi tiết
                   </DropdownMenuItem>
-                  {can('report:update') &&
-                    canRunReportAction(report, 'report:update') && (
+                  <PermissionGuard permission='report-campaigns.update'>
+                    {canRunReportAction(report, 'report:update') && (
                       <DropdownMenuItem onClick={() => onEdit(report)}>
                         <Edit className='me-2 size-4' />
                         Chỉnh sửa
                       </DropdownMenuItem>
                     )}
-                  {can('report:assign') &&
-                    canRunReportAction(report, 'report:assign') && (
+                  </PermissionGuard>
+                  <PermissionGuard permission='report-campaigns.dispatch'>
+                    {canRunReportAction(report, 'report:assign') && (
                       <DropdownMenuItem onClick={() => onAssign(report)}>
                         <Send className='me-2 size-4' />
                         Giao báo cáo
                       </DropdownMenuItem>
                     )}
-                  {(can('report:approve') || can('report:reject')) &&
-                    canRunReportAction(report, 'report:approve') && (
+                  </PermissionGuard>
+                  <PermissionGuard
+                    permission={['approvals.approve', 'approvals.reject']}
+                  >
+                    {canRunReportAction(report, 'report:approve') && (
                       <DropdownMenuSeparator />
                     )}
-                  {can('report:approve') &&
-                    canRunReportAction(report, 'report:approve') && (
+                  </PermissionGuard>
+                  <PermissionGuard permission='approvals.approve'>
+                    {canRunReportAction(report, 'report:approve') && (
                       <DropdownMenuItem onClick={() => onApprove(report)}>
                         <CheckCircle2 className='me-2 size-4' />
                         Phê duyệt
                       </DropdownMenuItem>
                     )}
-                  {can('report:reject') &&
-                    canRunReportAction(report, 'report:reject') && (
+                  </PermissionGuard>
+                  <PermissionGuard permission='approvals.reject'>
+                    {canRunReportAction(report, 'report:reject') && (
                       <DropdownMenuItem onClick={() => onReject(report)}>
                         <XCircle className='me-2 size-4' />
                         Trả lại
                       </DropdownMenuItem>
                     )}
-                  {can('report:cancel') &&
-                    canRunReportAction(report, 'report:cancel') && (
+                  </PermissionGuard>
+                  <PermissionGuard permission='report-campaigns.delete'>
+                    {canRunReportAction(report, 'report:cancel') && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -205,6 +211,7 @@ export function ReportTable({
                         </DropdownMenuItem>
                       </>
                     )}
+                  </PermissionGuard>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -212,7 +219,7 @@ export function ReportTable({
         },
       },
     ],
-    [can, onApprove, onAssign, onCancel, onEdit, onReject, onView]
+    [onApprove, onAssign, onCancel, onEdit, onReject, onView]
   )
 
   const table = useReactTable({

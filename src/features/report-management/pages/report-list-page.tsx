@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { FilePlus2 } from 'lucide-react'
@@ -12,7 +12,6 @@ import { reportCampaignApi } from '../api/report-management-api'
 import type {
   CreateReportInput,
   CampaignStatus,
-  ReportAction,
   ReportFilters,
   ReportListItem,
   UpdateReportInput,
@@ -22,7 +21,6 @@ import { ReportConfirmDialog } from '../components/report-confirm-dialog'
 import { ReportFilters as ReportFiltersPanel } from '../components/report-filters'
 import { ReportFormDialog } from '../components/report-form-dialog'
 import { ReportTable } from '../components/report-table'
-import { usePermission } from '@/hooks/use-permission'
 import { useTemplateInfo } from '../hooks/use-template-info'
 import {
   defaultReportFilters,
@@ -94,28 +92,6 @@ function getConfirmCopy(confirmState: ConfirmState) {
 export function ReportListPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-
-  const canCreate  = usePermission('report-campaigns.create')
-  const canUpdate  = usePermission('report-campaigns.update')
-  const canAssign  = usePermission('report-campaigns.dispatch')
-  const canApprove = usePermission('approvals.approve')
-  const canReject  = usePermission('approvals.reject')
-  const canCancel  = usePermission('report-campaigns.delete')
-
-  const can = useCallback(
-    (action: ReportAction): boolean => {
-      switch (action) {
-        case 'report:create':  return canCreate
-        case 'report:update':  return canUpdate
-        case 'report:assign':  return canAssign
-        case 'report:approve': return canApprove
-        case 'report:reject':  return canReject
-        case 'report:cancel':  return canCancel
-        default:               return false
-      }
-    },
-    [canCreate, canUpdate, canAssign, canApprove, canReject, canCancel]
-  )
 
   const [filters, setFilters] = useState<ReportFilters>(defaultReportFilters)
   const [formOpen, setFormOpen] = useState(false)
@@ -299,7 +275,6 @@ export function ReportListPage() {
             isLoading={
               listQuery.isLoading || listQuery.isFetching || templateLoading
             }
-            can={can}
             onView={(report) =>
               navigate({
                 to: '/report-management/details/$reportId',

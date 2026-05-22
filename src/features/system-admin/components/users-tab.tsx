@@ -37,6 +37,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PermissionGuard } from '@/components/permission-guard'
 import { systemAdminMockApi } from '../api/mock-system-admin-api'
 import { type SystemUser } from '../api/types'
 
@@ -64,7 +65,33 @@ const defaultForm: UserFormState = {
   status: 'active',
 }
 
+function UsersAccessDenied() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Quản lý người dùng</CardTitle>
+        <CardDescription>
+          CRUD user, reset mật khẩu, khóa/mở tài khoản, enforce soft delete.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className='text-sm text-muted-foreground'>
+          Bạn không có quyền xem tài khoản.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function UsersTab() {
+  return (
+    <PermissionGuard permission='users.view' fallback={<UsersAccessDenied />}>
+      <UsersTabContent />
+    </PermissionGuard>
+  )
+}
+
+function UsersTabContent() {
   const queryClient = useQueryClient()
 
   const usersQuery = useQuery({
@@ -251,10 +278,12 @@ export function UsersTab() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <Button onClick={openCreateDialog}>
-            <PlusCircle />
-            Thêm người dùng
-          </Button>
+          <PermissionGuard permission='users.create'>
+            <Button onClick={openCreateDialog}>
+              <PlusCircle />
+              Thêm người dùng
+            </Button>
+          </PermissionGuard>
         </div>
       </CardHeader>
       <CardContent className='space-y-4'>
@@ -309,39 +338,56 @@ export function UsersTab() {
                     </Badge>
                   </TableCell>
                   <TableCell className='text-right'>
-                    <div className='flex justify-end gap-1'>
-                      <Button
-                        size='icon'
-                        variant='outline'
-                        onClick={() => openEditDialog(user)}
-                        title='Sửa'
-                      >
-                        <UserPen />
-                      </Button>
-                      <Button
-                        size='icon'
-                        variant='outline'
-                        onClick={() => resetPasswordMutation.mutate(user.id)}
-                        title='Reset mật khẩu'
-                      >
-                        <RotateCcw />
-                      </Button>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => setStatusDialog(user)}
-                      >
-                        {user.status === 'active' ? 'Khóa' : 'Mở'}
-                      </Button>
-                      <Button
-                        size='icon'
-                        variant='destructive'
-                        onClick={() => setDeletingUser(user)}
-                        title='Xóa mềm'
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
+                    <PermissionGuard
+                      permission={[
+                        'users.update',
+                        'users.reset-password',
+                        'users.toggle-status',
+                        'users.delete',
+                      ]}
+                    >
+                      <div className='flex justify-end gap-1'>
+                        <PermissionGuard permission='users.update'>
+                          <Button
+                            size='icon'
+                            variant='outline'
+                            onClick={() => openEditDialog(user)}
+                            title='Sửa'
+                          >
+                            <UserPen />
+                          </Button>
+                        </PermissionGuard>
+                        <PermissionGuard permission='users.reset-password'>
+                          <Button
+                            size='icon'
+                            variant='outline'
+                            onClick={() => resetPasswordMutation.mutate(user.id)}
+                            title='Reset mật khẩu'
+                          >
+                            <RotateCcw />
+                          </Button>
+                        </PermissionGuard>
+                        <PermissionGuard permission='users.toggle-status'>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            onClick={() => setStatusDialog(user)}
+                          >
+                            {user.status === 'active' ? 'Khóa' : 'Mở'}
+                          </Button>
+                        </PermissionGuard>
+                        <PermissionGuard permission='users.delete'>
+                          <Button
+                            size='icon'
+                            variant='destructive'
+                            onClick={() => setDeletingUser(user)}
+                            title='Xóa mềm'
+                          >
+                            <Trash2 />
+                          </Button>
+                        </PermissionGuard>
+                      </div>
+                    </PermissionGuard>
                   </TableCell>
                 </TableRow>
               ))}
@@ -519,12 +565,16 @@ export function UsersTab() {
             <Button variant='outline' onClick={closeForm}>
               Hủy
             </Button>
-            <Button
-              onClick={submitForm}
-              disabled={createMutation.isPending || updateMutation.isPending}
+            <PermissionGuard
+              permission={editingUser ? 'users.update' : 'users.create'}
             >
-              {editingUser ? 'Lưu thay đổi' : 'Tạo mới'}
-            </Button>
+              <Button
+                onClick={submitForm}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingUser ? 'Lưu thay đổi' : 'Tạo mới'}
+              </Button>
+            </PermissionGuard>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -543,9 +593,10 @@ export function UsersTab() {
             : ''
         }
         destructive
-        handleConfirm={() =>
-          deletingUser && deleteMutation.mutate(deletingUser.id)
-        }
+        handleConfirm={() => {
+          if (!deletingUser) return
+          deleteMutation.mutate(deletingUser.id)
+        }}
         confirmText='Xác nhận xóa'
         isLoading={deleteMutation.isPending}
       />

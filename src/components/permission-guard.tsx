@@ -18,6 +18,8 @@ type PermissionGuardProps = {
 /**
  * Renders `children` only when the current user has the required permission(s).
  * Falls back to `fallback` (default: null) when the check fails.
+ *
+ * Use this component for all RBAC UI (buttons, sections, table actions).
  */
 export function PermissionGuard({
   permission,
@@ -25,11 +27,20 @@ export function PermissionGuard({
   fallback = null,
 }: PermissionGuardProps) {
   const codes = Array.isArray(permission) ? permission : [permission]
-  const can = useAnyPermission(codes)
+  const allowed = useAnyPermission(codes)
 
-  if (!can) {
+  if (!allowed) {
     return fallback
   }
 
   return children
+}
+
+/**
+ * Programmatic check (tab routing, etc.). For buttons and sections use
+ * `<PermissionGuard>` instead.
+ */
+export function usePermissionGuard(permission: string | string[]): boolean {
+  const codes = Array.isArray(permission) ? permission : [permission]
+  return useAnyPermission(codes)
 }

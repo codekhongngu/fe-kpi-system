@@ -23,6 +23,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PermissionGuard } from '@/components/permission-guard'
 import {
   Collapsible,
   CollapsibleContent,
@@ -63,7 +64,30 @@ function arraysEqual(a: string[], b: string[]): boolean {
 
 const ROLES_STALE_MS = 5 * 60 * 1000
 
+function RolesAccessDenied() {
+  return (
+    <Card className='overflow-hidden'>
+      <CardHeader>
+        <CardTitle>Vai trò & Phân quyền (RBAC)</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className='text-sm text-muted-foreground'>
+          Bạn không có quyền xem vai trò.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function RolesTab() {
+  return (
+    <PermissionGuard permission='roles.view' fallback={<RolesAccessDenied />}>
+      <RolesTabContent />
+    </PermissionGuard>
+  )
+}
+
+function RolesTabContent() {
   const queryClient = useQueryClient()
 
   const rolesQuery = useQuery<Role[]>({
@@ -228,7 +252,7 @@ export function RolesTab() {
     pendingPermissionIds.includes(permissionId)
 
   const togglePermission = (permissionId: string) => {
-    if (isSuperAdmin || !isValidPermissionUuid(permissionId)) return
+    if (!isValidPermissionUuid(permissionId)) return
     setPendingPermissionIds((prev) =>
       prev.includes(permissionId)
         ? prev.filter((id) => id !== permissionId)
@@ -246,7 +270,6 @@ export function RolesTab() {
   }
 
   const toggleGroup = (group: PermissionGroup) => {
-    if (isSuperAdmin) return
     const ids = group.permissions
       .map((p) => permissionByCode.get(p.code)?.id)
       .filter((id): id is string => Boolean(id && isValidPermissionUuid(id)))
@@ -481,7 +504,22 @@ export function RolesTab() {
                         trong danh mục /permissions và không thể chỉnh sửa.
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <PermissionGuard
+                      permission='roles.update'
+                      fallback={
+                        <div className='flex items-center gap-3 rounded-lg border bg-muted/40 p-3'>
+                          <Lock className='h-4 w-4 shrink-0 text-muted-foreground' />
+                          <div className='text-sm text-muted-foreground'>
+                            Bạn chỉ có quyền xem. Cần quyền cập nhật vai trò
+                            để chỉnh sửa phân quyền.
+                          </div>
+                        </div>
+                      }
+                    >
+                      {null}
+                    </PermissionGuard>
+                  )}
 
                   <div className='flex flex-wrap items-center justify-between gap-2'>
                     <span className='text-sm text-muted-foreground'>
@@ -549,17 +587,19 @@ export function RolesTab() {
                               <div className='flex items-center justify-between gap-2 bg-muted/20 px-2 py-2.5 sm:px-4'>
                                 <div className='flex min-w-0 flex-1 items-center gap-1 sm:gap-2'>
                                   {!isSuperAdmin && groupPermIds.length > 0 ? (
-                                    <Checkbox
-                                      checked={
-                                        groupState === 'all'
-                                          ? true
-                                          : groupState === 'partial'
-                                            ? 'indeterminate'
-                                            : false
-                                      }
-                                      onCheckedChange={() => toggleGroup(group)}
-                                      aria-label={`Chọn nhóm ${group.label}`}
-                                    />
+                                    <PermissionGuard permission='roles.update'>
+                                      <Checkbox
+                                        checked={
+                                          groupState === 'all'
+                                            ? true
+                                            : groupState === 'partial'
+                                              ? 'indeterminate'
+                                              : false
+                                        }
+                                        onCheckedChange={() => toggleGroup(group)}
+                                        aria-label={`Chọn nhóm ${group.label}`}
+                                      />
+                                    </PermissionGuard>
                                   ) : null}
                                   <span className='shrink-0'>{group.icon}</span>
                                   <span className='truncate text-sm font-medium'>
@@ -574,16 +614,18 @@ export function RolesTab() {
                                 </div>
                                 <div className='flex shrink-0 items-center gap-1'>
                                   {!isSuperAdmin && groupPermIds.length > 0 ? (
-                                    <Button
-                                      variant='ghost'
-                                      size='sm'
-                                      className='h-7 text-xs'
-                                      onClick={() => toggleGroup(group)}
-                                    >
-                                      {groupState === 'all'
-                                        ? 'Bỏ chọn tất cả'
-                                        : 'Chọn tất cả'}
-                                    </Button>
+                                    <PermissionGuard permission='roles.update'>
+                                      <Button
+                                        variant='ghost'
+                                        size='sm'
+                                        className='h-7 text-xs'
+                                        onClick={() => toggleGroup(group)}
+                                      >
+                                        {groupState === 'all'
+                                          ? 'Bỏ chọn tất cả'
+                                          : 'Chọn tất cả'}
+                                      </Button>
+                                    </PermissionGuard>
                                   ) : null}
                                   <CollapsibleTrigger asChild>
                                     <Button
@@ -612,31 +654,45 @@ export function RolesTab() {
                                   {group.permissions.map((perm) => {
                                     const apiPerm = permissionByCode.get(perm.code)
                                     const permId = apiPerm?.id ?? ''
-                                    const canToggle =
-                                      !isSuperAdmin &&
-                                      isValidPermissionUuid(permId)
                                     const isChecked =
                                       isSuperAdmin ||
-                                      (canToggle && isPermissionChecked(permId))
+                                      isPermissionChecked(permId)
 
                                     return (
                                       <label
                                         key={perm.code}
                                         className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                                          canToggle || isSuperAdmin
-                                            ? isSuperAdmin
-                                              ? 'cursor-default'
-                                              : 'cursor-pointer hover:bg-accent/50'
-                                            : 'cursor-not-allowed opacity-60'
+                                          isSuperAdmin
+                                            ? 'cursor-default'
+                                            : 'cursor-pointer hover:bg-accent/50'
                                         }`}
                                       >
-                                        <Checkbox
-                                          checked={isChecked}
-                                          disabled={!canToggle && !isSuperAdmin}
-                                          onCheckedChange={() =>
-                                            togglePermission(permId)
-                                          }
-                                        />
+                                        {isSuperAdmin ? (
+                                          <Checkbox
+                                            checked={isChecked}
+                                            disabled
+                                          />
+                                        ) : (
+                                          <PermissionGuard
+                                            permission='roles.update'
+                                            fallback={
+                                              <Checkbox
+                                                checked={isChecked}
+                                                disabled
+                                              />
+                                            }
+                                          >
+                                            <Checkbox
+                                              checked={isChecked}
+                                              disabled={
+                                                !isValidPermissionUuid(permId)
+                                              }
+                                              onCheckedChange={() =>
+                                                togglePermission(permId)
+                                              }
+                                            />
+                                          </PermissionGuard>
+                                        )}
                                         <div className='min-w-0 flex-1'>
                                           <div className='truncate'>
                                             {perm.label}
@@ -670,35 +726,33 @@ export function RolesTab() {
         )}
 
         {isDirty ? (
-          <div className='sticky bottom-0 z-10 mt-6 flex items-center justify-between border-t bg-amber-50 px-1 py-3 dark:bg-amber-950/30'>
-            <div className='flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200'>
-              <Save className='h-4 w-4' />
-              Có thay đổi chưa được lưu.
+          <PermissionGuard permission='roles.update'>
+            <div className='sticky bottom-0 z-10 mt-6 flex items-center justify-between border-t bg-amber-50 px-1 py-3 dark:bg-amber-950/30'>
+              <div className='flex items-center gap-2 text-sm text-amber-800 dark:text-amber-200'>
+                <Save className='h-4 w-4' />
+                Có thay đổi chưa được lưu.
+              </div>
+              <div className='flex gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleCancel}
+                  disabled={saveMutation.isPending}
+                >
+                  <X className='mr-1 h-3 w-3' />
+                  Hủy
+                </Button>
+                <Button
+                  size='sm'
+                  onClick={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending || isSuperAdmin || isLoadingPermissions}
+                >
+                  <Save className='mr-1 h-3 w-3' />
+                  {saveMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </Button>
+              </div>
             </div>
-            <div className='flex gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={handleCancel}
-                disabled={saveMutation.isPending}
-              >
-                <X className='mr-1 h-3 w-3' />
-                Hủy
-              </Button>
-              <Button
-                size='sm'
-                onClick={() => saveMutation.mutate()}
-                disabled={
-                  saveMutation.isPending ||
-                  isSuperAdmin ||
-                  isLoadingPermissions
-                }
-              >
-                <Save className='mr-1 h-3 w-3' />
-                {saveMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </Button>
-            </div>
-          </div>
+          </PermissionGuard>
         ) : null}
       </CardContent>
 

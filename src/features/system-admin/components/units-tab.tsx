@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AxiosError } from 'axios'
-import { usePermission } from '@/hooks/use-permission'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   type ColumnDef,
@@ -69,6 +68,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PermissionGuard } from '@/components/permission-guard'
 import {
   DataTableColumnHeader,
   DataTablePagination,
@@ -307,11 +307,32 @@ function OrganizationTree({
   )
 }
 
+function UnitsAccessDenied() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Quản lý đơn vị</CardTitle>
+        <CardDescription>Cơ cấu Hành chính & Đơn vị</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className='text-sm text-muted-foreground'>
+          Bạn không có quyền xem đơn vị.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function UnitsTab() {
+  return (
+    <PermissionGuard permission='units.view' fallback={<UnitsAccessDenied />}>
+      <UnitsTabContent />
+    </PermissionGuard>
+  )
+}
+
+function UnitsTabContent() {
   const queryClient = useQueryClient()
-  const canCreate = usePermission('units.create')
-  const canUpdate = usePermission('units.update')
-  const canDelete = usePermission('units.delete')
   const [includeLockedUnits, setIncludeLockedUnits] = useState(true)
   const unitsQuery = useQuery({
     queryKey: ['organizations', 'tree', { includeLockedUnits }],
@@ -442,15 +463,15 @@ export function UnitsTab() {
   )
 
   const openEditDialog = useCallback((unit: OrganizationUnit) => {
-    setEditingUnit(unit)
-    setForm({
-      code: unit.code,
-      name: unit.name,
-      level: unit.level,
-      parentId: unit.parentId,
-      description: unit.description ?? '',
-      canAssignReports: unit.canAssignReports ?? true,
-    })
+      setEditingUnit(unit)
+      setForm({
+        code: unit.code,
+        name: unit.name,
+        level: unit.level,
+        parentId: unit.parentId,
+        description: unit.description ?? '',
+        canAssignReports: unit.canAssignReports ?? true,
+      })
     setOpenForm(true)
   }, [])
 
@@ -564,49 +585,52 @@ export function UnitsTab() {
         header: () => <div className='text-right'>Thao tác</div>,
         cell: ({ row }) => {
           const unit = row.original
-          if (!canUpdate && !canDelete) return null
           return (
-            <div className='flex justify-end gap-1'>
-              {canUpdate && (
-                <Button
-                  size='icon'
-                  variant='outline'
-                  onClick={() => openEditDialog(unit)}
-                  title='Sửa đơn vị'
-                >
-                  <UserPen />
-                </Button>
-              )}
-              {canUpdate && (
-                <Button
-                  size='sm'
-                  variant='outline'
-                  onClick={() =>
-                    setStatusDialog({
-                      unit,
-                      action: unit.status === 'active' ? 'lock' : 'unlock',
-                    })
-                  }
-                >
-                  {unit.status === 'active' ? 'Khóa' : 'Mở'}
-                </Button>
-              )}
-              {canDelete && (
-                <Button
-                  size='icon'
-                  variant='destructive'
-                  onClick={() => setDeletingUnit(unit)}
-                  title='Xóa đơn vị'
-                >
-                  <Trash2 />
-                </Button>
-              )}
-            </div>
+            <PermissionGuard
+              permission={['units.update', 'units.delete']}
+            >
+              <div className='flex justify-end gap-1'>
+                <PermissionGuard permission='units.update'>
+                  <Button
+                    size='icon'
+                    variant='outline'
+                    onClick={() => openEditDialog(unit)}
+                    title='Sửa đơn vị'
+                  >
+                    <UserPen />
+                  </Button>
+                </PermissionGuard>
+                <PermissionGuard permission='units.update'>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() =>
+                      setStatusDialog({
+                        unit,
+                        action: unit.status === 'active' ? 'lock' : 'unlock',
+                      })
+                    }
+                  >
+                    {unit.status === 'active' ? 'Khóa' : 'Mở'}
+                  </Button>
+                </PermissionGuard>
+                <PermissionGuard permission='units.delete'>
+                  <Button
+                    size='icon'
+                    variant='destructive'
+                    onClick={() => setDeletingUnit(unit)}
+                    title='Xóa đơn vị'
+                  >
+                    <Trash2 />
+                  </Button>
+                </PermissionGuard>
+              </div>
+            </PermissionGuard>
           )
         },
       },
     ]
-  }, [openEditDialog, statusMutation])
+  }, [openEditDialog])
 
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -654,7 +678,7 @@ export function UnitsTab() {
                   Chọn đơn vị để xem danh sách trực thuộc
                 </CardDescription>
               </div>
-              {canCreate && (
+              <PermissionGuard permission='units.create'>
                 <Button
                   size='sm'
                   variant='outline'
@@ -663,7 +687,7 @@ export function UnitsTab() {
                   <PlusCircle />
                   Thêm
                 </Button>
-              )}
+              </PermissionGuard>
             </CardHeader>
             <CardContent className='space-y-3 p-4'>
               <Input
@@ -743,7 +767,7 @@ export function UnitsTab() {
                   )}
                 </div>
                 <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end'>
-                  {canCreate && (
+                  <PermissionGuard permission='units.create'>
                     <Button
                       size='sm'
                       onClick={() => openCreateDialog(selectedUnitId)}
@@ -752,8 +776,8 @@ export function UnitsTab() {
                       <PlusCircle />
                       Thêm trực thuộc
                     </Button>
-                  )}
-                  {canUpdate && (
+                  </PermissionGuard>
+                  <PermissionGuard permission='units.update'>
                     <Button
                       size='sm'
                       variant='outline'
@@ -763,8 +787,8 @@ export function UnitsTab() {
                       <UserPen />
                       Sửa
                     </Button>
-                  )}
-                  {canUpdate && (
+                  </PermissionGuard>
+                  <PermissionGuard permission='units.update'>
                     <Button
                       size='sm'
                       variant='outline'
@@ -790,7 +814,7 @@ export function UnitsTab() {
                         </>
                       )}
                     </Button>
-                  )}
+                  </PermissionGuard>
                 </div>
               </CardHeader>
             </Card>
@@ -1004,13 +1028,17 @@ export function UnitsTab() {
             <Button variant='outline' onClick={closeForm}>
               Hủy
             </Button>
-            <Button
-              onClick={submitForm}
-              disabled={createMutation.isPending || updateMutation.isPending}
+            <PermissionGuard
+              permission={editingUnit ? 'units.update' : 'units.create'}
             >
-              <Building2 />
-              {editingUnit ? 'Lưu thay đổi' : 'Tạo đơn vị'}
-            </Button>
+              <Button
+                onClick={submitForm}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                <Building2 />
+                {editingUnit ? 'Lưu thay đổi' : 'Tạo đơn vị'}
+              </Button>
+            </PermissionGuard>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1029,9 +1057,10 @@ export function UnitsTab() {
             : ''
         }
         destructive
-        handleConfirm={() =>
-          deletingUnit && deleteMutation.mutate(deletingUnit.id)
-        }
+        handleConfirm={() => {
+          if (!deletingUnit) return
+          deleteMutation.mutate(deletingUnit.id)
+        }}
         confirmText='Xóa đơn vị'
         isLoading={deleteMutation.isPending}
       />
