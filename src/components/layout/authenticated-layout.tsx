@@ -11,6 +11,7 @@ import { Header } from '@/components/layout/header'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { UserContextBadge } from '@/components/layout/user-context-badge'
 import { authApi } from '@/features/auth/api/auth-api'
+
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
 }
@@ -55,24 +56,19 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
               // Set content container, so we can use container queries
               '@container/content',
               'transition-[width,margin] duration-200',
-
-              // If layout is fixed, set the height
-              // to 100svh to prevent overflow
-              'has-data-[layout=fixed]:h-svh',
-
-              // If layout is fixed and sidebar is inset,
-              // set the height to 100svh - spacing (total margins) to prevent overflow
-              'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
+              // Always fixed to viewport height — header stays put, only content area scrolls
+              'h-svh'
             )}
           >
-            <Header fixed>
+            <Header fixed className='h-14 w-auto -mx-2 -mt-2 rounded-t-lg top-0'>
               <UserContextBadge />
               <div className='ms-auto flex items-center space-x-4'>
                 <ProfileDropdown />
               </div>
             </Header>
-            <div className="pt-4">
-            {children ?? <Outlet />}
+            {/* flex-col so Main fixed's `grow` works; overflow-y-auto is the real scroll container */}
+            <div className='flex flex-col flex-1 overflow-y-auto pt-4'>
+              {children ?? <Outlet />}
             </div>
           </SidebarInset>
         </SidebarProvider>
