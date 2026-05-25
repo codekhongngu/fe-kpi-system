@@ -15,15 +15,9 @@ export const KT_XH_PAGES = [
     description: 'Trồng trọt và cây cối',
   },
   {
-    name: 'Nông nghiệp: Các loại cây trồng khác',
-    path: '/tree-planting-other',
-    description: 'Các loại cây trồng khác',
-  },
-  { name: 'Chăn nuôi', path: '/livestock', description: 'Chăn nuôi gia súc, gia cầm' },
-  {
-    name: 'Lâm nghiệp, Thủy sản',
-    path: '/forestry-fishery',
-    description: 'Lâm nghiệp và khai thác thủy sản',
+    name: 'Chăn nuôi, Lâm nghiệp, Thủy sản',
+    path: '/livestock-forestry-fishery',
+    description: 'Chăn nuôi, lâm nghiệp và thủy sản',
   },
 ] as const
 
@@ -104,6 +98,36 @@ export function getFieldCodeForKtXhPath(path: string): string | undefined {
   return LEGACY_PATH_FIELD_CODE[path]
 }
 
+function findCategoryAndTemplate(
+  fieldCode: string,
+  categories: DashboardFieldCategoryHub[]
+): { categoryId: string; templateId: string } | null {
+  const normalizedCode = normalizeFieldCategoryCode(fieldCode)
+
+  const directMatch = categories.find(
+    (item) => normalizeFieldCategoryCode(item.code) === normalizedCode
+  )
+  if (directMatch?.id && directMatch.templates[0]?.id) {
+    return {
+      categoryId: directMatch.id,
+      templateId: directMatch.templates[0].id,
+    }
+  }
+
+  for (const cat of categories) {
+    const tpl = cat.templates.find(
+      (t) =>
+        (t.code && normalizeFieldCategoryCode(t.code) === normalizedCode) ||
+        (t.name && normalizeFieldCategoryCode(t.name) === normalizedCode)
+    )
+    if (tpl?.id) {
+      return { categoryId: cat.id, templateId: tpl.id }
+    }
+  }
+
+  return null
+}
+
 export function resolveKtXhRouteSearch(
   targetPath: string,
   categories: DashboardFieldCategoryHub[],
@@ -118,38 +142,37 @@ export function resolveKtXhRouteSearch(
       DEFAULT_FIELD_DASHBOARD_SEARCH.periodType
   )
 
+  const fieldCode = getFieldCodeForKtXhPath(targetPath)
+  const resolved = fieldCode
+    ? findCategoryAndTemplate(fieldCode, categories)
+    : null
+
   const storedTargets = readStoredRouteTargets()
   const storedTarget = isKtXhPagePath(targetPath)
     ? storedTargets[targetPath]
     : undefined
 
   if (storedTarget?.fieldCategoryId && storedTarget.templateId) {
-    return {
-      fieldCategoryId: storedTarget.fieldCategoryId,
-      templateId: storedTarget.templateId,
-      periodCode,
-      periodType,
+    const isValid =
+      !resolved || (storedTarget.fieldCategoryId === resolved.categoryId &&
+        storedTarget.templateId === resolved.templateId)
+    if (isValid) {
+      return {
+        fieldCategoryId: storedTarget.fieldCategoryId,
+        templateId: storedTarget.templateId,
+        periodCode,
+        periodType,
+      }
     }
   }
 
-  const fieldCode = getFieldCodeForKtXhPath(targetPath)
-  if (!fieldCode) {
-    return { periodCode, periodType }
-  }
-
-  const category = categories.find(
-    (item) =>
-      normalizeFieldCategoryCode(item.code) ===
-      normalizeFieldCategoryCode(fieldCode)
-  )
-  const template = category?.templates[0]
-  if (!category?.id || !template?.id) {
+  if (!resolved) {
     return { periodCode, periodType }
   }
 
   return {
-    fieldCategoryId: category.id,
-    templateId: template.id,
+    fieldCategoryId: resolved.categoryId,
+    templateId: resolved.templateId,
     periodCode,
     periodType,
   }

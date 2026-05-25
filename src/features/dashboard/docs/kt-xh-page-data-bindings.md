@@ -26,7 +26,7 @@ Tài liệu tham chiếu khi chỉnh sửa gắn dữ liệu API (`cells`) lên 
 | Nông nghiệp | `/agriculture` | `use-agriculture-display-values.ts` | `pages/kt-xh/agriculture.tsx` |
 | Chăn nuôi | `/livestock` | `use-livestock-display-values.ts` | `pages/kt-xh/livestock.tsx` |
 | Trồng trọt khác | `/tree-planting-other` | `use-tree-planting-display-values.ts` | `pages/kt-xh/tree-planting-other.tsx` |
-| Lâm nghiệp, Thủy sản | `/forestry-fishery` | *(chưa có)* | `pages/kt-xh/forestry-fishery.tsx` |
+| Lâm nghiệp, Thủy sản | `/forestry-fishery` | `use-forestry-fishery-display-values.ts` | `pages/kt-xh/forestry-fishery.tsx` |
 
 ### Mã lĩnh vực Hub (BE)
 
@@ -112,16 +112,16 @@ Tài liệu tham chiếu khi chỉnh sửa gắn dữ liệu API (`cells`) lên 
 | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
 |---------|------|---------|---------------------|
 | TỔNG DIỆN TÍCH GIEO TRỒNG (ha) | — | — | Nhãn tĩnh |
-| Số chính | `section1Area.value` | CSTT73 | Thực hiên |
-| So với kỳ trước (%) | `section1Area.yoy` | CSTT73 | YoY % |
+| Số chính | `section1Area.value` | CSTT74 | Thực hiên |
+| So với kỳ trước (%) | `section1Area.yoy` | CSTT74 | YoY % |
 
 #### Card 2 — Sản lượng
 
 | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
 |---------|------|---------|---------------------|
 | SẢN LƯỢNG (tấn) | — | — | Nhãn tĩnh |
-| Số chính | `section1Output.value` | CSTT75 | Thực hiên |
-| So với kỳ trước (%) | `section1Output.yoy` | CSTT75 | YoY % |
+| Số chính | `section1Output.value` | CSTT77 | Thực hiên |
+| So với kỳ trước (%) | `section1Output.yoy` | CSTT77 | YoY % |
 
 #### Card 3 — Năng suất
 
@@ -140,8 +140,8 @@ Mỗi hàng: `.value` = Thực hiên, `.yoy` = % so kỳ (cùng mã CSTT).
 | Nhãn UI | Biến | Mã CSTT |
 |---------|------|---------|
 | LÚA VỤ ĐÔNG XUÂN | — | — |
-| Diện tích (ha) | `dongXuanArea` | CSTT78 |
-| Sản lượng (tấn) | `dongXuanOutput` | CSTT80 |
+| Diện tích (ha) | `dongXuanArea` | CSTT79 |
+| Sản lượng (tấn) | `dongXuanOutput` | CSTT82 |
 | Năng suất (tạ/ha) | `dongXuanYield` | CSTT81 |
 
 #### Card 5 — LÚA VỤ HÈ THU
@@ -149,8 +149,8 @@ Mỗi hàng: `.value` = Thực hiên, `.yoy` = % so kỳ (cùng mã CSTT).
 | Nhãn UI | Biến | Mã CSTT |
 |---------|------|---------|
 | LÚA VỤ HÈ THU | — | — |
-| Diện tích (ha) | `heThuArea` | CSTT83 |
-| Sản lượng (tấn) | `heThuOutput` | CSTT85 |
+| Diện tích (ha) | `heThuArea` | CSTT84 |
+| Sản lượng (tấn) | `heThuOutput` | CSTT87 |
 | Năng suất (tạ/ha) | `heThuYield` | CSTT86 |
 
 #### Card 6 — LÚA VỤ MÙA
@@ -158,8 +158,8 @@ Mỗi hàng: `.value` = Thực hiên, `.yoy` = % so kỳ (cùng mã CSTT).
 | Nhãn UI | Biến | Mã CSTT |
 |---------|------|---------|
 | LÚA VỤ MÙA | — | — |
-| Diện tích (ha) | `muaArea` | CSTT88 |
-| Sản lượng (tấn) | `muaOutput` | CSTT90 |
+| Diện tích (ha) | `muaArea` | CSTT89 |
+| Sản lượng (tấn) | `muaOutput` | CSTT91 |
 | Năng suất (tạ/ha) | `muaYield` | CSTT91 |
 
 **Tổng Agriculture:** 12 mã CSTT × 2 (value + yoy) = **24 ô số**.
@@ -175,34 +175,34 @@ Mỗi hàng: `.value` = Thực hiên, `.yoy` = % so kỳ (cùng mã CSTT).
 
 | Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
 |------|---------|------|---------|---------------------|
-| 1 | TỔNG ĐÀN BÒ | `herdCattle.value` | CSTT127 | Thực hiên |
-| 1 | So với cùng kỳ (%) | `herdCattle.yoy` | CSTT127 | YoY % |
-| 2 | TỔNG ĐÀN LỢN | `herdPig.value` | CSTT126 | Thực hiên |
-| 2 | So với cùng kỳ (%) | `herdPig.yoy` | CSTT126 | YoY % |
-| 3 | TỔNG ĐÀN GIA CẦM | `herdPoultry.value` | CSTT128 | Thực hiên |
-| 3 | So với cùng kỳ (%) | `herdPoultry.yoy` | CSTT128 | YoY % |
+| 1 | TỔNG ĐÀN BÒ | `herdCattle.value` | CSTT117 | Thực hiên |
+| 1 | So với cùng kỳ (%) | `herdCattle.yoy` | CSTT117 | YoY % |
+| 2 | TỔNG ĐÀN LỢN | `herdPig.value` | CSTT116 | Thực hiên |
+| 2 | So với cùng kỳ (%) | `herdPig.yoy` | CSTT116 | YoY % |
+| 3 | TỔNG ĐÀN GIA CẦM | `herdPoultry.value` | CSTT118 | Thực hiên |
+| 3 | So với cùng kỳ (%) | `herdPoultry.yoy` | CSTT118 | YoY % |
 
 ### Section 2 — SẢN LƯỢNG CHĂN NUÔI
 
 | Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
 |------|---------|------|---------|---------------------|
-| 4 | Thịt bò hơi | `beefMeat.value` | CSTT131 | Thực hiên |
-| 4 | So với cùng kỳ (%) | `beefMeat.yoy` | CSTT131 | YoY % |
-| 5 | Thịt lợn hơi | `porkMeat.value` | CSTT130 | Thực hiên |
-| 5 | So với cùng kỳ (%) | `porkMeat.yoy` | CSTT130 | YoY % |
-| 6 | Gia cầm | `poultryMeat.value` | CSTT132 | Thực hiên |
-| 6 | So với cùng kỳ (%) | `poultryMeat.yoy` | CSTT132 | YoY % |
+| 4 | Thịt bò hơi | `beefMeat.value` | CSTT121 | Thực hiên |
+| 4 | So với cùng kỳ (%) | `beefMeat.yoy` | CSTT121 | YoY % |
+| 5 | Thịt lợn hơi | `porkMeat.value` | CSTT120 | Thực hiên |
+| 5 | So với cùng kỳ (%) | `porkMeat.yoy` | CSTT120 | YoY % |
+| 6 | Gia cầm | `poultryMeat.value` | CSTT122 | Thực hiên |
+| 6 | So với cùng kỳ (%) | `poultryMeat.yoy` | CSTT122 | YoY % |
 
 ### Section 3 — SỐ TRANG TRẠI QUY MÔ VỪA, QUY MÔ LỚN
 
 | Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
 |------|---------|------|---------|---------------------|
-| 7 | Trang trại lợn | `pigFarm.value` | CSTT134 | Thực hiên |
-| 7 | So với cùng kỳ (%) | `pigFarm.yoy` | CSTT134 | YoY % |
-| 8 | Trang trại bò | `cattleFarm.value` | CSTT135 | Thực hiên |
-| 8 | So với cùng kỳ (%) | `cattleFarm.yoy` | CSTT135 | YoY % |
-| 9 | Trang trại gia cầm | `poultryFarm.value` | CSTT136 | Thực hiên |
-| 9 | So với cùng kỳ (%) | `poultryFarm.yoy` | CSTT136 | YoY % |
+| 7 | Trang trại lợn | `pigFarm.value` | CSTT124 | Thực hiên |
+| 7 | So với cùng kỳ (%) | `pigFarm.yoy` | CSTT124 | YoY % |
+| 8 | Trang trại bò | `cattleFarm.value` | CSTT125 | Thực hiên |
+| 8 | So với cùng kỳ (%) | `cattleFarm.yoy` | CSTT125 | YoY % |
+| 9 | Trang trại gia cầm | `poultryFarm.value` | CSTT126 | Thực hiên |
+| 9 | So với cùng kỳ (%) | `poultryFarm.yoy` | CSTT126 | YoY % |
 
 **Tổng Livestock:** 9 mã CSTT × 2 = **18 ô số**.
 
@@ -216,43 +216,45 @@ Mỗi hàng: `.value` = Thực hiên, `.yoy` = % so kỳ (cùng mã CSTT).
 
 ### Section 1 — TỔNG DIỆN TÍCH, SẢN LƯỢNG VÀ NĂNG SUẤT CÂY TRỒNG KHÁC
 
-Thứ tự cột: Ngô → Lạc → Khoai lang → Sắn → Mía → Cây vừng (Mè) → Rau các loại → Đậu các loại.
+Thứ tự cột: Ngô → Lạc → Rau các loại → Đậu các loại.
 
 #### Card 1 — Diện tích gieo trồng (ha) — `display.areaChart`
 
 | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
 |---------|------|---------|---------------------|
-| Ngô | `areaChart[0]` | CSTT94 | Thực hiên (cột) + YoY % (đường) |
-| Lạc | `areaChart[1]` | CSTT95 | Thực hiên + YoY % |
-| Khoai lang | `areaChart[2]` | CSTT96 | Thực hiên + YoY % |
-| Sắn | `areaChart[3]` | CSTT97 | Thực hiên + YoY % |
-| Mía | `areaChart[4]` | CSTT98 | Thực hiên + YoY % |
-| Cây vừng (Mè) | `areaChart[5]` | CSTT99 | Thực hiên + YoY % |
-| Rau các loại | `areaChart[6]` | CSTT100 | Thực hiên + YoY % |
-| Đậu các loại | `areaChart[7]` | CSTT101 | Thực hiên + YoY % |
+| Ngô | `areaChart[0]` | CSTT95 | Thực hiên (cột) + YoY % (đường) |
+| Lạc | `areaChart[1]` | CSTT105 | Thực hiên + YoY % |
+| Rau các loại | `areaChart[6]` | CSTT110 | Thực hiên + YoY % |
+| Đậu các loại | `areaChart[7]` | CSTT100 | Thực hiên + YoY % |
 
 #### Card 2 — Sản lượng (tấn) — `display.outputChart`
 
-| Nhãn UI | Mã CSTT |
-|---------|---------|
-| Ngô … Đậu các loại (cùng thứ tự) | CSTT103 … CSTT110 |
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Ngô | `outputChart[0]` | CSTT98 | Thực hiên (cột) + YoY % (đường) |
+| Lạc | `outputChart[1]` | CSTT108 | Thực hiên + YoY % |
+| Rau các loại | `outputChart[6]` | CSTT113 | Thực hiên + YoY % |
+| Đậu các loại | `outputChart[7]` | CSTT103 | Thực hiên + YoY % |
 
 #### Card 3 — Năng suất (tạ/ha) — `display.yieldChart`
 
-| Nhãn UI | Mã CSTT |
-|---------|---------|
-| Ngô … Đậu các loại (cùng thứ tự) | CSTT112 … CSTT119 |
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Ngô | `yieldChart[0]` | CSTT97 | Thực hiên (cột) + YoY % (đường) |
+| Lạc | `yieldChart[1]` | CSTT107 | Thực hiên + YoY % |
+| Rau các loại | `yieldChart[6]` | CSTT112 | Thực hiên + YoY % |
+| Đậu các loại | `yieldChart[7]` | CSTT102 | Thực hiên + YoY % |
 
 ### Section 2 — CHUYỂN ĐỔI CƠ CẤU CÂY TRỒNG
 
 | Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
 |------|---------|------|---------|---------------------|
-| 4 | Trên đất lúa | `landRice.value` | CSTT121 | Thực hiên |
-| 4 | So với kỳ trước (%) | `landRice.yoy` | CSTT121 | YoY % |
-| 5 | Trên đất mía | `landSugarcane.value` | CSTT122 | Thực hiên |
-| 5 | So với kỳ trước (%) | `landSugarcane.yoy` | CSTT122 | YoY % |
-| 6 | Trên đất sắn | `landCassava.value` | CSTT123 | Thực hiên |
-| 6 | So với kỳ trước (%) | `landCassava.yoy` | CSTT123 | YoY % |
+| 4 | Trên đất lúa | `landRice.value` |  | Thực hiên |
+| 4 | So với kỳ trước (%) | `landRice.yoy` |  | YoY % |
+| 5 | Trên đất mía | `landSugarcane.value` |  | Thực hiên |
+| 5 | So với kỳ trước (%) | `landSugarcane.yoy` |  | YoY % |
+| 6 | Trên đất sắn | `landCassava.value` |  | Thực hiên |
+| 6 | So với kỳ trước (%) | `landCassava.yoy` |  | YoY % |
 
 **Tổng Tree planting:** 24 mã CSTT chart (8×3) + 3 mã CSTT section 2 × 2 = **30 ô số**.
 
@@ -260,21 +262,20 @@ Thứ tự cột: Ngô → Lạc → Khoai lang → Sắn → Mía → Cây vừ
 
 ## `/forestry-fishery` — Lâm nghiệp, Thủy sản
 
-- **Trạng thái API:** Chưa gắn
+- **Trạng thái API:** Đã gắn
 
 ### LÂM NGHIỆP
+| Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|------|---------|------|---------|---------------------|
+| 1 | Diện tích trồng rừng và cây phân tán | `forestArea.value` | CSTT130 | Thực hiên + YoY % |
+| 2 | Sản lượng gỗ khai thác (Rừng trồng)  | `timberOutput.value` | CSTT131 | Thực hiên + YoY % |
 
-| Card | Nhãn | Giá trị mock | % mock | Biến / CSTT |
-|------|------|--------------|--------|-------------|
-| 1 | Diện tích trồng rừng và cây phân tán | *(số lớn)* | `+105,20` | *chưa map* |
-| 2 | Sản lượng gỗ khai thác (Rừng trồng) | *(số lớn)* | `+98,50` | *chưa map* |
 
 ### THỦY SẢN
-
-| Card | Nhãn | % mock | Biến / CSTT |
-|------|------|--------|-------------|
-| 1 | Sản lượng thủy sản nuôi trồng | `+112,30` | *chưa map* |
-| 2 | Sản lượng thủy sản khai thác | `+95,80` | *chưa map* |
+| Card | Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|------|---------|------|---------|---------------------|
+| 1 | Sản lượng thủy sản nuôi trồng | `aquacultureOutput.value` | CSTT133 | Thực hiên + YoY % |
+| 2 | Sản lượng thủy sản khai thác | `fisheryCatch.value` | CSTT134 | Thực hiên + YoY % |
 
 ---
 

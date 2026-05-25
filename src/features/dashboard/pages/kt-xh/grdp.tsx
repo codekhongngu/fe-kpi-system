@@ -65,7 +65,7 @@ export function GrdpPage() {
 
         <div className='grid grid-cols-1 items-stretch gap-4 md:grid-cols-2'>
           <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
-            <CardContent className='p-6'>
+            <CardContent className='px-6 py-[15px]'>
               <h3 className='mb-4 text-xl font-bold text-red-800'>
                 Tổng sản phẩm trên địa bàn theo giá so sánh
               </h3>
@@ -135,7 +135,7 @@ export function GrdpPage() {
           </Card>
 
           <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
-            <CardContent className='p-6'>
+            <CardContent className='px-6 py-[15px]'>
               <h3 className='mb-4 text-xl font-bold text-[#F3932C]'>
                 Tổng sản phẩm trên địa bàn theo giá hiện hành
               </h3>
@@ -205,7 +205,7 @@ export function GrdpPage() {
           </Card>
 
           <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
-            <CardContent className='p-6'>
+            <CardContent className='px-6 py-[15px]'>
               <h3 className='mb-4 text-xl font-bold text-green-700'>
                 Tốc độ tăng GRDP
               </h3>
@@ -246,7 +246,7 @@ export function GrdpPage() {
           </Card>
 
           <Card className='h-full w-full min-w-0 overflow-hidden border-r border-b border-l-4 border-[#E66C37]/50 border-l-[#E66C37]'>
-            <CardContent className='p-6'>
+            <CardContent className='px-6 py-[15px]'>
               <h3 className='mb-4 text-xl font-bold text-blue-800'>
                 Cơ cấu GRDP
               </h3>

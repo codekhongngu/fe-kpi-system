@@ -24,7 +24,7 @@ export function KtXhDashboardShell({
         aria-hidden
       />
 
-      <div className='relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-[10px] sm:px-8 sm:py-[10px]'>
+      <div className='relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-0 pb-[10px] sm:px-8 sm:pt-0 sm:pb-[10px]'>
         <div className={cn('mx-auto w-full max-w-7xl', contentClassName)}>
           {children}
         </div>

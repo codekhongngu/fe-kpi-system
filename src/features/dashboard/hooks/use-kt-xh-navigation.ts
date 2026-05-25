@@ -58,6 +58,13 @@ export function useKtXhNavigation() {
         currentSearch
       )
 
+      console.log('[KtXhNav] resolveKtXhRouteSearch →', {
+        targetPath,
+        fieldCode: targetPath,
+        categoriesCount: categories.length,
+        nextSearch,
+      })
+
       persistKtXhRouteState(pathname, currentSearch)
 
       const reportSearch = toFieldDashboardSearch(nextSearch)
@@ -77,7 +84,7 @@ export function useKtXhNavigation() {
 
       navigate({
         to: targetPath,
-        search: nextSearch,
+        search: () => nextSearch,
       })
     },
     [categoriesQuery.data, currentSearch, navigate, pathname, queryClient]

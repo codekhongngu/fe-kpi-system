@@ -76,16 +76,38 @@ export function useLivestockDisplayValues(
 
     const lookup = buildDashboardCellLookup(data)
 
-    return {
-      herdCattle: formatMetricPair(lookup, 'CSTT127', '0', '0'),
-      herdPig: formatMetricPair(lookup, 'CSTT126', '0', '0'),
-      herdPoultry: formatMetricPair(lookup, 'CSTT128', '0,0', '0'),
-      beefMeat: formatMetricPair(lookup, 'CSTT131', '0', '0,00'),
-      porkMeat: formatMetricPair(lookup, 'CSTT130', '0', '0,00'),
-      poultryMeat: formatMetricPair(lookup, 'CSTT132', '0', '0,00'),
-      pigFarm: formatMetricPair(lookup, 'CSTT134', '0', '0,00'),
-      cattleFarm: formatMetricPair(lookup, 'CSTT135', '0', '0,00'),
-      poultryFarm: formatMetricPair(lookup, 'CSTT136', '0', '0,00'),
+    const codes = [
+      'CSTT117', 'CSTT116', 'CSTT118',
+      'CSTT121', 'CSTT120', 'CSTT122',
+      'CSTT124', 'CSTT125', 'CSTT126',
+    ] as const
+
+    const rawValues = codes.map((code) => ({
+      code,
+      current: getDashboardCellValue(lookup, code, DASHBOARD_ATTR_CURRENT),
+      prior: getDashboardCellValue(lookup, code, DASHBOARD_ATTR_PRIOR_YEAR),
+    }))
+
+    console.group('[Livestock] Raw CSTT values')
+    console.table(rawValues)
+    console.groupEnd()
+
+    const result = {
+      herdCattle: formatMetricPair(lookup, 'CSTT117', '0', '0'),
+      herdPig: formatMetricPair(lookup, 'CSTT116', '0', '0'),
+      herdPoultry: formatMetricPair(lookup, 'CSTT118', '0,0', '0'),
+      beefMeat: formatMetricPair(lookup, 'CSTT121', '0', '0,00'),
+      porkMeat: formatMetricPair(lookup, 'CSTT120', '0', '0,00'),
+      poultryMeat: formatMetricPair(lookup, 'CSTT122', '0', '0,00'),
+      pigFarm: formatMetricPair(lookup, 'CSTT124', '0', '0,00'),
+      cattleFarm: formatMetricPair(lookup, 'CSTT125', '0', '0,00'),
+      poultryFarm: formatMetricPair(lookup, 'CSTT126', '0', '0,00'),
     }
+
+    console.group('[Livestock] Formatted display values')
+    console.table(result)
+    console.groupEnd()
+
+    return result
   }, [data])
 }
