@@ -1,4 +1,4 @@
-name: Trigger Vercel Deployment
+name: Normalize Vercel Identity
 
 on:
   push:
@@ -11,9 +11,14 @@ permissions:
   contents: write
 
 jobs:
-  trigger-deploy:
+  normalize-identity:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip vercel]')"
+    # Chỉ chạy nếu:
+    # 1. Không phải commit do chính workflow tạo ra (tránh loop)
+    # 2. Commit author KHÔNG phải codekhongngu (identity sai → cần normalize)
+    if: |
+      !contains(github.event.head_commit.message, '[skip vercel]') &&
+      github.event.head_commit.author.email != 'codekhongngu@gmail.com'
 
     steps:
       - name: Checkout code
@@ -24,8 +29,8 @@ jobs:
 
       - name: Configure Git (unified Vercel identity)
         run: |
-          git config --global user.name "codekhongngu"
-          git config --global user.email "codekhongngu@gmail.com"
+          git config user.name "codekhongngu"
+          git config user.email "codekhongngu@gmail.com"
 
       - name: Pull latest changes
         run: git pull origin ${{ github.ref_name }}
