@@ -4,7 +4,7 @@ name: Trigger Vercel Deployment
 on:
   push:
     branches:
-      - main      # Hoặc branch chính của bạn (master, develop...)
+      - master      # Hoặc branch chính của bạn (master, develop...)
       - develop   # Thêm nếu cần
     # Không chạy khi push empty commit (tránh loop vô tận)
     paths-ignore:
@@ -33,8 +33,8 @@ jobs:
       # Bước 2: Cấu hình Git với thông tin của chủ tài khoản Vercel
       - name: Configure Git
         run: |
-          git config --global user.name "Ten cua ban tren Vercel"
-          git config --global user.email "email-vercel-cua-ban@gmail.com"
+          git config --global user.name "codekhongngu"
+          git config --global user.email "codekhongngu@gmail.com"
           git config --global --list  # Kiểm tra (optional)
       
       # Bước 3: Pull latest changes để tránh conflict
