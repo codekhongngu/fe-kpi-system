@@ -7,11 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "pnpm run build && wrangler dev",
+    "preview": "npm run build && wrangler dev",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "knip": "knip",
-    "deploy": "pnpm run build && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "prepare": "husky"
   },
   "lint-staged": {
