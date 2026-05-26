@@ -11,7 +11,7 @@ import type { AgricultureMetricPair } from '../../utils/use-agriculture-display-
 import { useAgricultureDisplayValues } from '../../utils/use-agriculture-display-values'
 import { KT_XH_METRIC_ICON_SIZE } from '../../utils/kt-xh-theme'
 
-import { Leaf, Sprout, Sun, Trees, Wheat , Snowflake} from 'lucide-react'
+import { Leaf, Sprout, Sun, Trees, Snowflake} from 'lucide-react'
 
 const routeApi = getRouteApi('/_authenticated/agriculture')
 
