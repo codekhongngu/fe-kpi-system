@@ -45,6 +45,8 @@ const ERROR_CODE_MESSAGES: Record<string, string> = {
 
   ASSIGNMENT_BATCH_DUPLICATE:
     'Đợt giao báo cáo đã tồn tại. Vui lòng chọn kỳ hoặc thời hạn khác.',
+  CAMPAIGN_DUPLICATE:
+    'Đợt báo cáo đã tồn tại (trùng kỳ). Vui lòng chọn kỳ khác.',
 }
 
 const ERROR_MESSAGE_MESSAGES: Record<string, string> = {
