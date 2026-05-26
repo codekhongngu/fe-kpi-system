@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GIHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Configure Git (unified Vercel identity)
         run: |
@@ -31,7 +31,8 @@ jobs:
         run: git pull origin ${{ github.ref_name }}
 
       - name: Create trigger commit
-        run: git commit --allow-empty -m "chore: trigger vercel deployment [skip vercel]"
+        run: |
+          git commit --allow-empty -m "chore: trigger vercel deployment [skip vercel]"
 
       - name: Push trigger commit
         run: git push origin ${{ github.ref_name }}
