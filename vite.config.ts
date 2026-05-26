@@ -24,7 +24,18 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['fs', 'stream', 'crypto', 'os', 'zlib', 'buffer'],
+      external: [
+        'fs',
+        'stream',
+        'crypto',
+        'os',
+        'zlib',
+        'buffer',
+        'path',
+        'util',
+        'child_process',
+        'events',
+      ],
     },
   },
 })
