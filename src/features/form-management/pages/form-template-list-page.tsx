@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { DataTablePagination } from '@/components/data-table/data-table-pagination'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { PermissionGuard } from '@/components/permission-guard'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/template-management-api'
 import type { FormTemplate, PeriodType, TemplateType } from '../api/types'
@@ -85,7 +86,7 @@ export function FormTemplateListPage() {
       await invalidate()
       handleCloseModal()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const patchMutation = useMutation({
@@ -108,7 +109,7 @@ export function FormTemplateListPage() {
       await invalidate()
       handleCloseModal()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const markReadyMutation = useMutation({
@@ -118,7 +119,7 @@ export function FormTemplateListPage() {
       toast.success('Đã chuyển biểu mẫu sang trạng thái sẵn sàng.')
       await invalidate()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const archiveMutation = useMutation({
@@ -128,7 +129,7 @@ export function FormTemplateListPage() {
       toast.success('Đã lưu trữ biểu mẫu.')
       await invalidate()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
@@ -138,7 +139,7 @@ export function FormTemplateListPage() {
       toast.success('Đã xóa biểu mẫu.')
       await invalidate()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const cloneMutation = useMutation({
@@ -156,7 +157,7 @@ export function FormTemplateListPage() {
         })
       }
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const openCreateModal = () => {

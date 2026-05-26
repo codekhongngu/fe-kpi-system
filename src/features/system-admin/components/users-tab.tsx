@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PermissionGuard } from '@/components/permission-guard'
 import { systemAdminMockApi } from '../api/mock-system-admin-api'
@@ -139,7 +140,7 @@ function UsersTabContent() {
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const updateMutation = useMutation({
@@ -150,7 +151,7 @@ function UsersTabContent() {
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       closeForm()
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
@@ -160,7 +161,7 @@ function UsersTabContent() {
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       setDeletingUser(null)
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const statusMutation = useMutation({
@@ -169,7 +170,7 @@ function UsersTabContent() {
       queryClient.invalidateQueries({ queryKey: ['system-admin'] })
       toast.success('Đã cập nhật trạng thái tài khoản.')
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const resetPasswordMutation = useMutation({
@@ -181,7 +182,7 @@ function UsersTabContent() {
       }
       toast.success('Đã reset mật khẩu.')
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(getApiErrorMessage(error)),
   })
 
   const closeForm = () => {
