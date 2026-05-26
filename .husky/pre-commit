@@ -1,0 +1,6 @@
+# Đồng nhất Git identity cho Vercel Hobby plan
+git config user.name "codekhongngu"
+git config user.email "codekhongngu@gmail.com"
+
+# Kiểm tra code quality trên staged files
+npx lint-staged
