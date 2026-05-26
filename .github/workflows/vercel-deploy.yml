@@ -1,62 +1,37 @@
 name: Trigger Vercel Deployment
 
-# Chạy workflow khi có push lên các branch cụ thể
 on:
   push:
     branches:
-      - master      # Hoặc branch chính của bạn (master, develop...)
-      - develop   # Thêm nếu cần
-    # Không chạy khi push empty commit (tránh loop vô tận)
+      - master
     paths-ignore:
       - '.github/workflows/vercel-deploy.yml'
 
-# Quyền cần thiết cho action
 permissions:
   contents: write
-  actions: read
 
 jobs:
   trigger-deploy:
     runs-on: ubuntu-latest
-    
-    # Chỉ chạy nếu commit KHÔNG phải empty commit
     if: "!contains(github.event.head_commit.message, '[skip vercel]')"
-    
+
     steps:
-      # Bước 1: Checkout code mới nhất
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Lấy toàn bộ lịch sử commit
-          token: ${{ secrets.PAT_TOKEN }}  # Dùng token để có quyền push
-      
-      # Bước 2: Cấu hình Git với thông tin của chủ tài khoản Vercel
-      - name: Configure Git
+          fetch-depth: 0
+          token: ${{ secrets.GIHUB_TOKEN }}
+
+      - name: Configure Git (unified Vercel identity)
         run: |
           git config --global user.name "codekhongngu"
           git config --global user.email "codekhongngu@gmail.com"
-          git config --global --list  # Kiểm tra (optional)
-      
-      # Bước 3: Pull latest changes để tránh conflict
+
       - name: Pull latest changes
-        run: |
-          git pull origin ${{ github.ref_name }}
-      
-      # Bước 4: Tạo empty commit với message đặc biệt
-      - name: Create empty commit
-        run: |
-          # Tạo empty commit với flag để tránh loop
-          git commit --allow-empty -m "chore: trigger vercel deployment [skip vercel]"
-      
-      # Bước 5: Push empty commit lên GitHub
-      - name: Push changes
-        run: |
-          git push origin ${{ github.ref_name }}
-      
-      # Bước 6: Gọi Vercel deploy hook (optional - tăng tốc độ)
-      - name: Trigger Vercel webhook
-        run: |
-          curl -X POST "https://api.vercel.com/v1/integrations/deploy/${{ secrets.VERCEL_PROJECT_ID }}/${{ secrets.VERCEL_DEPLOY_HOOK }}"
-        env:
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: git pull origin ${{ github.ref_name }}
+
+      - name: Create trigger commit
+        run: git commit --allow-empty -m "chore: trigger vercel deployment [skip vercel]"
+
+      - name: Push trigger commit
+        run: git push origin ${{ github.ref_name }}
