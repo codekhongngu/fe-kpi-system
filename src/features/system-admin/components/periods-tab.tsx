@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarPlus, PlusCircle, Trash2, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
@@ -39,6 +38,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { periodsApi } from '../api/mock-system-admin-api'
 import {
   periodTypeOptions,
@@ -66,49 +66,6 @@ const defaultForm: PeriodFormState = {
   isActive: true,
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function getApiErrorMessage(error: unknown) {
-  if (error instanceof AxiosError) {
-    const payload = error.response?.data
-    if (isRecord(payload)) {
-      if (payload.message === 'PERIOD_CODE_DUPLICATE') {
-        return 'Mã kỳ bị trùng (PERIOD_CODE_DUPLICATE). Vui lòng chọn loại kỳ/khoảng ngày khác hoặc tạo kỳ mới.'
-      }
-      if (payload.message === 'PERIOD_DUPLICATE') {
-        return 'Kỳ báo cáo bị trùng (PERIOD_DUPLICATE). Đã tồn tại kỳ với loại kỳ và khoảng ngày này.'
-      }
-      const message =
-        (typeof payload.message === 'string' && payload.message) ||
-        (Array.isArray(payload.message) &&
-          payload.message.length > 0 &&
-          typeof payload.message[0] === 'string' &&
-          payload.message[0]) ||
-        (typeof payload.error === 'string' && payload.error)
-      if (message) return message
-      if (
-        isRecord(payload.error) &&
-        typeof payload.error.message === 'string'
-      ) {
-        const details = payload.error.details
-        if (Array.isArray(details) && details.length > 0) {
-          const first = details[0]
-          if (isRecord(first) && typeof first.message === 'string') {
-            return first.message
-          }
-          if (typeof first === 'string') return first
-        }
-        return payload.error.message
-      }
-    }
-    return error.message
-  }
-
-  if (error instanceof Error) return error.message
-  return 'Có lỗi xảy ra.'
-}
 
 export function PeriodsTab() {
   const queryClient = useQueryClient()

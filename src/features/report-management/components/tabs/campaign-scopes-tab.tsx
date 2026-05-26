@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -331,7 +332,7 @@ export function CampaignScopesTab({
         queryKey: ['report-management', 'campaign', campaignId, 'scopes'],
       })
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   function handleAssignSelected() {

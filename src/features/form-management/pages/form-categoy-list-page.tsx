@@ -33,6 +33,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { PermissionGuard } from '@/components/permission-guard'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { formManagementApi } from '../api/template-management-api'
 import { type FieldCategory } from '../api/types'
 
@@ -154,7 +155,7 @@ function FormCategoryListContent() {
       })
       closeForm()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const updateMutation = useMutation({
@@ -180,7 +181,7 @@ function FormCategoryListContent() {
       })
       closeForm()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
@@ -192,7 +193,7 @@ function FormCategoryListContent() {
       })
       setDeletingCategory(null)
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   return (

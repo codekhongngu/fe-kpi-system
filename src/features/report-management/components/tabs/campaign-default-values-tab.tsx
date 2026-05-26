@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { Input } from '@/components/ui/input'
 import { formManagementApi } from '../../../form-management/api/template-management-api'
 import type {
@@ -201,7 +202,7 @@ export function CampaignDefaultValuesTab({
         ],
       })
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   function handleValueChange(

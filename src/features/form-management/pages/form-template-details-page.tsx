@@ -21,6 +21,7 @@ import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/template-management-api'
 import type { PeriodType, TemplateType } from '../api/types'
 import { usePermission } from '@/hooks/use-permission'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { TemplateStatusBadge } from '../components/shared/template-status-badge'
 import { TemplateAttributesTab } from '../components/tabs/template-attributes-tab'
 import { TemplateCellConfigsTab } from '../components/tabs/template-cell-configs-tab'
@@ -99,7 +100,7 @@ export function FormTemplateDetailsPage({
       await refreshTemplate()
       setOpenUpdateModal(false)
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const totalInputIndicators = (template?.indicators ?? []).filter(
@@ -124,15 +125,7 @@ export function FormTemplateDetailsPage({
       toast.success('Đã chuyển biểu mẫu sang trạng thái sẵn sàng.')
       await refreshTemplate()
     },
-    onError: (error: Error) => {
-      if (error.message?.includes('ALL_INPUT_INDICATORS_MUST_BE_ASSIGNED')) {
-        toast.error(
-          'Vui lòng phân bổ 100% chỉ tiêu INPUT trước khi chuyển sẵn sàng.'
-        )
-      } else {
-        toast.error(error.message)
-      }
-    },
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const handleMarkReady = () => {
@@ -151,7 +144,7 @@ export function FormTemplateDetailsPage({
       toast.success('Đã lưu trữ biểu mẫu.')
       await refreshTemplate()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
@@ -161,7 +154,7 @@ export function FormTemplateDetailsPage({
       await refreshTemplate()
       await navigate({ to: '/form-management' })
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const cloneMutation = useMutation({
@@ -179,7 +172,7 @@ export function FormTemplateDetailsPage({
         })
       }
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const openModal = () => {

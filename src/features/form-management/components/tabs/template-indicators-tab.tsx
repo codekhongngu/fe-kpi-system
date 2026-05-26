@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { triggerBrowserFileDownload } from '@/lib/utils'
 import {
   Card,
@@ -329,7 +330,7 @@ export function TemplateIndicatorsTab({
       await refreshTemplate()
       closeDialog()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const updateMutation = useMutation({
@@ -349,7 +350,7 @@ export function TemplateIndicatorsTab({
       await refreshTemplate()
       closeDialog()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteMutation = useMutation({
@@ -359,7 +360,7 @@ export function TemplateIndicatorsTab({
       toast.success('Đã xóa chỉ tiêu.')
       await refreshTemplate()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const saveOrderMutation = useMutation({
@@ -376,7 +377,7 @@ export function TemplateIndicatorsTab({
       setHasPendingReorder(false)
       toast.success('Đã cập nhật vị trí.')
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const importMutation = useMutation({
@@ -388,7 +389,7 @@ export function TemplateIndicatorsTab({
       setExcelImportFile(null)
       await refreshTemplate()
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   function openExcelPicker() {

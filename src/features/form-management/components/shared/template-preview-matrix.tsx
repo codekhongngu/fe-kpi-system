@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -171,7 +172,7 @@ export function TemplatePreviewMatrix({
       })
       setEditorOpen(false)
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   const deleteCellConfigMutation = useMutation({
@@ -192,7 +193,7 @@ export function TemplatePreviewMatrix({
       })
       setEditorOpen(false)
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
   function toggleCellSelection(indicatorId: string, attributeId: string) {
