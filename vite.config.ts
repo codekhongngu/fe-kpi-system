@@ -19,4 +19,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['xlsx', 'xlsx-js-style'],
+  },
+  build: {
+    rollupOptions: {
+      external: ['fs', 'stream', 'crypto', 'os', 'zlib', 'buffer'],
+    },
+  },
 })
