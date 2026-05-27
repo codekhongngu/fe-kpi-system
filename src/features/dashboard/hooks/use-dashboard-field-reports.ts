@@ -54,10 +54,7 @@ export function useDashboardFieldReports(params: DashboardFieldReportsParams) {
     queryFn: () =>
       dashboardApi.getFieldCategoryReports(
         params.fieldCategoryId as string,
-        {
-          ...search!,
-          periodCode: search!.periodCode || DEFAULT_PERIOD_CODE,
-        }
+        search!
       ),
     enabled: Boolean(search?.templateId && search?.periodCode),
     staleTime: 2 * 60 * 1000,
@@ -80,9 +77,13 @@ export async function fetchDashboardFieldReports(
     throw new Error('Thiếu fieldCategoryId hoặc templateId.')
   }
 
-  const merged = { ...search, ...overrides }
+  const definedOverrides = overrides
+    ? Object.fromEntries(
+        Object.entries(overrides).filter(([, v]) => v !== undefined)
+      )
+    : {}
   return dashboardApi.getFieldCategoryReports(fieldCategoryId, {
-    ...merged,
-    periodCode: merged.periodCode || DEFAULT_PERIOD_CODE,
+    ...search,
+    ...definedOverrides,
   })
 }

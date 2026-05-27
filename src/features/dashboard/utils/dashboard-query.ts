@@ -19,13 +19,18 @@ export function buildFieldDashboardSearch(
   templateId: string,
   overrides?: Partial<Omit<FieldDashboardSearch, 'templateId'>>
 ): FieldDashboardSearch {
+  const defined = overrides
+    ? Object.fromEntries(
+        Object.entries(overrides).filter(([, v]) => v !== undefined)
+      )
+    : {}
   return {
     templateId,
     periodCode: DEFAULT_FIELD_DASHBOARD_SEARCH.periodCode,
     periodType: DEFAULT_FIELD_DASHBOARD_SEARCH.periodType,
     page: DEFAULT_FIELD_DASHBOARD_SEARCH.page,
     limit: DEFAULT_FIELD_DASHBOARD_SEARCH.limit,
-    ...overrides,
+    ...defined,
   }
 }
 
