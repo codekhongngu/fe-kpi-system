@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { DateField } from '@/components/ui/date-field'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -376,21 +377,19 @@ export function PeriodsTab() {
             </div>
             <div className='space-y-2'>
               <Label>Từ ngày</Label>
-              <Input
-                type='date'
+              <DateField
                 value={form.dateFrom}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, dateFrom: event.target.value }))
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, dateFrom: val }))
                 }
               />
             </div>
             <div className='space-y-2'>
               <Label>Đến ngày</Label>
-              <Input
-                type='date'
+              <DateField
                 value={form.dateTo}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, dateTo: event.target.value }))
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, dateTo: val }))
                 }
               />
             </div>

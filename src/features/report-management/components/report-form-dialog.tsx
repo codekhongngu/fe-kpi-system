@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { DateField } from '@/components/ui/date-field'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -199,17 +199,17 @@ export function ReportFormDialog({
   onCreate,
   onUpdate,
 }: ReportFormDialogProps) {
-  const title = mode === 'create' ? 'Tạo báo cáo' : 'Chỉnh sửa báo cáo'
+  const title = mode === 'create' ? 'Tạo báo cáo' : 'Chỉnh sửa báo cáo';
+  const description = mode === 'create'
+    ? 'Tạo mới báo cáo từ biểu mẫu.'
+    : 'Cập nhật thông tin báo cáo.';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Tạo report instance từ template đã khóa hoặc cập nhật thông tin báo
-            cáo chưa chốt.
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <ReportForm
@@ -320,6 +320,8 @@ export function ReportForm({
         periodType: isPeriodType(report.periodType) ? report.periodType : undefined,
       })
       resetCommonState()
+      setOpenDate(report.deadlineFrom?.split('T')[0] ?? report.openDate ?? todayISO())
+      setCloseDate(report.deadlineTo?.split('T')[0] ?? report.closeDate ?? report.deadline ?? todayISO())
       return
     }
 
@@ -432,15 +434,17 @@ export function ReportForm({
     }
 
     if (!report) return
-    if (!form.deadline) {
-      toast.error('Hạn nộp là bắt buộc.')
+    if (!openDate || !closeDate) {
+      toast.error('Vui lòng chọn ngày mở và ngày đóng.')
+      return
+    }
+    if (openDate > closeDate) {
+      toast.error('Ngày mở không được lớn hơn ngày đóng.')
       return
     }
     onUpdate(report.id, {
-      name: reportName,
-      deadline: form.deadline,
-      priority: form.priority,
-      note: note || null,
+      deadlineFrom: openDate,
+      deadlineTo: closeDate,
     })
   }
 
@@ -618,19 +622,17 @@ export function ReportForm({
           <div className='mt-4 grid gap-4 sm:grid-cols-3'>
             <div className='space-y-2'>
               <Label>Ngày mở</Label>
-              <Input
-                type='date'
+              <DateField
                 value={openDate}
-                onChange={(event) => setOpenDate(event.target.value)}
+                onChange={setOpenDate}
               />
             </div>
 
             <div className='space-y-2'>
               <Label>Ngày đóng</Label>
-              <Input
-                type='date'
+              <DateField
                 value={closeDate}
-                onChange={(event) => setCloseDate(event.target.value)}
+                onChange={setCloseDate}
               />
             </div>
 

@@ -17,25 +17,19 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      fs: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      stream: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      crypto: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      os: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      zlib: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      buffer: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      path: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      util: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      child_process: path.resolve(__dirname, './src/mocks/node-mock.ts'),
+      events: path.resolve(__dirname, './src/mocks/node-mock.ts'),
     },
   },
   optimizeDeps: {
     include: ['xlsx', 'xlsx-js-style'],
-  },
-  build: {
-    rollupOptions: {
-      external: [
-        'fs',
-        'stream',
-        'crypto',
-        'os',
-        'zlib',
-        'buffer',
-        'path',
-        'util',
-        'child_process',
-        'events',
-      ],
-    },
   },
 })
