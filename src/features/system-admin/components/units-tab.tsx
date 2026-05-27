@@ -68,12 +68,13 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { PermissionGuard } from '@/components/permission-guard'
 import {
   DataTableColumnHeader,
-  DataTablePagination,
   DataTableToolbar,
 } from '@/components/data-table'
+import { DataTablePagination } from '@/components/data-table/data-table-pagination'
 import { organizationsApi } from '../api/mock-system-admin-api'
 import {
   type OrganizationUnit,
@@ -309,17 +310,15 @@ function OrganizationTree({
 
 function UnitsAccessDenied() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quản lý đơn vị</CardTitle>
-        <CardDescription>Cơ cấu Hành chính & Đơn vị</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className='text-sm text-muted-foreground'>
-          Bạn không có quyền xem đơn vị.
-        </p>
-      </CardContent>
-    </Card>
+    <div className='flex w-full flex-col gap-4'>
+      <PageBreadcrumb
+        title='Quản lý đơn vị'
+        subtitle='Cơ cấu Hành chính & Đơn vị'
+      />
+      <p className='text-sm text-muted-foreground'>
+        Bạn không có quyền xem đơn vị.
+      </p>
+    </div>
   )
 }
 
@@ -661,20 +660,19 @@ function UnitsTabContent() {
   }, [selectedUnitId, table])
 
   return (
-    <Card>
-      <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
-        <div>
-          <CardTitle>Quản lý đơn vị</CardTitle>
-          <CardDescription>Cơ cấu Hành chính & Đơn vị</CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className='grid grid-cols-1 items-start gap-4 lg:grid-cols-10'>
-          <Card className='overflow-hidden lg:col-span-3'>
-            <CardHeader className='flex-row items-center justify-between gap-3 bg-muted/30'>
-              <div className='min-w-0'>
+    <>
+      <div className='flex w-full flex-col gap-4'>
+        <PageBreadcrumb
+          title='Quản lý đơn vị'
+          subtitle='Cơ cấu Hành chính & Đơn vị'
+        />
+
+        <div className='grid grid-cols-1 items-start gap-4 lg:grid-cols-10 lg:items-stretch'>
+          <Card className='flex h-full min-h-0 flex-col overflow-hidden lg:col-span-3'>
+            <CardHeader className='flex-row items-center justify-between gap-2 bg-muted/30 px-4 py-3'>
+              <div className='min-w-0 space-y-0.5'>
                 <CardTitle className='text-base'>Cây tổ chức</CardTitle>
-                <CardDescription className='truncate'>
+                <CardDescription className='truncate text-xs'>
                   Chọn đơn vị để xem danh sách trực thuộc
                 </CardDescription>
               </div>
@@ -689,7 +687,7 @@ function UnitsTabContent() {
                 </Button>
               </PermissionGuard>
             </CardHeader>
-            <CardContent className='space-y-3 p-4'>
+            <CardContent className='flex min-h-0 flex-1 flex-col space-y-3 px-4 pb-4 pt-2'>
               <Input
                 placeholder='Tìm theo mã/tên...'
                 value={treeSearch}
@@ -704,7 +702,8 @@ function UnitsTabContent() {
                   onCheckedChange={setIncludeLockedUnits}
                 />
               </div>
-              <ScrollArea className='h-[520px]'>
+              <div className='min-h-[240px] flex-1 lg:min-h-0'>
+                <ScrollArea className='h-full min-h-[240px] lg:min-h-0'>
                 {unitsQuery.isLoading ? (
                   <div className='py-6 text-center text-sm text-muted-foreground'>
                     Đang tải đơn vị...
@@ -729,15 +728,16 @@ function UnitsTabContent() {
                     setExpandedIds={setExpandedIds}
                   />
                 )}
-              </ScrollArea>
+                </ScrollArea>
+              </div>
             </CardContent>
           </Card>
 
-          <div className='min-w-0 space-y-4 lg:col-span-7'>
-            <Card className='overflow-hidden'>
-              <CardHeader className='flex flex-col gap-3 bg-muted/30'>
-                <div className='min-w-0 space-y-2'>
-                  <div>
+          <div className='flex h-full min-h-0 flex-col gap-4 lg:col-span-7'>
+            <Card className='shrink-0 overflow-hidden'>
+              <CardHeader className='bg-muted/30'>
+                <div className='space-y-3'>
+                  <div className='min-w-0'>
                     <CardTitle className='text-base'>
                       {selectedUnit?.name ?? 'Tên đơn vị'}
                     </CardTitle>
@@ -745,107 +745,124 @@ function UnitsTabContent() {
                       {selectedUnitPathLabel}
                     </CardDescription>
                   </div>
-                  {selectedUnit && (
-                    <div className='flex flex-wrap gap-2'>
-                      <Badge variant='secondary'>Mã: {selectedUnit.code}</Badge>
-                      <Badge variant='secondary'>
-                        Cấp: {getUnitLevelLabel(selectedUnit.level)}
-                      </Badge>
-                      <Badge
-                        variant={
-                          selectedUnit.status === 'active'
-                            ? 'default'
-                            : 'secondary'
-                        }
-                      >
-                        Trạng thái:{' '}
-                        {selectedUnit.status === 'active'
-                          ? 'Hoạt động'
-                          : 'Đã khóa'}
-                      </Badge>
+                  <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+                    {selectedUnit ? (
+                      <div className='flex min-w-0 flex-1 flex-wrap items-center gap-2'>
+                        <Badge variant='secondary'>Mã: {selectedUnit.code}</Badge>
+                        <Badge variant='secondary'>
+                          Cấp: {getUnitLevelLabel(selectedUnit.level)}
+                        </Badge>
+                        <Badge
+                          variant={
+                            selectedUnit.status === 'active'
+                              ? 'default'
+                              : 'secondary'
+                          }
+                        >
+                          Trạng thái:{' '}
+                          {selectedUnit.status === 'active'
+                            ? 'Hoạt động'
+                            : 'Đã khóa'}
+                        </Badge>
+                      </div>
+                    ) : (
+                      <div className='hidden flex-1 sm:block' />
+                    )}
+                    <div className='flex shrink-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end'>
+                      <PermissionGuard permission='units.create'>
+                        <Button
+                          size='sm'
+                          className='w-full sm:w-auto'
+                          onClick={() => openCreateDialog(selectedUnitId)}
+                          disabled={!selectedUnitId}
+                        >
+                          <PlusCircle />
+                          Thêm trực thuộc
+                        </Button>
+                      </PermissionGuard>
+                      <PermissionGuard permission='units.update'>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='w-full sm:w-auto'
+                          onClick={() =>
+                            selectedUnit && openEditDialog(selectedUnit)
+                          }
+                          disabled={!selectedUnit}
+                        >
+                          <UserPen />
+                          Sửa
+                        </Button>
+                      </PermissionGuard>
+                      <PermissionGuard permission='units.update'>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='w-full sm:w-auto'
+                          onClick={() =>
+                            selectedUnit &&
+                            setStatusDialog({
+                              unit: selectedUnit,
+                              action:
+                                selectedUnit.status === 'active'
+                                  ? 'lock'
+                                  : 'unlock',
+                            })
+                          }
+                          disabled={!selectedUnit}
+                        >
+                          {selectedUnit?.status === 'active' ? (
+                            <>
+                              <Lock />
+                              Khóa
+                            </>
+                          ) : (
+                            <>
+                              <Unlock />
+                              Mở
+                            </>
+                          )}
+                        </Button>
+                      </PermissionGuard>
                     </div>
-                  )}
-                </div>
-                <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end'>
-                  <PermissionGuard permission='units.create'>
-                    <Button
-                      size='sm'
-                      onClick={() => openCreateDialog(selectedUnitId)}
-                      disabled={!selectedUnitId}
-                    >
-                      <PlusCircle />
-                      Thêm trực thuộc
-                    </Button>
-                  </PermissionGuard>
-                  <PermissionGuard permission='units.update'>
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={() => selectedUnit && openEditDialog(selectedUnit)}
-                      disabled={!selectedUnit}
-                    >
-                      <UserPen />
-                      Sửa
-                    </Button>
-                  </PermissionGuard>
-                  <PermissionGuard permission='units.update'>
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={() =>
-                        selectedUnit &&
-                        setStatusDialog({
-                          unit: selectedUnit,
-                          action:
-                            selectedUnit.status === 'active' ? 'lock' : 'unlock',
-                        })
-                      }
-                      disabled={!selectedUnit}
-                    >
-                      {selectedUnit?.status === 'active' ? (
-                        <>
-                          <Lock />
-                          Khóa
-                        </>
-                      ) : (
-                        <>
-                          <Unlock />
-                          Mở
-                        </>
-                      )}
-                    </Button>
-                  </PermissionGuard>
+                  </div>
                 </div>
               </CardHeader>
             </Card>
 
-            <Card className='overflow-hidden'>
-              <CardContent className='space-y-3 p-4'>
-                <div className='text-sm font-medium'>Đơn vị trực thuộc</div>
-                <DataTableToolbar
-                  table={table}
-                  searchPlaceholder='Tìm theo mã, tên, mô tả...'
-                  filters={[
-                    {
-                      columnId: 'level',
-                      title: 'Cấp',
-                      options: unitLevelOptions.map((option) => ({
-                        label: option.label,
-                        value: String(option.value),
-                      })),
-                    },
-                    {
-                      columnId: 'status',
-                      title: 'Trạng thái',
-                      options: [
-                        { label: 'Hoạt động', value: 'active' },
-                        { label: 'Đã khóa', value: 'locked' },
-                      ],
-                    },
-                  ]}
-                />
+            <Card className='flex min-h-0 flex-1 flex-col overflow-hidden'>
+              <CardContent className='flex min-h-0 flex-1 flex-col space-y-3 p-4'>
+                <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4'>
+                  <div className='shrink-0 text-sm font-medium'>
+                    Đơn vị trực thuộc
+                  </div>
+                  <div className='min-w-0 flex-1'>
+                    <DataTableToolbar
+                      table={table}
+                      searchPlaceholder='Tìm theo mã, tên, mô tả...'
+                      filters={[
+                        {
+                          columnId: 'level',
+                          title: 'Cấp',
+                          options: unitLevelOptions.map((option) => ({
+                            label: option.label,
+                            value: String(option.value),
+                          })),
+                        },
+                        {
+                          columnId: 'status',
+                          title: 'Trạng thái',
+                          options: [
+                            { label: 'Hoạt động', value: 'active' },
+                            { label: 'Đã khóa', value: 'locked' },
+                          ],
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
 
-                <div className='overflow-hidden rounded-md border'>
+                <div className='max-h-[600px] min-h-0 flex-1 overflow-auto rounded-md border bg-card'>
                   <Table>
                     <TableHeader>
                       {table.getHeaderGroups().map((headerGroup) => (
@@ -901,12 +918,21 @@ function UnitsTabContent() {
                   </Table>
                 </div>
 
-                <DataTablePagination table={table} />
+                <DataTablePagination
+                  total={table.getFilteredRowModel().rows.length}
+                  page={table.getState().pagination.pageIndex + 1}
+                  pageSize={table.getState().pagination.pageSize}
+                  onPageChange={(page) => table.setPageIndex(page - 1)}
+                  onPageSizeChange={(pageSize) => {
+                    table.setPageSize(pageSize)
+                    table.setPageIndex(0)
+                  }}
+                />
               </CardContent>
             </Card>
           </div>
         </div>
-      </CardContent>
+      </div>
 
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent className='sm:max-w-2xl'>
@@ -1090,6 +1116,6 @@ function UnitsTabContent() {
         destructive={statusDialog?.action === 'lock'}
         isLoading={statusMutation.isPending}
       />
-    </Card>
+    </>
   )
 }

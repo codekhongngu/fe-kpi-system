@@ -1,16 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusCircle, RotateCcw, Trash2, UserPen } from 'lucide-react'
+import { PlusCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -28,19 +20,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { DataTablePagination } from '@/components/data-table/data-table-pagination'
+import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { PermissionGuard } from '@/components/permission-guard'
 import { systemAdminMockApi } from '../api/mock-system-admin-api'
 import { type SystemUser } from '../api/types'
+import {
+  defaultUserFilters,
+  UserFilters,
+  type UserFiltersState,
+} from './user-filters'
+import { UsersTable } from './users-table'
 
 const EMPTY_USERS: SystemUser[] = []
 
@@ -68,19 +60,15 @@ const defaultForm: UserFormState = {
 
 function UsersAccessDenied() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quản lý người dùng</CardTitle>
-        <CardDescription>
-          CRUD user, reset mật khẩu, khóa/mở tài khoản, enforce soft delete.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className='text-sm text-muted-foreground'>
-          Bạn không có quyền xem tài khoản.
-        </p>
-      </CardContent>
-    </Card>
+    <div className='flex w-full flex-col gap-4'>
+      <PageBreadcrumb
+        title='Quản lý người dùng'
+        subtitle='CRUD user, reset mật khẩu, khóa/mở tài khoản, enforce soft delete.'
+      />
+      <p className='text-sm text-muted-foreground'>
+        Bạn không có quyền xem tài khoản.
+      </p>
+    </div>
   )
 }
 
@@ -108,7 +96,7 @@ function UsersTabContent() {
     queryFn: () => systemAdminMockApi.listUnits(),
   })
 
-  const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState<UserFiltersState>(defaultUserFilters)
   const [openForm, setOpenForm] = useState(false)
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null)
   const [form, setForm] = useState<UserFormState>(defaultForm)
@@ -120,16 +108,25 @@ function UsersTabContent() {
   const units = unitsQuery.data ?? []
 
   const filteredUsers = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    if (!keyword) {
-      return users
-    }
-    return users.filter((user) =>
-      [user.userCode, user.fullName, user.email, user.username].some((value) =>
-        value.toLowerCase().includes(keyword)
-      )
-    )
-  }, [search, users])
+    const keyword = filters.keyword.trim().toLowerCase()
+    return users.filter((user) => {
+      const matchKeyword =
+        !keyword ||
+        [user.userCode, user.fullName, user.email, user.username].some(
+          (value) => value.toLowerCase().includes(keyword)
+        )
+      const matchUnit =
+        !filters.unitId || user.unitId === filters.unitId
+      const matchStatus =
+        filters.status === 'all' || user.status === filters.status
+      return matchKeyword && matchUnit && matchStatus
+    })
+  }, [filters.keyword, filters.status, filters.unitId, users])
+
+  const paginatedUsers = useMemo(() => {
+    const start = (filters.page - 1) * filters.pageSize
+    return filteredUsers.slice(start, start + filters.pageSize)
+  }, [filteredUsers, filters.page, filters.pageSize])
 
   const createMutation = useMutation({
     mutationFn: systemAdminMockApi.createUser,
@@ -214,7 +211,7 @@ function UsersTabContent() {
 
   const submitForm = () => {
     const isCreating = !editingUser
-    
+
     if (
       !form.fullName.trim() ||
       !form.email.trim() ||
@@ -254,148 +251,53 @@ function UsersTabContent() {
     createMutation.mutate(payload)
   }
 
-  const unitLabel = (unitId: string) =>
-    units.find((unit) => unit.id === unitId)?.name ?? 'Không xác định'
-
-  const roleLabel = (roleId: string) =>
-    roles.find((role) => role.id === roleId)?.name ?? 'N/A'
-
   const loading =
     usersQuery.isLoading || rolesQuery.isLoading || unitsQuery.isLoading
 
   return (
-    <Card>
-      <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
-        <div>
-          <CardTitle>Quản lý người dùng</CardTitle>
-          <CardDescription>
-            CRUD user, reset mật khẩu, khóa/mở tài khoản, enforce soft delete.
-          </CardDescription>
-        </div>
-        <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
-          <Input
-            className='sm:w-80'
-            placeholder='Tìm theo mã, tên, email, username...'
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+    <>
+      <div className='flex w-full flex-col gap-4'>
+        <PageBreadcrumb
+          title='Quản lý người dùng'
+          subtitle='CRUD user, reset mật khẩu, khóa/mở tài khoản, enforce soft delete.'
+        >
           <PermissionGuard permission='users.create'>
             <Button onClick={openCreateDialog}>
               <PlusCircle />
               Thêm người dùng
             </Button>
           </PermissionGuard>
-        </div>
-      </CardHeader>
-      <CardContent className='space-y-4'>
-        <div className='overflow-hidden rounded-md border'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã</TableHead>
-                <TableHead>Họ tên</TableHead>
-                <TableHead>Đơn vị</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className='text-right'>Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!loading && filteredUsers.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className='h-20 text-center'>
-                    Không có dữ liệu người dùng.
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className='font-medium'>{user.userCode}</TableCell>
-                  <TableCell>
-                    <div>{user.fullName}</div>
-                    <div className='text-xs text-muted-foreground'>
-                      {user.email}
-                    </div>
-                  </TableCell>
-                  <TableCell>{unitLabel(user.unitId)}</TableCell>
-                  <TableCell>
-                    <div className='flex flex-wrap gap-1'>
-                      {user.roleIds.map((roleId) => (
-                        <Badge key={roleId} variant='outline'>
-                          {roleLabel(roleId)}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        user.status === 'active' ? 'default' : 'secondary'
-                      }
-                    >
-                      {user.status === 'active'
-                        ? 'Hoạt động'
-                        : 'Dừng hoạt động'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className='text-right'>
-                    <PermissionGuard
-                      permission={[
-                        'users.update',
-                        'users.reset-password',
-                        'users.toggle-status',
-                        'users.delete',
-                      ]}
-                    >
-                      <div className='flex justify-end gap-1'>
-                        <PermissionGuard permission='users.update'>
-                          <Button
-                            size='icon'
-                            variant='outline'
-                            onClick={() => openEditDialog(user)}
-                            title='Sửa'
-                          >
-                            <UserPen />
-                          </Button>
-                        </PermissionGuard>
-                        <PermissionGuard permission='users.reset-password'>
-                          <Button
-                            size='icon'
-                            variant='outline'
-                            onClick={() => resetPasswordMutation.mutate(user.id)}
-                            title='Reset mật khẩu'
-                          >
-                            <RotateCcw />
-                          </Button>
-                        </PermissionGuard>
-                        <PermissionGuard permission='users.toggle-status'>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                            onClick={() => setStatusDialog(user)}
-                          >
-                            {user.status === 'active' ? 'Khóa' : 'Mở'}
-                          </Button>
-                        </PermissionGuard>
-                        <PermissionGuard permission='users.delete'>
-                          <Button
-                            size='icon'
-                            variant='destructive'
-                            onClick={() => setDeletingUser(user)}
-                            title='Xóa mềm'
-                          >
-                            <Trash2 />
-                          </Button>
-                        </PermissionGuard>
-                      </div>
-                    </PermissionGuard>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+        </PageBreadcrumb>
+
+        <UserFilters filters={filters} units={units} onChange={setFilters} />
+
+        {usersQuery.isError ? (
+          <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
+            {getApiErrorMessage(usersQuery.error)}
+          </div>
+        ) : (
+          <UsersTable
+            data={paginatedUsers}
+            isLoading={loading}
+            units={units}
+            roles={roles}
+            onEdit={openEditDialog}
+            onResetPassword={(userId) => resetPasswordMutation.mutate(userId)}
+            onToggleStatus={setStatusDialog}
+            onDelete={setDeletingUser}
+          />
+        )}
+
+        <DataTablePagination
+          total={filteredUsers.length}
+          page={filters.page}
+          pageSize={filters.pageSize}
+          onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+          onPageSizeChange={(pageSize) =>
+            setFilters((prev) => ({ ...prev, pageSize, page: 1 }))
+          }
+        />
+      </div>
 
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent className='sm:max-w-2xl'>
@@ -626,6 +528,6 @@ function UsersTabContent() {
         destructive={statusDialog?.status === 'active'}
         isLoading={statusMutation.isPending}
       />
-    </Card>
+    </>
   )
 }

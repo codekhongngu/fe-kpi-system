@@ -1,16 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusCircle, Trash2, UserPen } from 'lucide-react'
+import { PlusCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -22,20 +14,21 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { DataTablePagination } from '@/components/data-table/data-table-pagination'
+import { Main } from '@/components/layout/main'
+import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { PermissionGuard } from '@/components/permission-guard'
 import { getApiErrorMessage } from '@/lib/get-api-error-message'
 import { formManagementApi } from '../api/template-management-api'
 import { type FieldCategory } from '../api/types'
+import {
+  defaultFieldCategoryFilters,
+  FieldCategoryFilters,
+  type FieldCategoryFiltersState,
+} from '../components/field-category-filters'
+import { FieldCategoriesTable } from '../components/field-categories-table'
 
 const EMPTY_CATEGORIES: FieldCategory[] = []
 
@@ -57,30 +50,30 @@ const defaultForm: FieldCategoryFormState = {
 
 function FormCategoryAccessDenied() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Lĩnh vực biểu mẫu</CardTitle>
-        <CardDescription>
-          Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className='text-sm text-muted-foreground'>
-          Bạn không có quyền xem lĩnh vực biểu mẫu.
-        </p>
-      </CardContent>
-    </Card>
+    <div className='flex w-full flex-col gap-4'>
+      <PageBreadcrumb
+        title='Lĩnh vực biểu mẫu'
+        subtitle='Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.'
+      />
+      <p className='text-sm text-muted-foreground'>
+        Bạn không có quyền xem lĩnh vực biểu mẫu.
+      </p>
+    </div>
   )
 }
 
 export function FormCategoryListPage() {
   return (
-    <PermissionGuard
-      permission='field-categories.view'
-      fallback={<FormCategoryAccessDenied />}
-    >
-      <FormCategoryListContent />
-    </PermissionGuard>
+    <Main fixed>
+      <div className='flex w-full flex-1 overflow-y-auto'>
+        <PermissionGuard
+          permission='field-categories.view'
+          fallback={<FormCategoryAccessDenied />}
+        >
+          <FormCategoryListContent />
+        </PermissionGuard>
+      </div>
+    </Main>
   )
 }
 
@@ -94,7 +87,9 @@ function FormCategoryListContent() {
 
   const categories = categoriesQuery.data ?? EMPTY_CATEGORIES
 
-  const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState<FieldCategoryFiltersState>(
+    defaultFieldCategoryFilters
+  )
   const [openForm, setOpenForm] = useState(false)
   const [editingCategory, setEditingCategory] = useState<FieldCategory | null>(
     null
@@ -104,13 +99,25 @@ function FormCategoryListContent() {
     useState<FieldCategory | null>(null)
 
   const filteredCategories = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    if (!keyword) return categories
+    const keyword = filters.keyword.trim().toLowerCase()
     return categories.filter((item) => {
-      const parts = [item.code, item.name, item.description ?? '']
-      return parts.some((value) => value.toLowerCase().includes(keyword))
+      const matchKeyword =
+        !keyword ||
+        [item.code, item.name, item.description ?? ''].some((value) =>
+          value.toLowerCase().includes(keyword)
+        )
+      const matchStatus =
+        filters.status === 'all' ||
+        (filters.status === 'active' && item.isActive) ||
+        (filters.status === 'inactive' && !item.isActive)
+      return matchKeyword && matchStatus
     })
-  }, [categories, search])
+  }, [categories, filters.keyword, filters.status])
+
+  const paginatedCategories = useMemo(() => {
+    const start = (filters.page - 1) * filters.pageSize
+    return filteredCategories.slice(start, start + filters.pageSize)
+  }, [filteredCategories, filters.page, filters.pageSize])
 
   const closeForm = () => {
     setOpenForm(false)
@@ -197,123 +204,45 @@ function FormCategoryListContent() {
   })
 
   return (
-    <Card>
-      <CardHeader className='gap-4 sm:flex-row sm:items-end sm:justify-between'>
-        <div>
-          <CardTitle>Lĩnh vực biểu mẫu</CardTitle>
-          <CardDescription>
-            Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.
-          </CardDescription>
-        </div>
-
-        <div className='flex w-full flex-col gap-2 sm:w-auto sm:flex-row'>
-          <Input
-            className='sm:w-80'
-            placeholder='Tìm theo mã, tên hoặc mô tả...'
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+    <>
+      <div className='flex w-full flex-col gap-4'>
+        <PageBreadcrumb
+          title='Lĩnh vực biểu mẫu'
+          subtitle='Quản lý danh mục lĩnh vực biểu mẫu để phân Lĩnh vực biểu mẫu.'
+        >
           <PermissionGuard permission='field-categories.create'>
             <Button onClick={openCreateDialog}>
               <PlusCircle />
               Thêm lĩnh vực
             </Button>
           </PermissionGuard>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className='overflow-hidden rounded-md border'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã</TableHead>
-                <TableHead>Tên lĩnh vực</TableHead>
-                <TableHead className='w-[120px]'>Thứ tự</TableHead>
-                <TableHead className='w-[140px]'>Trạng thái</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead className='w-[120px] text-right'>Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categoriesQuery.isLoading && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className='h-20 text-center text-sm text-muted-foreground'
-                  >
-                    Đang tải danh sách lĩnh vực...
-                  </TableCell>
-                </TableRow>
-              )}
-              {categoriesQuery.isError && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className='h-20 text-center text-sm text-destructive'
-                  >
-                    Không tải được danh sách lĩnh vực.
-                  </TableCell>
-                </TableRow>
-              )}
-              {!categoriesQuery.isLoading &&
-                !categoriesQuery.isError &&
-                filteredCategories.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className='h-20 text-center'>
-                      Chưa có lĩnh vực biểu mẫu.
-                    </TableCell>
-                  </TableRow>
-                )}
-              {filteredCategories.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className='font-medium'>{item.code}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.sortOrder}</TableCell>
-                  <TableCell>
-                    <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                      {item.isActive ? 'Hoạt động' : 'Ngừng'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className='max-w-[420px] truncate'>
-                    {item.description ?? '-'}
-                  </TableCell>
-                  <TableCell className='text-right'>
-                    <PermissionGuard
-                      permission={[
-                        'field-categories.update',
-                        'field-categories.delete',
-                      ]}
-                    >
-                      <div className='flex justify-end gap-1'>
-                        <PermissionGuard permission='field-categories.update'>
-                          <Button
-                            size='icon'
-                            variant='outline'
-                            onClick={() => openEditDialog(item)}
-                            title='Sửa lĩnh vực'
-                          >
-                            <UserPen />
-                          </Button>
-                        </PermissionGuard>
-                        <PermissionGuard permission='field-categories.delete'>
-                          <Button
-                            size='icon'
-                            variant='destructive'
-                            onClick={() => setDeletingCategory(item)}
-                            title='Xóa lĩnh vực'
-                          >
-                            <Trash2 />
-                          </Button>
-                        </PermissionGuard>
-                      </div>
-                    </PermissionGuard>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
+        </PageBreadcrumb>
+
+        <FieldCategoryFilters filters={filters} onChange={setFilters} />
+
+        {categoriesQuery.isError ? (
+          <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
+            {getApiErrorMessage(categoriesQuery.error)}
+          </div>
+        ) : (
+          <FieldCategoriesTable
+            data={paginatedCategories}
+            isLoading={categoriesQuery.isLoading}
+            onEdit={openEditDialog}
+            onDelete={setDeletingCategory}
+          />
+        )}
+
+        <DataTablePagination
+          total={filteredCategories.length}
+          page={filters.page}
+          pageSize={filters.pageSize}
+          onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+          onPageSizeChange={(pageSize) =>
+            setFilters((prev) => ({ ...prev, pageSize, page: 1 }))
+          }
+        />
+      </div>
 
       <Dialog
         open={openForm}
@@ -463,6 +392,6 @@ function FormCategoryListContent() {
           deleteMutation.mutate(deletingCategory.id)
         }}
       />
-    </Card>
+    </>
   )
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Shield,
   Lock,
   Save,
   X,
@@ -13,16 +12,11 @@ import {
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { PermissionGuard } from '@/components/permission-guard'
 import {
   Collapsible,
@@ -66,16 +60,12 @@ const ROLES_STALE_MS = 5 * 60 * 1000
 
 function RolesAccessDenied() {
   return (
-    <Card className='overflow-hidden'>
-      <CardHeader>
-        <CardTitle>Vai trò & Phân quyền (RBAC)</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className='text-sm text-muted-foreground'>
-          Bạn không có quyền xem vai trò.
-        </p>
-      </CardContent>
-    </Card>
+    <div className='flex w-full flex-col gap-4'>
+      <PageBreadcrumb title='Vai trò & Phân quyền (RBAC)' />
+      <p className='text-sm text-muted-foreground'>
+        Bạn không có quyền xem vai trò.
+      </p>
+    </div>
   )
 }
 
@@ -357,19 +347,12 @@ function RolesTabContent() {
   const isLoadingPermissions = isLoadingCatalog || isLoadingRolePermissions
 
   return (
-    <Card className='overflow-hidden'>
-      <CardHeader>
-        <div className='flex items-center gap-2'>
-          <Shield className='h-5 w-5' />
-          <div>
-            <CardTitle>Vai trò & Phân quyền (RBAC)</CardTitle>
-            <CardDescription>
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+    <>
+      <div className='flex w-full flex-col gap-4'>
+        <PageBreadcrumb title='Vai trò & Phân quyền (RBAC)' />
 
-      <CardContent className='relative pb-10'>
+        <Card className='overflow-hidden'>
+          <CardContent className='relative pb-10'>
         {isLoadingRoles ? (
           <div className='flex h-64 items-center justify-center gap-2 text-muted-foreground'>
             <Loader2 className='size-5 animate-spin' />
@@ -457,54 +440,66 @@ function RolesTabContent() {
                     </div>
                   ) : null}
 
-                  <div className='flex items-center justify-between rounded-lg border bg-muted/30 p-4'>
-                    <div>
-                      <div className='flex flex-wrap items-center gap-2'>
-                        <h3 className='text-base font-semibold'>
-                          {selectedRole.name}
-                        </h3>
-                        <Badge variant={getRoleBadgeVariant(selectedRole.code)}>
-                          {selectedRole.code}
-                        </Badge>
-                        {isDirty ? (
-                          <Badge
-                            variant='outline'
-                            className='border-amber-300 bg-amber-50 text-amber-800'
-                          >
-                            Chưa lưu
+                  <div
+                    className={`rounded-lg border p-4 ${
+                      isSuperAdmin
+                        ? 'border-amber-200 bg-amber-50/80 dark:border-amber-900 dark:bg-amber-950/30'
+                        : 'border-border bg-muted/30'
+                    }`}
+                  >
+                    <div className='flex items-center justify-between gap-4'>
+                      <div className='min-w-0'>
+                        <div className='flex flex-wrap items-center gap-2'>
+                          <h3 className='text-base font-semibold'>
+                            {selectedRole.name}
+                          </h3>
+                          <Badge variant={getRoleBadgeVariant(selectedRole.code)}>
+                            {selectedRole.code}
                           </Badge>
+                          {isDirty ? (
+                            <Badge
+                              variant='outline'
+                              className='border-amber-300 bg-amber-50 text-amber-800'
+                            >
+                              Chưa lưu
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          {selectedRole.description}
+                        </p>
+                        {isSuperAdmin ? (
+                          <p className='mt-1.5 flex items-start gap-1.5 text-xs leading-relaxed text-amber-800 dark:text-amber-200'>
+                            <Lock className='mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400' />
+                            <span>
+                              <span className='font-medium'>
+                                Toàn quyền hệ thống
+                              </span>
+                              {' — '}
+                              đủ {totalMatrixPermissions} quyền, không thể chỉnh
+                              sửa.
+                            </span>
+                          </p>
                         ) : null}
                       </div>
-                      <p className='mt-1 text-sm text-muted-foreground'>
-                        {selectedRole.description}
-                      </p>
-                    </div>
-                    <div className='text-right'>
-                      {isLoadingPermissions ? (
-                        <Loader2 className='ml-auto size-6 animate-spin text-muted-foreground' />
-                      ) : (
-                        <>
-                          <div className='text-2xl font-bold'>
-                            {pendingPermissionIds.length}
-                          </div>
-                          <div className='text-xs text-muted-foreground'>
-                            / {totalMatrixPermissions} quyền trong ma trận
-                          </div>
-                        </>
-                      )}
+                      <div className='shrink-0 text-right'>
+                        {isLoadingPermissions ? (
+                          <Loader2 className='ml-auto size-6 animate-spin text-muted-foreground' />
+                        ) : (
+                          <>
+                            <div className='text-2xl font-bold'>
+                              {pendingPermissionIds.length}
+                            </div>
+                            <div className='text-xs text-muted-foreground'>
+                              / {totalMatrixPermissions} quyền trong ma trận
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {isSuperAdmin ? (
-                    <div className='flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30'>
-                      <Lock className='h-4 w-4 shrink-0 text-amber-600' />
-                      <div className='text-sm text-amber-800 dark:text-amber-200'>
-                        <strong>SUPER_ADMIN — Toàn quyền hệ thống.</strong>{' '}
-                        Role này có toàn bộ {totalMatrixPermissions} quyền
-                        trong danh mục /permissions và không thể chỉnh sửa.
-                      </div>
-                    </div>
-                  ) : (
+                  {!isSuperAdmin ? (
                     <PermissionGuard
                       permission='roles.update'
                       fallback={
@@ -519,7 +514,7 @@ function RolesTabContent() {
                     >
                       {null}
                     </PermissionGuard>
-                  )}
+                  ) : null}
 
                   <div className='flex flex-wrap items-center justify-between gap-2'>
                     <span className='text-sm text-muted-foreground'>
@@ -754,7 +749,9 @@ function RolesTabContent() {
             </div>
           </PermissionGuard>
         ) : null}
-      </CardContent>
+          </CardContent>
+        </Card>
+      </div>
 
       <ConfirmDialog
         open={Boolean(confirmSwitchRole)}
@@ -767,6 +764,6 @@ function RolesTabContent() {
         confirmText='Bỏ thay đổi & Chuyển'
         destructive
       />
-    </Card>
+    </>
   )
 }

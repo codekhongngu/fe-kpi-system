@@ -62,19 +62,21 @@ export function SystemAdmin() {
   }, [activeTab, navigate, requestedTab])
 
   return (
-    <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
-      <PermissionGuard
-        permission={['users.view', 'roles.view', 'units.view']}
-        fallback={
-          <p className='text-sm text-muted-foreground'>
-            Bạn không có quyền truy cập Quản trị hệ thống.
-          </p>
-        }
-      >
-        {activeTab === 'users' && <UsersTab />}
-        {activeTab === 'roles' && <RolesTab />}
-        {activeTab === 'units' && <UnitsTab />}
-      </PermissionGuard>
+    <Main fixed>
+      <div className='flex w-full flex-1 overflow-y-auto'>
+        <PermissionGuard
+          permission={['users.view', 'roles.view', 'units.view']}
+          fallback={
+            <p className='text-sm text-muted-foreground'>
+              Bạn không có quyền truy cập Quản trị hệ thống.
+            </p>
+          }
+        >
+          {activeTab === 'users' && <UsersTab />}
+          {activeTab === 'roles' && <RolesTab />}
+          {activeTab === 'units' && <UnitsTab />}
+        </PermissionGuard>
+      </div>
     </Main>
   )
 }
