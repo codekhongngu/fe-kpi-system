@@ -17,7 +17,8 @@
   --accent-foreground: #2e3f45;
   --destructive: #ee1d36;
   --border: #d6e1df;
-  --input: #f7fbfa;
+  /* --input: #f7fbfa; */
+  --input: #d6e1df;
   --ring: #129b93;
   --chart-1: #129b93;
   --chart-2: #6caea9;

@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { DateField } from '@/components/ui/date-field'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -116,21 +117,19 @@ export function EditCampaignDialog({
           <div className='grid grid-cols-2 gap-4'>
             <div className='grid gap-2'>
               <Label>Ngày mở</Label>
-              <Input
-                type='date'
+              <DateField
                 value={form.deadlineFrom}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, deadlineFrom: e.target.value }))
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, deadlineFrom: val }))
                 }
               />
             </div>
             <div className='grid gap-2'>
               <Label>Ngày đóng</Label>
-              <Input
-                type='date'
+              <DateField
                 value={form.deadlineTo}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, deadlineTo: e.target.value }))
+                onChange={(val) =>
+                  setForm((prev) => ({ ...prev, deadlineTo: val }))
                 }
               />
             </div>
