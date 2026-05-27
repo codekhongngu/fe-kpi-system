@@ -6,17 +6,44 @@ import type { DashboardFieldCategoryHub } from '../api/types'
 import { dashboardQueryKeys } from '../utils/dashboard-query'
 import { toFieldDashboardSearch } from './use-dashboard-field-reports'
 import {
+  getFieldCodeForKtXhPath,
   persistKtXhRouteState,
   resolveKtXhRouteSearch,
   type KtXhRouteSearch,
 } from '../utils/kt-xh-navigation'
 
 export function useSyncKtXhRouteSearch(search: KtXhRouteSearch) {
+  const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
+
+  const categoriesQuery = useQuery({
+    queryKey: dashboardQueryKeys.fieldCategories,
+    queryFn: () => dashboardApi.listDashboardFieldCategories(true),
+    staleTime: 5 * 60 * 1000,
+  })
 
   useEffect(() => {
     persistKtXhRouteState(pathname, search)
   }, [pathname, search.fieldCategoryId, search.templateId, search.periodCode, search.periodType])
+
+  useEffect(() => {
+    if (search.fieldCategoryId && search.templateId) return
+
+    const fieldCode = getFieldCodeForKtXhPath(pathname)
+    if (!fieldCode) return
+
+    const categories = categoriesQuery.data ?? []
+    if (!categories.length) return
+
+    const resolved = resolveKtXhRouteSearch(pathname, categories, search)
+    if (resolved.fieldCategoryId && resolved.templateId) {
+      navigate({
+        to: pathname,
+        search: resolved as Record<string, string>,
+        replace: true,
+      })
+    }
+  }, [search.fieldCategoryId, search.templateId, pathname, navigate, categoriesQuery.data])
 }
 
 export function useKtXhNavigation() {
@@ -43,10 +70,14 @@ export function useKtXhNavigation() {
         []
 
       if (!categories.length) {
-        categories = await queryClient.fetchQuery({
-          queryKey: dashboardQueryKeys.fieldCategories,
-          queryFn: () => dashboardApi.listDashboardFieldCategories(true),
-        })
+        try {
+          categories = await queryClient.fetchQuery({
+            queryKey: dashboardQueryKeys.fieldCategories,
+            queryFn: () => dashboardApi.listDashboardFieldCategories(true),
+          })
+        } catch {
+          categories = []
+        }
       }
 
       const nextSearch = resolveKtXhRouteSearch(
@@ -54,13 +85,6 @@ export function useKtXhNavigation() {
         categories,
         currentSearch
       )
-
-      console.log('[KtXhNav] resolveKtXhRouteSearch →', {
-        targetPath,
-        fieldCode: targetPath,
-        categoriesCount: categories.length,
-        nextSearch,
-      })
 
       persistKtXhRouteState(pathname, currentSearch)
 
