@@ -50,7 +50,7 @@ export function UsersTable({
             <TableHead>Mã</TableHead>
             <TableHead>Họ tên</TableHead>
             <TableHead>Đơn vị</TableHead>
-            <TableHead>Role</TableHead>
+            <TableHead>Vai trò</TableHead>
             <TableHead>Trạng thái</TableHead>
             <TableHead className='text-right'>Thao tác</TableHead>
           </TableRow>

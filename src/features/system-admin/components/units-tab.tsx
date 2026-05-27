@@ -2,24 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  type ColumnDef,
-  type ColumnFiltersState,
-  type SortingState,
-  flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
-import {
   Building2,
   ChevronRight,
   Lock,
   PlusCircle,
-  Trash2,
   Unlock,
   UserPen,
 } from 'lucide-react'
@@ -49,7 +35,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -58,29 +43,22 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { DataTablePagination } from '@/components/data-table/data-table-pagination'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
 import { PermissionGuard } from '@/components/permission-guard'
-import {
-  DataTableColumnHeader,
-  DataTableToolbar,
-} from '@/components/data-table'
-import { DataTablePagination } from '@/components/data-table/data-table-pagination'
 import { organizationsApi } from '../api/mock-system-admin-api'
 import {
   type OrganizationUnit,
   unitLevelOptions,
-  type UnitStatus,
 } from '../api/types'
+import {
+  OrganizationSubUnitFilters,
+  defaultOrganizationSubUnitFilters,
+  type OrganizationSubUnitFiltersState,
+} from './organization-sub-unit-filters'
+import { OrganizationSubUnitsTable } from './organization-sub-units-table'
 
 const EMPTY_UNITS: OrganizationUnit[] = []
 
@@ -500,164 +478,39 @@ function UnitsTabContent() {
     return units.filter((unit) => unit.parentId === selectedUnitId)
   }, [selectedUnitId, units])
 
-  const columns = useMemo<ColumnDef<OrganizationUnit>[]>(() => {
-    return [
-      {
-        accessorKey: 'code',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title='Mã đơn vị' />
-        ),
-        cell: ({ row }) => (
-          <div className='font-medium'>{row.original.code}</div>
-        ),
-      },
-      {
-        accessorKey: 'name',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title='Tên đơn vị' />
-        ),
-        cell: ({ row }) => (
-          <div className='min-w-0'>
-            <div className='max-w-[320px] truncate' title={row.original.name}>
-              {row.original.name}
-            </div>
-            <div
-              className='max-w-[320px] truncate text-xs text-muted-foreground'
-              title={row.original.description ?? ''}
-            >
-              {row.original.description ?? ''}
-            </div>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'level',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title='Cấp bậc' />
-        ),
-        cell: ({ row }) => (
-          <div className='text-sm'>{getUnitLevelLabel(row.original.level)}</div>
-        ),
-        filterFn: (row, id, value) => {
-          if (!value || (Array.isArray(value) && value.length === 0))
-            return true
-          const level = row.getValue(id) as number
-          const key = String(level)
-          if (Array.isArray(value)) return value.includes(key)
-          return value === key
-        },
-      },
-      {
-        accessorKey: 'memberCount',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title='Thành viên' />
-        ),
-        cell: ({ row }) => (
-          <div className='text-sm'>
-            {row.original.memberCount} user | {row.original.activeAssignments}{' '}
-            đang giao
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'status',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title='Trạng thái' />
-        ),
-        cell: ({ row }) => (
-          <Badge
-            variant={row.original.status === 'active' ? 'default' : 'secondary'}
-          >
-            {row.original.status === 'active' ? 'Hoạt động' : 'Đã khóa'}
-          </Badge>
-        ),
-        filterFn: (row, id, value) => {
-          if (!value || (Array.isArray(value) && value.length === 0))
-            return true
-          const status = row.getValue(id) as UnitStatus
-          if (Array.isArray(value)) return value.includes(status)
-          return value === status
-        },
-      },
-      {
-        id: 'actions',
-        header: () => <div className='text-right'>Thao tác</div>,
-        cell: ({ row }) => {
-          const unit = row.original
-          return (
-            <PermissionGuard
-              permission={['units.update', 'units.delete']}
-            >
-              <div className='flex justify-end gap-1'>
-                <PermissionGuard permission='units.update'>
-                  <Button
-                    size='icon'
-                    variant='outline'
-                    onClick={() => openEditDialog(unit)}
-                    title='Sửa đơn vị'
-                  >
-                    <UserPen />
-                  </Button>
-                </PermissionGuard>
-                <PermissionGuard permission='units.update'>
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() =>
-                      setStatusDialog({
-                        unit,
-                        action: unit.status === 'active' ? 'lock' : 'unlock',
-                      })
-                    }
-                  >
-                    {unit.status === 'active' ? 'Khóa' : 'Mở'}
-                  </Button>
-                </PermissionGuard>
-                <PermissionGuard permission='units.delete'>
-                  <Button
-                    size='icon'
-                    variant='destructive'
-                    onClick={() => setDeletingUnit(unit)}
-                    title='Xóa đơn vị'
-                  >
-                    <Trash2 />
-                  </Button>
-                </PermissionGuard>
-              </div>
-            </PermissionGuard>
-          )
-        },
-      },
-    ]
-  }, [openEditDialog])
+  const [subUnitFilters, setSubUnitFilters] =
+    useState<OrganizationSubUnitFiltersState>(defaultOrganizationSubUnitFilters)
 
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [globalFilter, setGlobalFilter] = useState('')
+  const filteredSubUnits = useMemo(() => {
+    const keyword = subUnitFilters.keyword.trim().toLowerCase()
+    return subUnits.filter((unit) => {
+      const matchKeyword =
+        !keyword ||
+        [unit.code, unit.name, unit.description ?? ''].some((value) =>
+          value.toLowerCase().includes(keyword)
+        )
+      const matchLevel =
+        subUnitFilters.level === 'all' ||
+        String(unit.level) === subUnitFilters.level
+      const matchStatus =
+        subUnitFilters.status === 'all' || unit.status === subUnitFilters.status
+      return matchKeyword && matchLevel && matchStatus
+    })
+  }, [
+    subUnitFilters.keyword,
+    subUnitFilters.level,
+    subUnitFilters.status,
+    subUnits,
+  ])
 
-  const table = useReactTable({
-    data: subUnits,
-    columns,
-    state: { sorting, columnFilters, globalFilter },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: {
-      pagination: { pageSize: 10, pageIndex: 0 },
-    },
-  })
+  const paginatedSubUnits = useMemo(() => {
+    const start = (subUnitFilters.page - 1) * subUnitFilters.pageSize
+    return filteredSubUnits.slice(start, start + subUnitFilters.pageSize)
+  }, [filteredSubUnits, subUnitFilters.page, subUnitFilters.pageSize])
 
   useEffect(() => {
-    table.setPageIndex(0)
-    table.resetColumnFilters()
-    table.setGlobalFilter('')
-  }, [selectedUnitId, table])
+    setSubUnitFilters(defaultOrganizationSubUnitFilters)
+  }, [selectedUnitId])
 
   return (
     <>
@@ -667,8 +520,8 @@ function UnitsTabContent() {
           subtitle='Cơ cấu Hành chính & Đơn vị'
         />
 
-        <div className='grid grid-cols-1 items-start gap-4 lg:grid-cols-10 lg:items-stretch'>
-          <Card className='flex h-full min-h-0 flex-col overflow-hidden lg:col-span-3'>
+        <div className='grid grid-cols-1 items-start gap-4 lg:grid-cols-10'>
+          <Card className='flex flex-col overflow-hidden lg:col-span-3'>
             <CardHeader className='flex-row items-center justify-between gap-2 bg-muted/30 px-4 py-3'>
               <div className='min-w-0 space-y-0.5'>
                 <CardTitle className='text-base'>Cây tổ chức</CardTitle>
@@ -687,7 +540,7 @@ function UnitsTabContent() {
                 </Button>
               </PermissionGuard>
             </CardHeader>
-            <CardContent className='flex min-h-0 flex-1 flex-col space-y-3 px-4 pb-4 pt-2'>
+            <CardContent className='space-y-3 px-4 pb-4 pt-2'>
               <Input
                 placeholder='Tìm theo mã/tên...'
                 value={treeSearch}
@@ -702,8 +555,7 @@ function UnitsTabContent() {
                   onCheckedChange={setIncludeLockedUnits}
                 />
               </div>
-              <div className='min-h-[240px] flex-1 lg:min-h-0'>
-                <ScrollArea className='h-full min-h-[240px] lg:min-h-0'>
+              <div className='max-h-[600px] overflow-auto'>
                 {unitsQuery.isLoading ? (
                   <div className='py-6 text-center text-sm text-muted-foreground'>
                     Đang tải đơn vị...
@@ -728,14 +580,13 @@ function UnitsTabContent() {
                     setExpandedIds={setExpandedIds}
                   />
                 )}
-                </ScrollArea>
               </div>
             </CardContent>
           </Card>
 
-          <div className='flex h-full min-h-0 flex-col gap-4 lg:col-span-7'>
-            <Card className='shrink-0 overflow-hidden'>
-              <CardHeader className='bg-muted/30'>
+          <div className='flex flex-col gap-4 lg:col-span-7'>
+            <Card className='overflow-hidden'>
+              <CardHeader className='bg-muted/30 px-4 py-3'>
                 <div className='space-y-3'>
                   <div className='min-w-0'>
                     <CardTitle className='text-base'>
@@ -830,106 +681,39 @@ function UnitsTabContent() {
               </CardHeader>
             </Card>
 
-            <Card className='flex min-h-0 flex-1 flex-col overflow-hidden'>
-              <CardContent className='flex min-h-0 flex-1 flex-col space-y-3 p-4'>
-                <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4'>
-                  <div className='shrink-0 text-sm font-medium'>
-                    Đơn vị trực thuộc
-                  </div>
-                  <div className='min-w-0 flex-1'>
-                    <DataTableToolbar
-                      table={table}
-                      searchPlaceholder='Tìm theo mã, tên, mô tả...'
-                      filters={[
-                        {
-                          columnId: 'level',
-                          title: 'Cấp',
-                          options: unitLevelOptions.map((option) => ({
-                            label: option.label,
-                            value: String(option.value),
-                          })),
-                        },
-                        {
-                          columnId: 'status',
-                          title: 'Trạng thái',
-                          options: [
-                            { label: 'Hoạt động', value: 'active' },
-                            { label: 'Đã khóa', value: 'locked' },
-                          ],
-                        },
-                      ]}
-                    />
-                  </div>
-                </div>
+            <OrganizationSubUnitFilters
+              filters={subUnitFilters}
+              onChange={setSubUnitFilters}
+            />
 
-                <div className='max-h-[600px] min-h-0 flex-1 overflow-auto rounded-md border bg-card'>
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map((header) => (
-                            <TableHead
-                              key={header.id}
-                              className={cn(
-                                header.column.id === 'actions' && 'text-right'
-                              )}
-                            >
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(
-                                    header.column.columnDef.header,
-                                    header.getContext()
-                                  )}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={table.getAllLeafColumns().length}
-                            className='h-24 text-center'
-                          >
-                            Không có dữ liệu.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        table.getRowModel().rows.map((row) => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map((cell) => (
-                              <TableCell
-                                key={cell.id}
-                                className={cn(
-                                  cell.column.id === 'actions' && 'text-right'
-                                )}
-                              >
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+            <OrganizationSubUnitsTable
+              data={paginatedSubUnits}
+              isLoading={unitsQuery.isLoading}
+              onEdit={openEditDialog}
+              onToggleStatus={(unit) =>
+                setStatusDialog({
+                  unit,
+                  action: unit.status === 'active' ? 'lock' : 'unlock',
+                })
+              }
+              onDelete={setDeletingUnit}
+            />
 
-                <DataTablePagination
-                  total={table.getFilteredRowModel().rows.length}
-                  page={table.getState().pagination.pageIndex + 1}
-                  pageSize={table.getState().pagination.pageSize}
-                  onPageChange={(page) => table.setPageIndex(page - 1)}
-                  onPageSizeChange={(pageSize) => {
-                    table.setPageSize(pageSize)
-                    table.setPageIndex(0)
-                  }}
-                />
-              </CardContent>
-            </Card>
+            <DataTablePagination
+              total={filteredSubUnits.length}
+              page={subUnitFilters.page}
+              pageSize={subUnitFilters.pageSize}
+              onPageChange={(page) =>
+                setSubUnitFilters((prev) => ({ ...prev, page }))
+              }
+              onPageSizeChange={(pageSize) =>
+                setSubUnitFilters((prev) => ({
+                  ...prev,
+                  pageSize,
+                  page: 1,
+                }))
+              }
+            />
           </div>
         </div>
       </div>
