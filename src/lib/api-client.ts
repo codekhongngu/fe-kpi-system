@@ -130,8 +130,7 @@ export function createApiClient(): AxiosInstance {
       const requestUrl = originalRequest.url ?? ''
       if (
         requestUrl.includes('/auth/login') ||
-        requestUrl.includes('/auth/refresh-token') ||
-        requestUrl.includes('/auth/logout')
+        requestUrl.includes('/auth/refresh-token')
       ) {
         return Promise.reject(error)
       }

@@ -4,6 +4,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import {
   Archive,
   ArrowLeft,
+  ChevronDown,
   Copy,
   Eye,
   FilePlus2,
@@ -16,6 +17,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFieldCategoriesCatalogQuery } from '../api/catalog-queries'
 import { formManagementApi } from '../api/template-management-api'
@@ -32,6 +40,7 @@ import {
   type FormModalState,
   TemplateGeneralInfoDialog,
 } from '../components/template-general-info-dialog'
+import { PageBreadcrumb } from '@/components/page-breadcrumb'
 
 type FormTemplateDetailsPageProps = {
   templateId: string
@@ -67,10 +76,10 @@ export function FormTemplateDetailsPage({
 }: FormTemplateDetailsPageProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const canUpdate  = usePermission('forms.update')
+  const canUpdate = usePermission('forms.update')
   const canPublish = usePermission('forms.publish')
-  const canCreate  = usePermission('forms.create')
-  const canDelete  = usePermission('forms.delete')
+  const canCreate = usePermission('forms.create')
+  const canDelete = usePermission('forms.delete')
   const categoriesQuery = useFieldCategoriesCatalogQuery()
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [formState, setFormState] = useState<FormModalState>(emptyFormState)
@@ -86,7 +95,7 @@ export function FormTemplateDetailsPage({
     await queryClient.invalidateQueries({ queryKey: ['form-management'] })
   }
 
-  const patchMutation:any = useMutation({
+  const patchMutation: any = useMutation({
     mutationFn: (payload: {
       name: string
       fieldCategoryId: string
@@ -210,7 +219,7 @@ export function FormTemplateDetailsPage({
   )
 
   return (
-    <div className='flex w-full flex-col gap-6 p-6'>
+    <div className='flex w-full flex-col gap-4'>
       {templateQuery.isLoading ? (
         <div className='py-12 text-center text-sm text-muted-foreground'>
           Đang tải chi tiết biểu mẫu...
@@ -221,167 +230,152 @@ export function FormTemplateDetailsPage({
         </div>
       ) : (
         <>
-          {/* Tầng 1: Header - Tiêu đề và nút điều hướng */}
-          <div className='flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between'>
-            <div className='min-w-0 space-y-2'>
-              <h1 className='truncate text-3xl font-bold tracking-tight text-foreground'>
-                {template.name}
-              </h1>
-              <p className='max-w-3xl text-sm text-muted-foreground'>
-                Quản lý thông tin chung, cấu hình chỉ số, thuộc tính, phạm vi
-                mẫu và xem trước cấu trúc biểu mẫu.
-              </p>
-            </div>
-            <div className='flex flex-wrap gap-2'>
-              <Button variant='outline' asChild>
-                <Link to='/form-management'>
-                  <ArrowLeft />
-                  Quay lại
-                </Link>
-              </Button>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => templateQuery.refetch()}
-              >
-                <RefreshCcw className='size-4' />
-                Tải lại
-              </Button>
-            </div>
-          </div>
+          {/* Tầng 1: Header - Tên và mã biểu mẫu */}
+          <PageBreadcrumb
+            title={template.name}
+            subtitle={`Mã biểu mẫu: ${template.code}`}
+          >
+            <Button variant='outline' asChild>
+              <Link to='/form-management'>
+                <ArrowLeft />
+                Quay lại
+              </Link>
+            </Button>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => templateQuery.refetch()}
+            >
+              <RefreshCcw className='size-4' />
+              Tải lại
+            </Button>
+          </PageBreadcrumb>
 
-          {/* Tầng 2: Info Bar - Thông tin chung và hành động */}
-          <div className='rounded-2xl border bg-card shadow-sm p-4'>
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 items-start w-full'>
-              {/* Cột 1: Mã biểu mẫu & Trạng thái */}
-              <div className='space-y-2'>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Mã biểu mẫu
-                  </div>
-                  <div className='mt-1 text-sm font-semibold truncate'>{template.code}</div>
+          {/* Tầng 2: Info Bar - Thông tin và hành động */}
+          <div className='rounded-2xl border bg-card shadow-sm p-4 space-y-3'>
+            {/* Hàng 1: 4 field thông tin + hành động */}
+            <div className='grid grid-cols-2 md:grid-cols-5 gap-4 items-start'>
+              {/* Trạng thái */}
+              <div>
+                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                  Trạng thái
                 </div>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Trạng thái
-                  </div>
-                  <div className='mt-1'>
-                    <TemplateStatusBadge
-                      templateStatus={template.templateStatus}
-                      isActive={template.isActive}
-                    />
-                  </div>
+                <div className='mt-1'>
+                  <TemplateStatusBadge
+                    templateStatus={template.templateStatus}
+                    isActive={template.isActive}
+                  />
                 </div>
               </div>
 
-              {/* Cột 2: Tên biểu mẫu & Lĩnh vực */}
-              <div className='space-y-2'>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Tên biểu mẫu
-                  </div>
-                  <div className='mt-1 text-sm font-semibold truncate'>{template.name}</div>
+              {/* Lĩnh vực */}
+              <div>
+                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                  Lĩnh vực
                 </div>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Lĩnh vực
-                  </div>
-                  <div className='mt-1 text-sm font-semibold truncate'>
-                    {template.fieldCategoryName ?? template.fieldCategoryId}
-                  </div>
+                <div className='mt-1 text-sm font-semibold'>
+                  {template.fieldCategoryName ?? template.fieldCategoryId}
                 </div>
               </div>
 
-              {/* Cột 3: Kỳ báo cáo & Cập nhật lần cuối */}
-              <div className='space-y-2'>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Kỳ báo cáo
-                  </div>
-                  <div className='mt-1 text-sm font-semibold'>{periodLabel(template.periodType)}</div>
+              {/* Kỳ báo cáo */}
+              <div>
+                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                  Kỳ báo cáo
                 </div>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Cập nhật lần cuối
-                  </div>
-                  <div className='mt-1 text-sm font-semibold'>
-                    {template.updatedAt
-                      ? new Date(template.updatedAt).toLocaleString('vi-VN', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : '--'}
-                  </div>
+                <div className='mt-1 text-sm font-semibold'>
+                  {periodLabel(template.periodType)}
                 </div>
               </div>
 
-              {/* Cột 4: Loại biểu mẫu & Mô tả */}
-              <div className='space-y-2'>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Loại biểu mẫu
-                  </div>
-                  <div className='mt-1 text-sm font-semibold'>
-                    {template.templateType
-                      ? (template.templateType === 'AGGREGATE' ? 'Tổng hợp' : 'Đơn nhất')
-                      : '--'}
-                  </div>
+              {/* Loại biểu mẫu */}
+              <div>
+                <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                  Loại biểu mẫu
                 </div>
-                <div>
-                  <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
-                    Mô tả
-                  </div>
-                  <div className='mt-1 text-sm font-semibold truncate max-w-[200px]'>
-                    {template.description || 'Không có mô tả'}
-                  </div>
+                <div className='mt-1 text-sm font-semibold'>
+                  {template.templateType === 'AGGREGATE' ? 'Tổng hợp' : 'Đơn nhất'}
                 </div>
               </div>
 
-              {/* Cột 5: Nhóm nút hành động */}
-              <div className='space-y-2 lg:col-span-2 xl:col-span-2'>
+              {/* Hành động */}
+              <div>
                 <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
                   Hành động
                 </div>
-                <div className='flex flex-wrap gap-1 mt-1'>
-                  {canUpdate && (
-                    <Button variant='outline' size='sm' onClick={openModal}>
-                      <PencilLine className='size-3' />
-                      <span className='hidden sm:inline ml-1'>Chỉnh sửa</span>
-                    </Button>
-                  )}
-
-                  {canPublish && ['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') && (
-                    <Button variant='outline' size='sm' onClick={() => archiveMutation.mutate()}>
-                      <Archive className='size-3' />
-                      <span className='hidden sm:inline ml-1'>Lưu trữ</span>
-                    </Button>
-                  )}
-
-                  {canPublish && template.templateStatus === 'DRAFT' && canEdit && (
-                    <Button size='sm' onClick={handleMarkReady}>
-                      <FilePlus2 className='size-3' />
-                      <span className='hidden sm:inline ml-1'>Sẵn sàng</span>
-                    </Button>
-                  )}
-
-                  {canCreate && ['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') && (
-                    <Button variant='outline' size='sm' onClick={() => cloneMutation.mutate()}>
-                      <Copy className='size-3' />
-                      <span className='hidden sm:inline ml-1'>Sao chép</span>
-                    </Button>
-                  )}
-
-                  {canDelete && template.templateStatus === 'DRAFT' && (
-                    <Button variant='destructive' size='sm' onClick={() => deleteMutation.mutate()}>
-                      <Trash2 className='size-3' />
-                      <span className='hidden sm:inline ml-1'>Xóa</span>
-                    </Button>
-                  )}
+                <div className='mt-1'>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant='outline' size='sm'>
+                        Thao tác
+                        <ChevronDown className='ml-1 size-3' />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='start' className='w-52'>
+                      {canUpdate && (
+                        <DropdownMenuItem className='cursor-pointer' onClick={openModal}>
+                          <span className='flex items-center gap-2'>
+                            <PencilLine className='size-4 shrink-0 text-blue-500' />
+                            Chỉnh sửa thông tin
+                          </span>
+                        </DropdownMenuItem>
+                      )}
+                      {canPublish && template.templateStatus === 'DRAFT' && canEdit && (
+                        <DropdownMenuItem className='cursor-pointer' onClick={handleMarkReady}>
+                          <span className='flex items-center gap-2'>
+                            <FilePlus2 className='size-4 shrink-0 text-emerald-500' />
+                            Chuyển sẵn sàng
+                          </span>
+                        </DropdownMenuItem>
+                      )}
+                      {canPublish && ['READY', 'IN_USE'].includes(template.templateStatus ?? 'DRAFT') && (
+                        <DropdownMenuItem className='cursor-pointer' onClick={() => archiveMutation.mutate()}>
+                          <span className='flex items-center gap-2'>
+                            <Archive className='size-4 shrink-0 text-amber-500' />
+                            Lưu trữ
+                          </span>
+                        </DropdownMenuItem>
+                      )}
+                      {canCreate && ['IN_USE', 'ARCHIVED'].includes(template.templateStatus ?? 'DRAFT') && (
+                        <DropdownMenuItem className='cursor-pointer' onClick={() => cloneMutation.mutate()}>
+                          <span className='flex items-center gap-2'>
+                            <Copy className='size-4 shrink-0 text-sky-500' />
+                            Sao chép biểu mẫu
+                          </span>
+                        </DropdownMenuItem>
+                      )}
+                      {canDelete && template.templateStatus === 'DRAFT' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className='cursor-pointer text-destructive focus:text-destructive'
+                            onClick={() => deleteMutation.mutate()}
+                          >
+                            <span className='flex items-center gap-2'>
+                              <Trash2 className='size-4 shrink-0 text-destructive' />
+                              Xóa biểu mẫu
+                            </span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
+            </div>
+
+            {/* Hàng 2: Mô tả full-width */}
+            <div className='border-t pt-3'>
+              <div className='text-[11px] font-bold tracking-widest text-muted-foreground uppercase'>
+                Mô tả
+              </div>
+              {template.description ? (
+                <p className='mt-1 text-sm text-foreground leading-relaxed'>
+                  {template.description}
+                </p>
+              ) : (
+                <p className='mt-1 text-sm italic text-muted-foreground'>Không có mô tả</p>
+              )}
             </div>
           </div>
 

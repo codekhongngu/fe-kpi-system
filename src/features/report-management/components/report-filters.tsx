@@ -43,7 +43,7 @@ export function ReportFilters({
 
   return (
     <div className='rounded-xl border bg-card p-4'>
-      <div className='grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_repeat(3,minmax(150px,1fr))_auto]'>
+      <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,1fr)_auto]'>
         <div className='relative'>
           <Search className='pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
           <Input
@@ -60,8 +60,8 @@ export function ReportFilters({
             patchFilters({ templateId: value === 'all' ? '' : value })
           }
         >
-          <SelectTrigger className='min-w-0 max-w-full overflow-hidden'>
-            <SelectValue placeholder='Template' className='truncate' />
+          <SelectTrigger className='w-full'>
+            <SelectValue placeholder='Template' />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value='all'>Tất cả template</SelectItem>
@@ -74,7 +74,6 @@ export function ReportFilters({
             ))}
           </SelectContent>
         </Select>
-
         
         <Select
           value={filters.period || 'all'}
@@ -82,7 +81,7 @@ export function ReportFilters({
             patchFilters({ period: value === 'all' ? '' : value })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className='w-full'>
             <SelectValue placeholder='Kỳ báo cáo' />
           </SelectTrigger>
           <SelectContent>
@@ -100,7 +99,7 @@ export function ReportFilters({
             patchFilters({ status: value as ReportFiltersType['status'] })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className='w-full'>
             <SelectValue placeholder='Trạng thái' />
           </SelectTrigger>
           <SelectContent>
@@ -113,7 +112,7 @@ export function ReportFilters({
           </SelectContent>
         </Select>
 
-        <Button type='button' variant='outline' onClick={resetFilters}>
+        <Button type='button' variant='outline' onClick={resetFilters} className='w-full sm:col-span-2 lg:col-span-1 lg:w-auto'>
           <RotateCcw className='me-2 size-4' />
           Đặt lại
         </Button>

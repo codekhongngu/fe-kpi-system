@@ -160,8 +160,11 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
   )
 
   const orgByIndicatorId = useMemo(() => {
-    const map = new Map<string, string>()
-    rows.forEach((r) => map.set(r.indicatorId, r.orgId))
+    const map = new Map<string, Set<string>>()
+    rows.forEach((r) => {
+      if (!map.has(r.indicatorId)) map.set(r.indicatorId, new Set())
+      map.get(r.indicatorId)!.add(r.orgId)
+    })
     return map
   }, [rows])
 
@@ -341,7 +344,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
       const assignedToOther =
         isUnique &&
         orgByIndicatorId.has(node.id) &&
-        orgByIndicatorId.get(node.id) !== selectedOrgId
+        !orgByIndicatorId.get(node.id)!.has(selectedOrgId ?? '')
       if (
         availableIndicators.some((i) => i.id === node.id) &&
         !assignedToOther
@@ -626,21 +629,25 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                       ) : (
                         availableIndicators.map((item) => {
                           const isInput = item.type === 'INPUT'
+                          const isLeaf = isInput && item.children.length === 0
                           const assignedToOtherOrg =
                             isUnique &&
                             isInput &&
                             orgByIndicatorId.has(item.id) &&
-                            orgByIndicatorId.get(item.id) !== selectedOrgId
-                          const otherOrgId = assignedToOtherOrg
-                            ? orgByIndicatorId.get(item.id)
-                            : null
+                            !orgByIndicatorId.get(item.id)!.has(selectedOrgId ?? '')
+                          const otherOrgIds = assignedToOtherOrg
+                            ? Array.from(orgByIndicatorId.get(item.id)!).filter(
+                                (id) => id !== selectedOrgId
+                              )
+                            : []
+                          const otherOrgId = otherOrgIds[0] ?? null
                           const otherOrgName = otherOrgId
                             ? flatOrgs.find((o) => o.id === otherOrgId)?.name
                             : null
 
                           const descendantInputIds =
                             getAvailableDescendantInputs(item)
-                          const canCheck = isInput
+                          const canCheck = isLeaf
                             ? !assignedToOtherOrg
                             : descendantInputIds.length > 0
                           const allSelected =
@@ -654,7 +661,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                               selectedAvailableIds.includes(id)
                             )
 
-                          const isChecked = isInput
+                          const isChecked = isLeaf
                             ? selectedAvailableIds.includes(item.id)
                             : allSelected
 
@@ -667,7 +674,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                                 <div className='flex justify-center'>
                                   <Checkbox
                                     checked={
-                                      isInput
+                                      isLeaf
                                         ? isChecked
                                         : allSelected
                                           ? true
@@ -676,7 +683,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                                             : false
                                     }
                                     onCheckedChange={(checked) => {
-                                      if (isInput) {
+                                      if (isLeaf) {
                                         setSelectedAvailableIds((prev) =>
                                           checked
                                             ? [...prev, item.id]
@@ -814,9 +821,10 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                       ) : (
                         assignedIndicators.map((item) => {
                           const isInput = item.type === 'INPUT'
+                          const isLeaf = isInput && item.children.length === 0
                           const descendantInputIds =
                             getAssignedDescendantInputs(item)
-                          const canCheck = isInput
+                          const canCheck = isLeaf
                             ? true
                             : descendantInputIds.length > 0
                           const allSelected =
@@ -830,7 +838,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                               selectedAssignedIds.includes(id)
                             )
 
-                          const isChecked = isInput
+                          const isChecked = isLeaf
                             ? selectedAssignedIds.includes(item.id)
                             : allSelected
 
@@ -843,7 +851,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                                 <div className='flex justify-center'>
                                   <Checkbox
                                     checked={
-                                      isInput
+                                      isLeaf
                                         ? isChecked
                                         : allSelected
                                           ? true
@@ -852,7 +860,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
                                             : false
                                     }
                                     onCheckedChange={(checked) => {
-                                      if (isInput) {
+                                      if (isLeaf) {
                                         setSelectedAssignedIds((prev) =>
                                           checked
                                             ? [...prev, item.id]

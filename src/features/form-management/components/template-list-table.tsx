@@ -8,6 +8,7 @@ import {
   Trash2,
   FilePlus2,
 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -56,6 +57,7 @@ const lifecycleLabel: Record<TemplateLifecycleStatus, string> = {
 
 type TemplateListTableProps = {
   templates: FormTemplate[]
+  isLoading?: boolean
   onEditGeneral: (template: FormTemplate) => void
   onClone?: (template: FormTemplate) => void
   onMarkReady?: (template: FormTemplate) => void
@@ -63,8 +65,11 @@ type TemplateListTableProps = {
   onDelete?: (template: FormTemplate) => void
 }
 
+const SKELETON_ROWS = 8
+
 export function TemplateListTable({
   templates,
+  isLoading = false,
   onEditGeneral,
   onClone,
   onMarkReady,
@@ -91,14 +96,30 @@ export function TemplateListTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {templates.length === 0 && (
+          {isLoading &&
+            Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+              <TableRow key={`skeleton-${i}`}>
+                <TableCell><Skeleton className='h-4 w-20' /></TableCell>
+                <TableCell>
+                  <Skeleton className='h-4 w-40 mb-1' />
+                  <Skeleton className='h-3 w-56' />
+                </TableCell>
+                <TableCell><Skeleton className='h-4 w-24' /></TableCell>
+                <TableCell><Skeleton className='h-4 w-20' /></TableCell>
+                <TableCell><Skeleton className='h-4 w-12' /></TableCell>
+                <TableCell><Skeleton className='h-5 w-24 rounded-full' /></TableCell>
+                <TableCell><Skeleton className='h-5 w-20 rounded-full' /></TableCell>
+                <TableCell className='text-right'><Skeleton className='h-8 w-8 ml-auto' /></TableCell>
+              </TableRow>
+            ))}
+          {!isLoading && templates.length === 0 && (
             <TableRow>
               <TableCell colSpan={8} className='h-20 text-center'>
                 Không có biểu mẫu phù hợp điều kiện lọc.
               </TableCell>
             </TableRow>
           )}
-          {templates.map((template) => (
+          {!isLoading && templates.map((template) => (
             <TableRow key={template.id}>
               <TableCell className='font-medium'>{template.code}</TableCell>
               <TableCell>

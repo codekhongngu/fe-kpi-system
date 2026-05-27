@@ -86,6 +86,7 @@ export function ExcelImportPreviewDialog({
             Hủy
           </Button>
           <Button
+            className="ml-2"
             type='button'
             onClick={onConfirm}
             disabled={!file || isConfirming}

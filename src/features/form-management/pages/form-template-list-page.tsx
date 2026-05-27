@@ -266,6 +266,7 @@ export function FormTemplateListPage() {
 
         <TemplateListTable
           templates={templates}
+          isLoading={templatesQuery.isLoading}
           onEditGeneral={openEditModal}
           onClone={(template) => cloneMutation.mutate(template)}
           onMarkReady={(template) => markReadyMutation.mutate(template.id)}

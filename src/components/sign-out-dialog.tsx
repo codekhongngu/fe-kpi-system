@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { authApi } from '@/features/auth/api/auth-api'
@@ -12,20 +13,24 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { auth } = useAuthStore()
+  const queryClient = useQueryClient()
 
-  const handleSignOut = () => {
-    const refreshToken = auth.refreshToken || undefined
-    if (auth.accessToken) {
-      authApi.logout(refreshToken).catch(() => {})
-    }
-    auth.reset()
-    // Preserve current location for redirect after sign-in
+  const handleSignOut = async () => {
     const currentPath = location.href
-    navigate({
-      to: '/sign-in',
-      search: { redirect: currentPath },
-      replace: true,
-    })
+    try {
+      await authApi.logout(auth.refreshToken || undefined)
+    } catch {
+      // best-effort: server-side logout failed (expired/missing token).
+      // Local cleanup always proceeds in finally.
+    } finally {
+      auth.reset()
+      queryClient.clear()
+      navigate({
+        to: '/sign-in',
+        search: { redirect: currentPath },
+        replace: true,
+      })
+    }
   }
 
   return (
