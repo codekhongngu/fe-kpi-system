@@ -23,8 +23,8 @@ export function toFieldDashboardSearch(
 
   return {
     templateId: params.templateId,
-    periodCode: params.periodCode ?? DEFAULT_PERIOD_CODE,
-    periodType: (params.periodType ??
+    periodCode: params.periodCode || DEFAULT_PERIOD_CODE,
+    periodType: (params.periodType ||
       DEFAULT_FIELD_DASHBOARD_SEARCH.periodType) as PeriodType,
     page: DEFAULT_FIELD_DASHBOARD_SEARCH.page,
     limit: DEFAULT_FIELD_DASHBOARD_SEARCH.limit,
@@ -54,9 +54,12 @@ export function useDashboardFieldReports(params: DashboardFieldReportsParams) {
     queryFn: () =>
       dashboardApi.getFieldCategoryReports(
         params.fieldCategoryId as string,
-        search as FieldDashboardSearch
+        {
+          ...search!,
+          periodCode: search!.periodCode || DEFAULT_PERIOD_CODE,
+        }
       ),
-    enabled: Boolean(search?.templateId && search.periodCode),
+    enabled: Boolean(search?.templateId && search?.periodCode),
     staleTime: 2 * 60 * 1000,
   })
 }
@@ -77,8 +80,9 @@ export async function fetchDashboardFieldReports(
     throw new Error('Thiếu fieldCategoryId hoặc templateId.')
   }
 
+  const merged = { ...search, ...overrides }
   return dashboardApi.getFieldCategoryReports(fieldCategoryId, {
-    ...search,
-    ...overrides,
+    ...merged,
+    periodCode: merged.periodCode || DEFAULT_PERIOD_CODE,
   })
 }

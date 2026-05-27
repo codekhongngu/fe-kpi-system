@@ -2,11 +2,11 @@ import { useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { dashboardApi } from '../api/dashboard-api'
-import type {
-  DashboardFieldCategoryHub,
-  FieldDashboardSearch,
-} from '../api/types'
-import { dashboardQueryKeys } from '../utils/dashboard-query'
+import type { DashboardFieldCategoryHub } from '../api/types'
+import {
+  DEFAULT_PERIOD_CODE,
+  dashboardQueryKeys,
+} from '../utils/dashboard-query'
 import { toFieldDashboardSearch } from './use-dashboard-field-reports'
 import {
   persistKtXhRouteState,
@@ -68,7 +68,7 @@ export function useKtXhNavigation() {
       persistKtXhRouteState(pathname, currentSearch)
 
       const reportSearch = toFieldDashboardSearch(nextSearch)
-      if (nextSearch.fieldCategoryId && reportSearch) {
+      if (nextSearch.fieldCategoryId && reportSearch?.periodCode) {
         void queryClient.prefetchQuery({
           queryKey: dashboardQueryKeys.fieldReports(
             nextSearch.fieldCategoryId,
@@ -77,7 +77,10 @@ export function useKtXhNavigation() {
           queryFn: () =>
             dashboardApi.getFieldCategoryReports(
               nextSearch.fieldCategoryId as string,
-              reportSearch as FieldDashboardSearch
+              {
+                ...reportSearch,
+                periodCode: reportSearch.periodCode || DEFAULT_PERIOD_CODE,
+              }
             ),
         })
       }
