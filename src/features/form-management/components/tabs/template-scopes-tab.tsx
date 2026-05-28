@@ -39,6 +39,11 @@ import {
   type OrgTreeItem,
 } from '../../api/template-management-api'
 import type { TemplateIndicator, TemplateScope } from '../../api/types'
+import {
+  findUniqueScopeViolations,
+  formatUniqueScopeViolationMessage,
+  validateUniqueScopes,
+} from '../../utils/template-scope-rules'
 
 type TemplateScopesTabProps = {
   templateId: string
@@ -276,6 +281,11 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
     return JSON.stringify(initial) !== JSON.stringify(current)
   }, [template?.templateScopes, rows])
 
+  const uniqueViolations = useMemo(() => {
+    if (!isUnique) return []
+    return findUniqueScopeViolations(dedupeScopes(rows), indicators)
+  }, [isUnique, rows, indicators])
+
   const saveMutation = useMutation({
     mutationFn: () =>
       formManagementApi.upsertTemplateScopes(
@@ -295,6 +305,21 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
     },
     onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
+
+  const handleSaveScopes = () => {
+    if (isUnique) {
+      const result = validateUniqueScopes(
+        'UNIQUE',
+        dedupeScopes(rows),
+        indicators
+      )
+      if (!result.ok) {
+        toast.error(result.message)
+        return
+      }
+    }
+    saveMutation.mutate()
+  }
 
   function handleAssignSelected() {
     if (!selectedOrgId) {
@@ -395,7 +420,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
       <CardHeader className='gap-4'>
         <div className='flex flex-wrap items-start justify-between gap-3'>
           <div>
-            <CardTitle>Chỉ tiêu</CardTitle>
+            <CardTitle>Phân bổ chỉ tiêu</CardTitle>
             <CardDescription>
               Phân bổ chỉ tiêu cho các đơn vị tham gia báo cáo.
             </CardDescription>
@@ -418,7 +443,7 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
             <Button
               type='button'
               className='gap-2 rounded-xl text-xs font-bold'
-              onClick={() => saveMutation.mutate()}
+              onClick={handleSaveScopes}
               disabled={!canEdit || !hasChanges || saveMutation.isPending}
             >
               <Save className='size-4' />
@@ -452,6 +477,15 @@ export function TemplateScopesTab({ templateId }: TemplateScopesTabProps) {
               <AlertCircle className='size-3' />
               Cần phân bổ 100% chỉ tiêu INPUT trước khi có thể chuyển biểu mẫu
               sang trạng thái Sẵn sàng.
+            </p>
+          )}
+          {uniqueViolations.length > 0 && (
+            <p className='mt-2 flex items-center gap-1 text-xs text-destructive'>
+              <AlertCircle className='size-3 shrink-0' />
+              {formatUniqueScopeViolationMessage(
+                uniqueViolations,
+                '— gỡ chỉ tiêu trùng đơn vị trước khi lưu.'
+              )}
             </p>
           )}
         </div>

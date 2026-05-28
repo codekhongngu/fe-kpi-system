@@ -17,6 +17,11 @@ import {
 } from '../components/template-general-info-dialog'
 import { TemplateListFilter } from '../components/template-list-filter'
 import { TemplateListTable } from '../components/template-list-table'
+import {
+  canMarkTemplateReady,
+  isSwitchingToUniqueTemplateType,
+  validateUniqueScopes,
+} from '../utils/template-scope-rules'
 
 const defaultFormModalState: FormModalState = {
   code: '',
@@ -188,13 +193,38 @@ export function FormTemplateListPage() {
     setFormState(defaultFormModalState)
   }
 
-  const submitFormModal = () => {
+  const submitFormModal = async () => {
     if (!formState.name.trim() || !formState.fieldCategoryId) {
       toast.error('Tên biểu mẫu và Lĩnh vực biểu mẫu là bắt buộc.')
       return
     }
 
     if (editingTemplate) {
+      if (
+        isSwitchingToUniqueTemplateType(
+          formState.templateType,
+          editingTemplate.templateType
+        )
+      ) {
+        try {
+          const full = await formManagementApi.getTemplate(editingTemplate.id)
+          const uniqueCheck = validateUniqueScopes(
+            'UNIQUE',
+            full.templateScopes ?? [],
+            full.indicators ?? []
+          )
+          if (!uniqueCheck.ok) {
+            toast.error(
+              `${uniqueCheck.message} Vui lòng chỉnh tab Phân bổ chỉ tiêu (gỡ chỉ tiêu trùng đơn vị) trước khi đổi sang Đơn nhất.`
+            )
+            return
+          }
+        } catch (error) {
+          toast.error(getApiErrorMessage(error))
+          return
+        }
+      }
+
       patchMutation.mutate({
         id: editingTemplate.id,
         payload: {
@@ -269,7 +299,22 @@ export function FormTemplateListPage() {
           isLoading={templatesQuery.isLoading}
           onEditGeneral={openEditModal}
           onClone={(template) => cloneMutation.mutate(template)}
-          onMarkReady={(template) => markReadyMutation.mutate(template.id)}
+          onMarkReady={async (template) => {
+            try {
+              const full = await formManagementApi.getTemplate(template.id)
+              const readiness = canMarkTemplateReady(full)
+              if (!readiness.ok) {
+                toast.error(
+                  readiness.message ??
+                    'Không thể chuyển trạng thái Sẵn sàng.'
+                )
+                return
+              }
+              markReadyMutation.mutate(template.id)
+            } catch (error) {
+              toast.error(getApiErrorMessage(error))
+            }
+          }}
           onArchive={(template) => archiveMutation.mutate(template.id)}
           onDelete={(template) => deleteMutation.mutate(template.id)}
         />

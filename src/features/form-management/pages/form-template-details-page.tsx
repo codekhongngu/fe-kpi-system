@@ -41,6 +41,11 @@ import {
   TemplateGeneralInfoDialog,
 } from '../components/template-general-info-dialog'
 import { PageBreadcrumb } from '@/components/page-breadcrumb'
+import {
+  canMarkTemplateReady,
+  isSwitchingToUniqueTemplateType,
+  validateUniqueScopes,
+} from '../utils/template-scope-rules'
 
 type FormTemplateDetailsPageProps = {
   templateId: string
@@ -112,22 +117,6 @@ export function FormTemplateDetailsPage({
     onError: (error: Error) => toast.error(getApiErrorMessage(error)),
   })
 
-  const totalInputIndicators = (template?.indicators ?? []).filter(
-    (i) => i.type === 'INPUT'
-  ).length
-  const assignedInputIndicatorsCount = new Set(
-    (template?.templateScopes ?? [])
-      .map((r) => r.indicatorId)
-      .filter((id) => {
-        const ind = (template?.indicators ?? []).find((i) => i.id === id)
-        return ind && ind.type === 'INPUT'
-      })
-  ).size
-  const isFullyAssigned =
-    totalInputIndicators > 0
-      ? assignedInputIndicatorsCount === totalInputIndicators
-      : true
-
   const markReadyMutation = useMutation({
     mutationFn: () => formManagementApi.markReadyTemplate(templateId),
     onSuccess: async () => {
@@ -138,10 +127,10 @@ export function FormTemplateDetailsPage({
   })
 
   const handleMarkReady = () => {
-    if (!isFullyAssigned) {
-      toast.error(
-        'Vui lòng phân bổ 100% chỉ tiêu INPUT trước khi chuyển trạng thái Sẵn sàng.'
-      )
+    if (!template) return
+    const readiness = canMarkTemplateReady(template)
+    if (!readiness.ok) {
+      toast.error(readiness.message ?? 'Không thể chuyển trạng thái Sẵn sàng.')
       return
     }
     markReadyMutation.mutate()
@@ -202,6 +191,26 @@ export function FormTemplateDetailsPage({
     if (!formState.name.trim() || !formState.fieldCategoryId) {
       toast.error('Tên biểu mẫu và Lĩnh vực biểu mẫu là bắt buộc.')
       return
+    }
+
+    if (
+      template &&
+      isSwitchingToUniqueTemplateType(
+        formState.templateType,
+        template.templateType
+      )
+    ) {
+      const uniqueCheck = validateUniqueScopes(
+        'UNIQUE',
+        template.templateScopes ?? [],
+        template.indicators ?? []
+      )
+      if (!uniqueCheck.ok) {
+        toast.error(
+          `${uniqueCheck.message} Vui lòng chỉnh tab Phân bổ chỉ tiêu (gỡ chỉ tiêu trùng đơn vị) trước khi đổi sang Đơn nhất.`
+        )
+        return
+      }
     }
 
     patchMutation.mutate({
