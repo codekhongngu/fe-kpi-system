@@ -19,6 +19,11 @@ export const KT_XH_PAGES = [
     path: '/livestock-forestry-fishery',
     description: 'Chăn nuôi, lâm nghiệp và thủy sản',
   },
+  {
+    name: 'Thương mại - Dịch vụ',
+    path: '/trade-service',
+    description: 'Thương mại và dịch vụ',
+  },
 ] as const
 
 export type KtXhPagePath = (typeof KT_XH_PAGES)[number]['path']

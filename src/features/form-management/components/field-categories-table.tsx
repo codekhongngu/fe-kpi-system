@@ -20,7 +20,7 @@ type FieldCategoriesTableProps = {
   onDelete: (category: FieldCategory) => void
 }
 
-const COLUMN_COUNT = 6
+const COLUMN_COUNT = 5
 
 export function FieldCategoriesTable({
   data,
@@ -35,7 +35,6 @@ export function FieldCategoriesTable({
           <TableRow>
             <TableHead>Mã</TableHead>
             <TableHead>Tên lĩnh vực</TableHead>
-            <TableHead className='w-[120px]'>Thứ tự</TableHead>
             <TableHead className='w-[140px]'>Trạng thái</TableHead>
             <TableHead>Mô tả</TableHead>
             <TableHead className='w-[120px] text-right'>Thao tác</TableHead>
@@ -55,7 +54,6 @@ export function FieldCategoriesTable({
               <TableRow key={item.id}>
                 <TableCell className='font-medium'>{item.code}</TableCell>
                 <TableCell>{item.name}</TableCell>
-                <TableCell>{item.sortOrder}</TableCell>
                 <TableCell>
                   <Badge variant={item.isActive ? 'default' : 'secondary'}>
                     {item.isActive ? 'Hoạt động' : 'Ngừng'}

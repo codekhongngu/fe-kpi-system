@@ -2,7 +2,7 @@
 
 Tài liệu tham chiếu khi chỉnh sửa gắn dữ liệu API (`cells`) lên UI dashboard KT-XH.
 
-**Cập nhật:** theo codebase `fe-kpi-system` (GRDP + Agriculture đã gắn API).
+**Cập nhật:** theo codebase `fe-kpi-system` (GRDP, Agriculture, Trade-Service đã gắn API).
 
 ---
 
@@ -27,6 +27,8 @@ Tài liệu tham chiếu khi chỉnh sửa gắn dữ liệu API (`cells`) lên 
 | Chăn nuôi | `/livestock` | `use-livestock-display-values.ts` | `pages/kt-xh/livestock.tsx` |
 | Trồng trọt khác | `/tree-planting-other` | `use-tree-planting-display-values.ts` | `pages/kt-xh/tree-planting-other.tsx` |
 | Lâm nghiệp, Thủy sản | `/forestry-fishery` | `use-forestry-fishery-display-values.ts` | `pages/kt-xh/forestry-fishery.tsx` |
+| Thương mại - Dịch vụ | `/trade-service` | `use-trade-service-display-values.ts` | `pages/kt-xh/trade-service.tsx` |
+| Chăn nuôi, Lâm nghiệp, Thủy sản | `/livestock-forestry-fishery` | `use-livestock-display-values.ts` + `use-forestry-fishery-display-values.ts` | `pages/kt-xh/livestock.tsx` |
 
 ### Mã lĩnh vực Hub (BE)
 
@@ -37,6 +39,7 @@ Tài liệu tham chiếu khi chỉnh sửa gắn dữ liệu API (`cells`) lên 
 | `/livestock` | `chan_nuoi` |
 | `/forestry-fishery` | `lam_nghiep_thuy_san` |
 | `/tree-planting-other` | `trong_trot_khac` |
+| `/trade-service` | `thuong_mai_dich_vu` |
 
 ---
 
@@ -276,6 +279,154 @@ Thứ tự cột: Ngô → Lạc → Rau các loại → Đậu các loại.
 |------|---------|------|---------|---------------------|
 | 1 | Sản lượng thủy sản nuôi trồng | `aquacultureOutput.value` | CSTT133 | Thực hiên + YoY % |
 | 2 | Sản lượng thủy sản khai thác | `fisheryCatch.value` | CSTT134 | Thực hiên + YoY % |
+
+---
+
+## `/trade-service` — THƯƠNG MẠI - DỊCH VỤ
+
+- **Tiêu đề header:** `THƯƠNG MẠI - DỊCH VỤ`
+- **Route:** `/trade-service`
+- **Lĩnh vực Hub:** `thuong_mai_dich_vu` (`legacy-field-routes.ts`)
+- **Trạng thái API:** Đã gắn (fallback mock khi chưa có data / thiếu So CK)
+- **Hook:** `use-trade-service-display-values.ts`
+- **Page:** `trade-service.tsx`
+
+### Cấu trúc layout (3 tầng)
+
+| Tầng | Khối UI | Component |
+|------|---------|-----------|
+| 1 | 2 KPI vĩ mô (50% - 50%) | `CompactKpiCard` |
+| 2 | Hero tổng giá trị (full width) | `HeroTotalSection` |
+| 3 | Chi tiết từng ngành (trái) + Tỷ trọng ngành (phải) | `SectorLedgerRow` + `SectorDonutChart` |
+
+### Chỉ mục hiển thị (theo nghiệp vụ)
+
+| Chỉ mục | Khối |
+|---------|------|
+| 1 | Kim ngạch xuất khẩu |
+| 2 | Thương mại dịch vụ (tổng giá trị) |
+| 2.1 | Bán buôn và bán lẻ; sửa chữa ô tô, mô tô, xe máy |
+| 2.2 | Vận tải kho bãi |
+| 2.3 | Dịch vụ lưu trú và ăn uống |
+| 2.4 | Dịch vụ khác |
+| 3 | Doanh thu bán lẻ hàng hóa và dịch vụ |
+
+---
+
+### Tầng 1 — KPI vĩ mô
+
+#### Card 1 — Kim ngạch xuất khẩu (`CompactKpiCard`, chỉ mục `1`)
+
+| Nhãn UI | Biến (`display.*`) | Mã CSTT | Attribute / Ghi chú |
+|---------|-------------------|---------|---------------------|
+| Giá trị thực hiện | `exportRevenue.value` | CSTT36 | Thực hiên |
+| So CK | `exportRevenue.yoy` | CSTT36 | Thực hiên vs Cùng kỳ năm trước → % |
+| Đơn vị (UI) | — | — | `USD` (hardcode trên page) |
+
+#### Card 3 — Doanh thu bán lẻ hàng hóa và dịch vụ (`CompactKpiCard`, chỉ mục `3`)
+
+| Nhãn UI | Biến (`display.*`) | Mã CSTT | Attribute / Ghi chú |
+|---------|-------------------|---------|---------------------|
+| Giá trị thực hiện | `retailRevenue.value` | CSTT42 | Thực hiên |
+| So CK | `retailRevenue.yoy` | CSTT42 | YoY % |
+| Đơn vị (UI) | — | — | `Tỷ đồng` (hardcode trên page) |
+
+---
+
+### Tầng 2 — Thương mại dịch vụ (Hero, chỉ mục `2`)
+
+| Nhãn UI | Biến (`display.*`) | Mã CSTT | Attribute / Ghi chú |
+|---------|-------------------|---------|---------------------|
+| Tổng giá trị (Triệu đồng) | `totalValue.value` | — | **Tính toán:** tổng `sectors[].metric.value` (CSTT38–41) |
+| So CK (badge) | `totalValue.yoy` | CSTT37 | YoY % |
+| % so với kỳ trước (badge) | `totalValue.yoy` | CSTT37 | Hiển thị cùng biến So CK |
+| Số ngành con đóng góp (badge) | `stats.sectorCount` | — | `sectors.length` (mặc định 4) |
+| Ngành tỷ trọng lớn nhất (badge) | `topSectorName` | — | Ngành có `metric.value` cao nhất |
+
+---
+
+### Tầng 3 — Chi tiết từng ngành (cột trái)
+
+Danh sách `display.sectorDetails` — thứ tự cố định theo chỉ mục 2.1 → 2.4; `rank` (#1, #2…) tính theo giá trị giảm dần.
+
+Mỗi dòng (`SectorLedgerRow`): `.metric.value` = Thực hiện, `.metric.yoy` = So CK, `.sharePercent` = % đóng góp trong tổng ngành.
+
+#### Card 2.1 — Bán buôn và bán lẻ; sửa chữa ô tô, mô tô, xe máy
+
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Chỉ mục | `sectorDetails[].index` | — | `2.1` (cố định) |
+| Tên ngành | `sectorDetails[].label` | — | Từ `SECTOR_DEFINITIONS` |
+| Giá trị thực hiện | `sectorDetails[].metric.value` | CSTT38 | Thực hiên |
+| So CK | `sectorDetails[].metric.yoy` | CSTT38 | YoY % |
+| % đóng góp (donut / nội bộ) | `sectorDetails[].sharePercent` | — | Tính từ tổng 4 ngành |
+| Xếp hạng (#) | `sectorDetails[].rank` | — | Theo giá trị |
+
+#### Card 2.2 — Vận tải kho bãi
+
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Chỉ mục | `sectorDetails[].index` | — | `2.2` |
+| Giá trị thực hiện | `sectorDetails[].metric.value` | CSTT39 | Thực hiên |
+| So CK | `sectorDetails[].metric.yoy` | CSTT39 | YoY % |
+
+#### Card 2.3 — Dịch vụ lưu trú và ăn uống
+
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Chỉ mục | `sectorDetails[].index` | — | `2.3` |
+| Giá trị thực hiện | `sectorDetails[].metric.value` | CSTT40 | Thực hiên |
+| So CK | `sectorDetails[].metric.yoy` | CSTT40 | YoY % |
+
+#### Card 2.4 — Dịch vụ khác
+
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Chỉ mục | `sectorDetails[].index` | — | `2.4` |
+| Giá trị thực hiện | `sectorDetails[].metric.value` | CSTT41 | Thực hiên |
+| So CK | `sectorDetails[].metric.yoy` | CSTT41 | YoY % |
+
+---
+
+### Tầng 3 — Tỷ trọng ngành (cột phải)
+
+**Biểu đồ:** `SectorDonutChart` (Recharts `PieChart` donut).
+
+| Nhãn UI | Biến | Mã CSTT | Attribute / Ghi chú |
+|---------|------|---------|---------------------|
+| Tên ngành (legend) | `sectorDetails[].label` | CSTT38–41 | — |
+| Giá trị (cột donut) | `sectorDetails[].metric.value` | CSTT38–41 | Thực hiên |
+| % tỷ trọng (legend) | `sectorDetails[].sharePercent` | — | Tính toán |
+
+---
+
+### Công thức So CK (áp dụng mọi khối có `.yoy`)
+
+| Bước | Nguồn | Ghi chú |
+|------|-------|---------|
+| Giá trị thực hiện | `Thực hiện` (`DASHBOARD_ATTR_CURRENT`) | Cùng mã CSTT với số hiển thị |
+| Cùng kỳ năm trước | `Cùng kỳ năm trước` (`DASHBOARD_ATTR_PRIOR_YEAR`) | Cùng mã CSTT |
+| So CK hiển thị | `(Thực hiện / Cùng kỳ năm trước) × 100` | `formatYoY` → `formatDashboardYoYPercent` trong `use-trade-service-display-values.ts` |
+
+Ví dụ: Thực hiện = 110, Cùng kỳ = 100 → So CK = `110,0%` (hiển thị dạng % theo chuẩn dashboard KT-XH).
+
+Nếu thiếu `Cùng kỳ năm trước` hoặc prior = 0 → hook trả fallback (xem bảng mock bên dưới).
+
+### Mock / fallback So CK (`MOCK_YOY_BY_CODE`)
+
+**Chỉ dùng khi API chưa có `Cùng kỳ năm trước`** (`withMockYoY` gán % mẫu thay cho So CK tính toán):
+
+| Mã CSTT | So CK fallback (dev) |
+|---------|----------------------|
+| CSTT36 | +12,5% |
+| CSTT42 | +8,2% |
+| CSTT37 | +5,8% |
+| CSTT38 | +15,3% |
+| CSTT39 | +6,8% |
+| CSTT40 | -2,1% |
+| CSTT41 | +4,2% |
+
+**Tổng Trade-Service:** 7 mã CSTT có binding trực tiếp (CSTT36, CSTT37, CSTT42, CSTT38–41) × 2 (value + yoy) = **14 ô số**; tổng khối 2 value tính từ 4 ngành.
 
 ---
 
