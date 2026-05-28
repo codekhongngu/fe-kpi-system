@@ -261,28 +261,6 @@ function SectorLedgerRow({ sector }: { sector: TradeServiceSectorDetail }) {
   )
 }
 
-function QuickStatCard({
-  label,
-  value,
-  sub,
-}: {
-  label: string
-  value: string
-  sub?: string
-}) {
-  return (
-    <div className='rounded-xl border border-orange-100 bg-orange-50/40 px-3 py-2.5'>
-      <p className='text-[10px] font-bold tracking-wide text-orange-600 uppercase'>
-        {label}
-      </p>
-      <p className='mt-1 truncate text-lg font-bold text-green-700'>{value}</p>
-      {sub ? (
-        <p className='mt-0.5 truncate text-[10px] text-orange-500'>{sub}</p>
-      ) : null}
-    </div>
-  )
-}
-
 function SectorDonutChart({
   sectors,
 }: {
