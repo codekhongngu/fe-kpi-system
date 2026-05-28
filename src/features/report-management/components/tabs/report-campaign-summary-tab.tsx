@@ -620,9 +620,6 @@ export function ReportCampaignSummaryPage({
     [approvedAssignmentDetails]
   )
 
-  const loadingApprovedDetails = approvedAssignmentDetailsQueries.some(
-    (query) => query.isLoading
-  )
   const handleExportExcel = () => {
     if (!template) return
 
@@ -725,7 +722,7 @@ export function ReportCampaignSummaryPage({
             size='sm'
             className='rounded-xl'
             onClick={handleExportExcel}
-            disabled={!template}
+            disabled={!template || loadingApprovedDetails}
           >
             <Download className='mr-2 size-4' />
             Xuất Excel
@@ -758,6 +755,10 @@ export function ReportCampaignSummaryPage({
       ) : templateQuery.isLoading ? (
         <div className='rounded-2xl border bg-card p-6 text-sm text-muted-foreground'>
           Đang tải cấu trúc biểu mẫu...
+        </div>
+      ) : loadingApprovedDetails ? (
+        <div className='rounded-2xl border bg-card p-6 text-sm text-muted-foreground'>
+          Đang tải dữ liệu báo cáo đã duyệt...
         </div>
       ) : templateQuery.isError || !template ? (
         <div className='rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive'>
