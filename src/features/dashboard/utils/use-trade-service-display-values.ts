@@ -102,39 +102,20 @@ const SECTOR_DEFINITIONS = [
   { index: '2.4', label: 'Dịch vụ khác', code: 'CSTT41' },
 ]
 
-/** Sample So CK when API has no prior-year data (dev / fallback). */
-export const MOCK_YOY_BY_CODE: Record<string, string> = {
-  [CSTT_EXPORT_REVENUE]: '+12,5%',
-  [CSTT_RETAIL_REVENUE]: '+8,2%',
-  [CSTT_TOTAL_TRADE_SERVICE]: '+5,8%',
-  CSTT38: '+15,3%',
-  CSTT39: '+6,8%',
-  CSTT40: '-2,1%',
-  CSTT41: '+4,2%',
-}
+const EMPTY_PAIR: TradeServiceMetricPair = { value: '0', yoy: '—' }
 
-const MOCK_SECTORS: ServiceSectorItem[] = SECTOR_DEFINITIONS.map((def) => ({
+const EMPTY_SECTORS: ServiceSectorItem[] = SECTOR_DEFINITIONS.map((def) => ({
   index: def.index,
   label: def.label,
   code: def.code,
-  metric: {
-    value:
-      def.code === 'CSTT38'
-        ? '62.450,00'
-        : def.code === 'CSTT39'
-          ? '95.120,50'
-          : def.code === 'CSTT40'
-            ? '35.280,40'
-            : '22.628,00',
-    yoy: MOCK_YOY_BY_CODE[def.code],
-  },
+  metric: EMPTY_PAIR,
 }))
 
-const MOCK_DATA: TradeServiceDisplayValues = buildDisplayFromSectors(
-  { value: '1.250.000', yoy: MOCK_YOY_BY_CODE[CSTT_EXPORT_REVENUE] },
-  { value: '5.420', yoy: MOCK_YOY_BY_CODE[CSTT_RETAIL_REVENUE] },
-  { value: '215.478,90', yoy: MOCK_YOY_BY_CODE[CSTT_TOTAL_TRADE_SERVICE] },
-  MOCK_SECTORS
+const EMPTY: TradeServiceDisplayValues = buildDisplayFromSectors(
+  EMPTY_PAIR,
+  EMPTY_PAIR,
+  EMPTY_PAIR,
+  EMPTY_SECTORS
 )
 
 function buildDisplayFromSectors(
@@ -195,7 +176,7 @@ export function useTradeServiceDisplayValues(
   data: DashboardFieldReportsResponse | undefined
 ): TradeServiceDisplayValues {
   return useMemo(() => {
-    if (!data) return MOCK_DATA
+    if (!data) return EMPTY
 
     const lookup = buildDashboardCellLookup(data)
 
@@ -218,13 +199,6 @@ export function useTradeServiceDisplayValues(
       code: def.code,
       metric: formatMetricPair(lookup, def.code, '0', '—'),
     }))
-
-    const hasRealData =
-      exportRevenue.value !== '0' ||
-      retailRevenue.value !== '0' ||
-      sectors.some((s) => s.metric.value !== '0')
-
-    if (!hasRealData) return MOCK_DATA
 
     const totalNumeric = sectors.reduce(
       (sum, s) => sum + parseTradeMetricNumber(s.metric.value),
