@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedTradeServiceRouteImport } from './routes/_authenticated/trade-service'
 import { Route as AuthenticatedSignOutRouteImport } from './routes/_authenticated/sign-out'
 import { Route as AuthenticatedLivestockForestryFisheryRouteImport } from './routes/_authenticated/livestock-forestry-fishery'
 import { Route as AuthenticatedGrdpRouteImport } from './routes/_authenticated/grdp'
@@ -72,6 +73,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTradeServiceRoute =
+  AuthenticatedTradeServiceRouteImport.update({
+    id: '/trade-service',
+    path: '/trade-service',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSignOutRoute = AuthenticatedSignOutRouteImport.update({
   id: '/sign-out',
   path: '/sign-out',
@@ -324,7 +331,7 @@ const AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
-  '/clerk': typeof ClerkauthRouteRouteWithChildren
+  '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/form-management': typeof AuthenticatedFormManagementRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/grdp': typeof AuthenticatedGrdpRoute
   '/livestock-forestry-fishery': typeof AuthenticatedLivestockForestryFisheryRoute
   '/sign-out': typeof AuthenticatedSignOutRoute
+  '/trade-service': typeof AuthenticatedTradeServiceRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
@@ -370,7 +378,7 @@ export interface FileRoutesByFullPath {
   '/report-management/details/$reportId/assignments/$assignmentId': typeof AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute
 }
 export interface FileRoutesByTo {
-  '/clerk': typeof ClerkauthRouteRouteWithChildren
+  '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/reset-password': typeof authResetPasswordRoute
@@ -387,6 +395,7 @@ export interface FileRoutesByTo {
   '/grdp': typeof AuthenticatedGrdpRoute
   '/livestock-forestry-fishery': typeof AuthenticatedLivestockForestryFisheryRoute
   '/sign-out': typeof AuthenticatedSignOutRoute
+  '/trade-service': typeof AuthenticatedTradeServiceRoute
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -438,6 +447,7 @@ export interface FileRoutesById {
   '/_authenticated/grdp': typeof AuthenticatedGrdpRoute
   '/_authenticated/livestock-forestry-fishery': typeof AuthenticatedLivestockForestryFisheryRoute
   '/_authenticated/sign-out': typeof AuthenticatedSignOutRoute
+  '/_authenticated/trade-service': typeof AuthenticatedTradeServiceRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -488,6 +498,7 @@ export interface FileRouteTypes {
     | '/grdp'
     | '/livestock-forestry-fishery'
     | '/sign-out'
+    | '/trade-service'
     | '/errors/$error'
     | '/settings/account'
     | '/settings/appearance'
@@ -532,6 +543,7 @@ export interface FileRouteTypes {
     | '/grdp'
     | '/livestock-forestry-fishery'
     | '/sign-out'
+    | '/trade-service'
     | '/'
     | '/errors/$error'
     | '/settings/account'
@@ -582,6 +594,7 @@ export interface FileRouteTypes {
     | '/_authenticated/grdp'
     | '/_authenticated/livestock-forestry-fishery'
     | '/_authenticated/sign-out'
+    | '/_authenticated/trade-service'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
     | '/_authenticated/settings/account'
@@ -647,6 +660,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/trade-service': {
+      id: '/_authenticated/trade-service'
+      path: '/trade-service'
+      fullPath: '/trade-service'
+      preLoaderRoute: typeof AuthenticatedTradeServiceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/sign-out': {
@@ -1031,6 +1051,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGrdpRoute: typeof AuthenticatedGrdpRoute
   AuthenticatedLivestockForestryFisheryRoute: typeof AuthenticatedLivestockForestryFisheryRoute
   AuthenticatedSignOutRoute: typeof AuthenticatedSignOutRoute
+  AuthenticatedTradeServiceRoute: typeof AuthenticatedTradeServiceRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
@@ -1059,6 +1080,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLivestockForestryFisheryRoute:
     AuthenticatedLivestockForestryFisheryRoute,
   AuthenticatedSignOutRoute: AuthenticatedSignOutRoute,
+  AuthenticatedTradeServiceRoute: AuthenticatedTradeServiceRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
