@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  CheckCircle2,
-  Eye,
-  FileText,
-  ListChecks,
+  Download,
   Maximize2,
   Minimize2,
-  ShieldCheck,
   Workflow,
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -38,6 +33,10 @@ import type {
 } from '../../api/types'
 import { reportCampaignApi } from '../../api/report-management-api'
 import { reportQueryKeys } from '../../utils/report-query'
+import {
+  downloadCampaignSummaryExcel,
+  type CampaignSummaryResolvedCell,
+} from '../../utils/campaign-summary-excel'
 import { ReportStatusBadge } from '../report-status'
 
 type SummaryCellValue = {
@@ -478,37 +477,6 @@ function UnitList({ units }: { units: ScopeGroup[] }) {
   )
 }
 
-function SummaryMetricCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-}: {
-  title: string
-  value: string
-  description: string
-  icon: typeof Eye
-}) {
-  return (
-    <Card className='rounded-2xl border bg-card shadow-sm'>
-      <CardContent className='p-4'>
-        <div className='flex items-start justify-between gap-3'>
-          <div className='space-y-1'>
-            <div className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-              {title}
-            </div>
-            <div className='text-xl font-bold text-foreground'>{value}</div>
-            <div className='text-xs text-muted-foreground'>{description}</div>
-          </div>
-          <div className='flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary'>
-            <Icon className='size-5' />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 export function ReportCampaignSummaryPage({
   reportId,
   report,
@@ -655,156 +623,132 @@ export function ReportCampaignSummaryPage({
   const loadingApprovedDetails = approvedAssignmentDetailsQueries.some(
     (query) => query.isLoading
   )
+  const handleExportExcel = () => {
+    if (!template) return
+
+    const systemFields = template.fields.filter((f) => f.isSystemDefault)
+    const nameField = systemFields.find((f) => f.label === 'Tên chỉ tiêu') ?? systemFields[0]
+    const unitField = systemFields.find(
+      (f) => f.label === 'Đơn vị tính' && f.id !== nameField?.id
+    )
+    const stickyFieldIds = new Set([nameField?.id, unitField?.id].filter(Boolean) as string[])
+    const extraFields = template.fields.filter(
+      (f) => !f.isSystemDefault || !stickyFieldIds.has(f.id)
+    )
+    const lFields = collectLeafFieldsInOrder(extraFields)
+
+    const resolvedCells = new Map<string, CampaignSummaryResolvedCell>()
+    const rowStatusLabels = new Map<string, string>()
+
+    for (const indicator of template.indicators) {
+      let sCount = 0
+      let subCount = 0
+      let dCount = 0
+
+      for (const field of lFields) {
+        const k = cellKey(indicator.id, field.id)
+        const resolved = resolveCellState({
+          key: k,
+          summaryCellMap,
+          submissionCellMap,
+          defaultValueMap,
+        })
+        resolvedCells.set(k, {
+          valueText: resolved.valueText,
+          valueNumber: resolved.valueNumber,
+          sourceLabel: resolved.sourceLabel,
+        })
+        if (summaryCellMap.has(k)) sCount += 1
+        if (submissionCellMap.has(k)) subCount += 1
+        if (defaultValueMap.has(k)) dCount += 1
+      }
+
+      const units = scopeGroupsByIndicator.get(indicator.id) ?? []
+      const status = getRowStatusMeta({
+        summaryCount: sCount,
+        submissionCount: subCount,
+        defaultCount: dCount,
+        unitCount: units.length,
+        summaryReady: Boolean(readiness?.canAggregate),
+      })
+      rowStatusLabels.set(indicator.id, status.label)
+    }
+
+    downloadCampaignSummaryExcel({
+      templateName: report.templateName ?? '',
+      periodName: report.periodName || report.periodCode || '',
+      summaryUpdatedAt,
+      template,
+      resolvedCells,
+      rowStatusLabels,
+    })
+
+    toast.success('Đã xuất file Excel thành công')
+  }
+
 
   return (
-    <div className='space-y-6 px-4 pt-6 pb-6 lg:px-6'>
-      <section className='grid gap-4 lg:grid-cols-4'>
-        <Card className='rounded-2xl border bg-card shadow-sm lg:col-span-2'>
-          <CardContent className='flex h-full flex-col justify-between gap-4 p-4'>
-            <div className='space-y-2'>
-              <div className='flex flex-wrap items-center gap-2'>
-                <Badge variant='outline' className='rounded-full px-3 py-1'>
-                  Tổng hợp dữ liệu
-                </Badge>
-                <ReportStatusBadge status={report.status} />
-              </div>
-              <div className='space-y-1'>
-                <h1 className='truncate text-2xl font-bold tracking-tight text-foreground'>
-                  {report.templateName}
-                </h1>
-                <p className='text-sm text-muted-foreground'>
-                  Xem cấu trúc báo cáo, giá trị mặc định, dữ liệu đã duyệt và kết quả tổng hợp theo kỳ.
-                </p>
-              </div>
-            </div>
-            <div className='grid gap-2 sm:grid-cols-2'>
-              <div className='rounded-xl bg-muted/30 p-3'>
-                <div className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-                  Biểu mẫu
-                </div>
-                <div className='mt-1 text-sm font-semibold text-foreground'>
-                  {report.templateCode ?? report.formId ?? '--'}
-                </div>
-              </div>
-              <div className='rounded-xl bg-muted/30 p-3'>
-                <div className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-                  Kỳ báo cáo
-                </div>
-                <div className='mt-1 text-sm font-semibold text-foreground'>
-                  {report.periodName || report.periodCode || '--'}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <SummaryMetricCard
-          title='Trạng thái tổng hợp'
-          value={summaryLabel}
-          description={summaryUpdatedAt ? `Cập nhật: ${formatDateTime(summaryUpdatedAt)}` : 'Chưa có bản tổng hợp'}
-          icon={Eye}
-        />
-
-        <SummaryMetricCard
-          title='Sẵn sàng tổng hợp'
-          value={readiness?.canAggregate ? 'Có' : 'Chưa'}
-          description={
-            readiness
+    <div className='space-y-4 px-4 pt-4 pb-6 lg:px-6'>
+      <div className='flex flex-col gap-3 rounded-2xl border bg-card px-4 py-3 shadow-sm lg:flex-row lg:items-center lg:justify-between'>
+        <div className='flex flex-wrap items-center gap-2'>
+          <ReportStatusBadge status={report.status} />
+          <Badge
+            variant='outline'
+            className={cn(
+              'rounded-full px-3 py-1',
+              summaryExists
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : readiness?.canAggregate
+                  ? 'border-blue-200 bg-blue-50 text-blue-700'
+                  : 'border-slate-200 bg-slate-50 text-slate-600'
+            )}
+          >
+            {summaryLabel}
+          </Badge>
+          <Badge variant='outline' className='rounded-full px-3 py-1'>
+            {readiness
               ? `${readiness.readyAssignments}/${readiness.totalAssignments} đơn vị đã chốt`
-              : 'Chưa có dữ liệu readiness'
-          }
-          icon={CheckCircle2}
-        />
-
-        <SummaryMetricCard
-          title='Dữ liệu duyệt'
-          value={`${approvedAssignments.length}`}
-          description={
-            loadingApprovedDetails
-              ? 'Đang tải chi tiết dữ liệu đã duyệt'
-              : 'Số đơn vị đã duyệt có dữ liệu'
-          }
-          icon={ShieldCheck}
-        />
-      </section>
-
-      <section className='grid gap-4 lg:grid-cols-3'>
-        <Card className='rounded-2xl border bg-card shadow-sm'>
-          <CardHeader className='pb-3'>
-            <CardTitle className='flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground'>
-              <ListChecks className='size-4 text-primary' />
-              Phân quyền chỉ tiêu
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-2 pt-0'>
-            <div className='text-2xl font-bold text-foreground'>
-              {campaignScopes.length}
-            </div>
-            <div className='text-sm text-muted-foreground'>
-              Số phạm vi scope đang áp dụng cho campaign.
-            </div>
-          </CardContent>
-        </Card>
-        <Card className='rounded-2xl border bg-card shadow-sm'>
-          <CardHeader className='pb-3'>
-            <CardTitle className='flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground'>
-              <FileText className='size-4 text-primary' />
-              Giá trị mặc định
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-2 pt-0'>
-            <div className='text-2xl font-bold text-foreground'>
-              {defaultValues.length}
-            </div>
-            <div className='text-sm text-muted-foreground'>
-              Giá trị đã cấu hình trên campaign để khóa nhập liệu.
-            </div>
-          </CardContent>
-        </Card>
-        <Card className='rounded-2xl border bg-card shadow-sm'>
-          <CardHeader className='pb-3'>
-            <CardTitle className='flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground'>
-              <Workflow className='size-4 text-primary' />
-              Tổng hợp cuối
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-2 pt-0'>
-            <div className='text-2xl font-bold text-foreground'>
-              {summaryExists ? 'Đã tạo' : 'Chưa tạo'}
-            </div>
-            <div className='text-sm text-muted-foreground'>
-              {summaryExists
-                ? `Bản gần nhất: ${formatDateTime(summaryUpdatedAt)}`
-                : 'Chưa có dữ liệu summary để hiển thị.'}
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <div className='flex flex-col gap-3 rounded-2xl border bg-card px-4 py-4 lg:flex-row lg:items-center lg:justify-between'>
-        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
-          <Workflow className='size-4 text-primary' />
-          {readiness?.canAggregate
-            ? 'Đã đủ điều kiện để tổng hợp báo cáo.'
-            : 'Chỉ khi tất cả đơn vị đã chốt ở cấp xã thì mới có thể tổng hợp.'}
-        </div>
-        <Button
-          className='rounded-xl font-bold shadow-lg shadow-primary/20'
-          onClick={() => recomputeMutation.mutate()}
-          disabled={recomputeMutation.isPending || !readiness?.canAggregate}
-        >
-          {recomputeMutation.isPending ? (
-            <>
-              <Workflow className='mr-2 size-4 animate-spin' />
-              Đang tổng hợp...
-            </>
-          ) : (
-            <>
-              <Workflow className='mr-2 size-4' />
-              Tổng hợp báo cáo
-            </>
+              : 'Đang tải...'}
+          </Badge>
+          <Badge variant='outline' className='rounded-full px-3 py-1'>
+            {approvedAssignments.length} đã duyệt
+          </Badge>
+          {summaryUpdatedAt && (
+            <span className='text-xs text-muted-foreground'>
+              Cập nhật: {formatDateTime(summaryUpdatedAt)}
+            </span>
           )}
-        </Button>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            className='rounded-xl'
+            onClick={handleExportExcel}
+            disabled={!template}
+          >
+            <Download className='mr-2 size-4' />
+            Xuất Excel
+          </Button>
+          <Button
+            size='sm'
+            className='rounded-xl font-bold shadow-lg shadow-primary/20'
+            onClick={() => recomputeMutation.mutate()}
+            disabled={recomputeMutation.isPending || !readiness?.canAggregate}
+          >
+            {recomputeMutation.isPending ? (
+              <>
+                <Workflow className='mr-2 size-4 animate-spin' />
+                Đang tổng hợp...
+              </>
+            ) : (
+              <>
+                <Workflow className='mr-2 size-4' />
+                Tổng hợp báo cáo
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {!templateId ? (
