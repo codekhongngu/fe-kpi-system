@@ -4,6 +4,7 @@ import axios, {
   type AxiosResponse,
 } from 'axios'
 import { useAuthStore } from '@/stores/auth-store'
+import { getQueryClientRef } from '@/lib/query-client-ref'
 
 type ApiEnvelope<T> = {
   data: T
@@ -158,7 +159,11 @@ export function createApiClient(): AxiosInstance {
         if (refreshed.refreshToken) {
           useAuthStore.getState().auth.setRefreshToken(refreshed.refreshToken)
         }
-        useAuthStore.getState().auth.setUser(refreshed.user)
+        // Do NOT call setUser(refreshed.user) here — the refresh response's user object
+        // is a raw entity that lacks the computed `permissions` array.
+        // Instead, invalidate the /me query so it re-fetches with the new token
+        // and updates the store with the full MeResponse (including permissions).
+        void getQueryClientRef()?.invalidateQueries({ queryKey: ['auth', 'me'] })
 
         originalRequest.headers = originalRequest.headers ?? {}
         originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`

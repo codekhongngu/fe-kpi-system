@@ -26,7 +26,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
     queryFn: authApi.me,
     enabled: !!accessToken,
     retry: false,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   })
 
   useEffect(() => {
@@ -35,12 +35,15 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
     }
   }, [meQuery.data, setUser])
 
-  // Only block rendering when no cached user AND actively loading
-  if (!!accessToken && !user && meQuery.isLoading) {
+  // Block rendering when accessToken exists but user is not yet in store:
+  // - isLoading: initial /me fetch in progress
+  // - isError: /me failed (401 → QueryCache.onError redirects to sign-in; other errors → hold screen)
+  // - data loaded but setUser effect hasn't run yet (very brief)
+  if (!!accessToken && !user && !meQuery.isSuccess) {
     return (
       <div className='flex min-h-svh items-center justify-center p-6'>
         <p className='text-sm text-muted-foreground'>
-          Đang tải phiên đăng nhập...
+          {meQuery.isError ? 'Đang chuyển hướng...' : 'Đang tải phiên đăng nhập...'}
         </p>
       </div>
     )

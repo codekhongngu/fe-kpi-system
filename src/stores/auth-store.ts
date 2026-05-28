@@ -6,6 +6,20 @@ import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 const ACCESS_TOKEN_COOKIE = 'kpi_access_token'
 const REFRESH_TOKEN_COOKIE = 'kpi_refresh_token'
 
+/**
+ * Safely parse a cookie value that may or may not be JSON-encoded.
+ * Guards against SyntaxError if the cookie was set without JSON.stringify
+ * (e.g., directly by the browser or a backend Set-Cookie header).
+ */
+function parseCookieToken(raw: string | undefined): string {
+  if (!raw) return ''
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return raw
+  }
+}
+
 export type AuthUser = MeResponse
 
 interface AuthState {
@@ -27,12 +41,8 @@ export const useAuthStore = create<AuthState>()(
     (set) => {
       const accessTokenCookie = getCookie(ACCESS_TOKEN_COOKIE)
       const refreshTokenCookie = getCookie(REFRESH_TOKEN_COOKIE)
-      const initAccessToken = accessTokenCookie
-        ? JSON.parse(accessTokenCookie)
-        : ''
-      const initRefreshToken = refreshTokenCookie
-        ? JSON.parse(refreshTokenCookie)
-        : ''
+      const initAccessToken = parseCookieToken(accessTokenCookie)
+      const initRefreshToken = parseCookieToken(refreshTokenCookie)
       return {
         auth: {
           user: null,

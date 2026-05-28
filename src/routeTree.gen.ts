@@ -331,7 +331,7 @@ const AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
-  '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/clerk': typeof ClerkauthRouteRouteWithChildren
   '/form-management': typeof AuthenticatedFormManagementRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -378,7 +378,7 @@ export interface FileRoutesByFullPath {
   '/report-management/details/$reportId/assignments/$assignmentId': typeof AuthenticatedReportManagementDetailsReportIdAssignmentsAssignmentIdRoute
 }
 export interface FileRoutesByTo {
-  '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
+  '/clerk': typeof ClerkauthRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/reset-password': typeof authResetPasswordRoute
